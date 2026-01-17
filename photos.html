@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <script src="dynamic-style/theme-init.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
+    <title>Photos - MAERS's Space</title>
+
+    <!-- 🚀 Resource Preloading -->
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/gallery-view.css">
+    <link rel="stylesheet" href="static-style/responsive.css">
+    <script defer src="data-manage/api-client.js"></script>
+    <script defer src="data-manage/data-provider.js"></script>
+    <script src="data/photos-data.js"></script>
+    <script src="dynamic-style/album-config.js"></script>
+    <script defer src="dynamic-style/layout.js"></script>
+    <script defer src="dynamic-style/script.js"></script>
+    <script defer src="data-manage/album-controller.js"></script>
+    <script defer src="custom/album/album-view.js"></script>
+
+    <style>
+        /* Ensure header title is white in dark mode */
+        .header-title {
+            color: #ffffff !important;
+        }
+
+        html.light-mode .header-title {
+            color: #333330 !important;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            z-index: 100;
+            gap: 10px;
+        }
+
+        #save-order-btn {
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--pill-border);
+            border-radius: 20px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: var(--text-main);
+        }
+
+        #save-order-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        #save-order-btn:active {
+            transform: scale(0.95);
+        }
+
+        .upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            padding: 0 20px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--pill-border);
+            cursor: pointer !important;
+            transition: 0.3s;
+            color: var(--text-main);
+            font-weight: bold;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .upload-label:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .photo-grid::-webkit-scrollbar {
+            width: 8px !important;
+            background-color: transparent !important;
+        }
+
+        .photo-grid::-webkit-scrollbar-track {
+            background-color: transparent !important;
+            margin: 0 !important;
+            border: none !important;
+        }
+
+        .photo-grid::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            border-radius: 4px !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .photo-grid::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(255, 255, 255, 0.5) !important;
+        }
+
+        .photo-grid {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="main-card content-mode">
+            <div class="page-header-bar">
+                <a href="album.html" class="back-btn">← Back</a>
+                <div class="header-title" id="page-title">Loading...</div>
+                <div class="header-actions">
+                    <button id="save-order-btn" style="display:none;" title="保存排序">💾</button>
+                    <label class="upload-label" id="upload-btn" style="display:none;" for="file-input">
+                        ＋ 上传图片
+                    </label>
+                    <input type="file" id="file-input" accept="image/*" multiple>
+                </div>
+            </div>
+            <div class="photo-grid" id="gallery-container"></div>
+        </div>
+    </div>
+    <div class="lightbox" id="lightbox">
+        <button class="close-lightbox">&times;</button>
+        <button class="lb-nav lb-prev">&#10094;</button>
+        <button class="lb-nav lb-next">&#10095;</button>
+        <img id="lightbox-img" src="" alt="Preview">
+        <div class="hd-switch-wrapper" id="hd-switch"><span class="hd-text">HD</span></div>
+    </div>
+</body>
+
+</html>

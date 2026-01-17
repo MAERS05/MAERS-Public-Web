@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <script src="dynamic-style/theme-init.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About Me - MAERS</title>
+
+    <!-- 🚀 Resource Preloading -->
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <script defer src="data-manage/data-provider.js"></script>
+    <script defer src="dynamic-style/layout.js"></script>
+    <style>
+        .placeholder-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: var(--text-sub);
+        }
+
+        .placeholder-text {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 20px;
+        }
+
+        /* [Optimal] 消除移动端点击延迟 */
+        a,
+        button,
+        input,
+        .photo-item,
+        .list-item,
+        .card-icon,
+        .tech-pill {
+            touch-action: manipulation;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="main-card clean-layout">
+            <div class="placeholder-content">
+                <div style="font-size: 4rem;">SPACE</div>
+                <div class="placeholder-text">待更新ing...</div>
+                <p>Knowledge needs time to accumulate.</p>
+            </div>
+        </div>
+    </div>
+    <script defer src="dynamic-style/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            MAERS.Layout.renderPageHeader("Other Spaces", "index.html", "Back"); // 自动生成头部
+        });
+    </script>
+</body>
+
+</html>

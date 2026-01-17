@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <script src="dynamic-style/theme-init.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
+    <title>Album Admin - MAERS</title>
+
+    <!-- 🚀 Resource Preloading -->
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/gallery-view.css">
+    <link rel="stylesheet" href="static-style/responsive.css">
+    <script defer src="shared/utils.js"></script>
+    <script defer src="data-manage/data-provider.js"></script>
+    <script defer src="dynamic-style/style-injector.js"></script>
+    <script defer src="dynamic-style/layout.js"></script>
+    <script defer src="dynamic-style/script.js"></script>
+    <script defer src="data-manage/album-controller.js"></script>
+    <script>MAERS.StyleInjector.inject();</script>
+    <script src="shared/toast.js"></script>
+    <link rel="stylesheet" href="static-style/html/admin-album.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="main-card">
+            <div class="page-header-bar">
+                <a href="admin.html" class="back-btn">← Back to Console</a>
+                <div class="header-title">🛠️ Gallery Manager</div>
+                <div class="header-actions">
+                    <button id="save-order-btn" title="保存修改">💾</button>
+                </div>
+            </div>
+            <div class="admin-content">
+                <div class="grid-layout" id="category-grid"></div>
+            </div>
+        </div>
+    </div>
+    <script defer src="data-manage/api-client.js"></script>
+    <script src="dynamic-style/album-config.js"></script>
+    <script defer src="custom/album/album-admin.js"></script>
+    <script>
+        // Inline script removed to custom/album/album-admin.js
+    </script>
+</body>
+
+</html>

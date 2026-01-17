@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <script src="dynamic-style/theme-init.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Space</title>
+
+    <!-- 🚀 Resource Preloading -->
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+    <link rel="dns-prefetch" href="https://api.bilibili.com">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <script defer src="dynamic-style/layout.js"></script>
+    <script defer src="dynamic-style/script.js"></script>
+    <link rel="stylesheet" href="static-style/html/index.css">
+
+</head>
+
+<body>
+    <div class="home-container">
+        <div class="brand-area">
+            <img src="ui/placeholder.svg" alt="Logo" class="brand-logo">
+            <div class="brand-title"><span class="maers-interactive"
+                    onclick="window.location.href='me.html'">YOUR</span> <span class="maers-interactive"
+                    onclick="window.location.href='space.html'">SPACE</span></div>
+            <div class="brand-subtitle">Personal Knowledge & Creative Hub</div>
+        </div>
+        <div class="nav-grid">
+            <div class="nav-card" onclick="window.location.href='notes.html'">
+                <div class="card-bg-text">KNOW</div>
+                <div class="card-icon">✒️</div>
+                <div class="card-title">Notes</div>
+                <div class="card-desc">Building a mental framework for learning.</div>
+            </div>
+            <div class="nav-card" onclick="window.location.href='record.html'">
+                <div class="card-bg-text">IDEA</div>
+                <div class="card-icon">💡</div>
+                <div class="card-title">Record</div>
+                <div class="card-desc">Recording resonance sentence and insights.</div>
+            </div>
+            <div class="nav-card" onclick="window.location.href='literature.html'">
+                <div class="card-bg-text">BOOK</div>
+                <div class="card-icon">📚</div>
+                <div class="card-title">Literature</div>
+                <div class="card-desc">Private bookshelf for golden lines and thoughts.</div>
+            </div>
+            <div class="nav-card" onclick="window.location.href='album.html'">
+                <div class="card-bg-text">PHOT</div>
+                <div class="card-icon">📸</div>
+                <div class="card-title">Lens</div>
+                <div class="card-desc">Personal visual photography archive album.</div>
+            </div>
+            <div class="nav-card" onclick="window.location.href='music.html'">
+                <div class="card-bg-text">FLOW</div>
+                <div class="card-icon">🎵</div>
+                <div class="card-title">Music</div>
+                <div class="card-desc">Personal playlist and rhythm. Listen to the vibe.</div>
+            </div>
+            <div class="nav-card" onclick="void(0)">
+                <div class="card-bg-text">NEW</div>
+                <div class="card-icon">➕</div>
+                <div class="card-title">待添加</div>
+                <div class="card-desc">New features coming soon.</div>
+            </div>
+        </div>
+        <footer style="margin-top: 60px; color: var(--text-sub); font-size: 0.8rem; opacity: 0.6;">
+            &copy; Your Personal Web. Powered by AI.
+        </footer>
+    </div>
+</body>
+
+</html>

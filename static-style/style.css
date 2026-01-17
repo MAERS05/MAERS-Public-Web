@@ -1,0 +1,311 @@
+/* ==========================================================================
+   MAERS Space - Core Stylesheet
+   Entry point for global layout and imports.
+   ========================================================================== */
+
+/* 2. Basic Resets & Performance */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+    background-color: var(--bg-base);
+    transition: background-color 2.5s ease;
+}
+
+html.light-mode {
+    background-color: var(--bg-light-base);
+}
+
+body {
+    font-family: var(--font-main);
+    color: var(--text-main);
+    line-height: 1.6;
+    min-height: 100vh;
+    position: relative;
+    background: transparent;
+    transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* White mode texture layer */
+body::before {
+    content: "";
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -2;
+    background-image: var(--bg-light-texture);
+    pointer-events: none;
+    will-change: opacity;
+}
+
+/* 3. Theme Mask (Animated Background) */
+#theme-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1 !important;
+    pointer-events: none !important;
+    background-color: #141417;
+    background-image:
+        url('data:image/svg+xml;charset=utf-8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.02"/%3E%3C/svg%3E'),
+        radial-gradient(80% 80% at 50% -20%, rgba(40, 40, 55, 0.4) 0%, transparent 60%),
+        linear-gradient(180deg, #141417 0%, #0a0a0c 100%);
+    clip-path: circle(150% at 100% 0%);
+    transition: clip-path 2.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#theme-mask::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image:
+        radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.8), transparent),
+        radial-gradient(1.5px 1.5px at 100px 150px, rgba(255, 255, 255, 0.7), transparent),
+        radial-gradient(1.2px 1.2px at 200px 80px, rgba(255, 255, 255, 0.6), transparent),
+        radial-gradient(1px 1px at 300px 250px, rgba(255, 255, 255, 0.7), transparent);
+    background-size: 400px 400px;
+    animation: stars-random-flicker 15s infinite ease-in-out;
+}
+
+@keyframes stars-random-flicker {
+
+    0%,
+    100% {
+        opacity: 0.7;
+    }
+
+    20% {
+        opacity: 0.2;
+    }
+
+    35% {
+        opacity: 0.8;
+    }
+
+    50% {
+        opacity: 0.1;
+    }
+
+    65% {
+        opacity: 0.6;
+    }
+
+    85% {
+        opacity: 0.3;
+    }
+}
+
+html.light-mode #theme-mask {
+    clip-path: circle(0% at 100% 0%) !important;
+}
+
+html.light-mode #theme-mask::after {
+    display: none;
+}
+
+/* 4. Core Layout */
+.container {
+    width: 100%;
+    min-height: 104.5vh;
+    height: auto;
+    padding: 40px 20px 60px 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 6. Layout Media Queries */
+@media (max-width: 1024px) {
+    .container {
+        padding-top: 60px;
+        height: auto;
+        overflow: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .grid-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        display: block;
+    }
+
+    .category-card {
+        margin-bottom: 20px;
+        height: 160px;
+        flex-direction: row;
+        gap: 20px;
+        padding: 0 30px;
+        justify-content: flex-start;
+    }
+
+    .card-icon {
+        font-size: 3rem;
+        margin-bottom: 0;
+    }
+
+    .text-group {
+        text-align: left;
+    }
+}
+
+/* 7. Special View States (Shrink/Zoom) */
+html.shrink-view body {
+    overflow: hidden !important;
+    transform: none !important;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+html.shrink-view .container {
+    cursor: zoom-out;
+    height: 100vh;
+    overflow: hidden;
+}
+
+/* Global Image Hover Effects */
+.vditor-reset img,
+.markdown-body img {
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+    cursor: zoom-in;
+}
+
+.vditor-reset img:hover,
+.markdown-body img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+html.shrink-view .main-card {
+    transform: scale(0.65) translateY(50px);
+    transform-origin: center top;
+    border-radius: 40px;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.5s, box-shadow 0.5s;
+    cursor: auto;
+    pointer-events: auto;
+}
+
+html.shrink-view .zoom-trigger-icon,
+html.shrink-view .zoom-trigger-whole {
+    z-index: 9999;
+    /* filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)) !important; Removed glow */
+}
+
+html.shrink-view::after {
+    display: none;
+}
+
+.zoom-trigger-icon,
+.zoom-trigger-whole {
+    cursor: pointer !important;
+    display: inline-block;
+    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    user-select: none;
+    position: relative;
+    z-index: 10;
+}
+
+.zoom-trigger-icon:hover,
+.zoom-trigger-whole:hover {
+    transform: scale(1.15) !important;
+    /* filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)) !important; Removed glow */
+    cursor: pointer !important;
+}
+
+/* 8. Lightbox State */
+body.is-viewing .theme-switch-wrapper,
+body.is-viewing .auto-mode-btn {
+    opacity: 0.1 !important;
+    filter: grayscale(100%) !important;
+    transform: scale(0.9);
+    transition: all 0.5s ease;
+    pointer-events: auto !important;
+    z-index: 10001 !important;
+}
+
+body.is-viewing .theme-switch-wrapper:hover,
+body.is-viewing .auto-mode-btn:hover {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: scale(1);
+    cursor: pointer;
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================================================
+   📱 Mobile Performance Optimization: Simple Fade Transition
+   ========================================================================== */
+@media (max-width: 1024px) {
+
+    /* 1. 重写遮罩层动画逻辑 */
+    #theme-mask {
+        /* 强制取消几何裁剪过渡，改为透明度过渡 */
+        transition: opacity 0.5s ease-in-out !important;
+
+        /* 默认状态（黑夜）是显示的，且铺满全屏 */
+        opacity: 1;
+        clip-path: none !important;
+        /* 移除圆形裁剪，改为普通图层 */
+
+        /* [可选] 禁用背景的微光呼吸动画，进一步省电 */
+        animation: none !important;
+    }
+
+    /* 2. 禁用星星闪烁动画 (性能杀手) */
+    #theme-mask::after {
+        display: none !important;
+        /* 移动端太小看不清星星，直接隐藏以大幅提升性能 */
+    }
+
+    /* 3. 定义白昼模式下的状态 */
+    html.light-mode #theme-mask {
+        /* 白昼模式下，遮罩层简单地变透明 */
+        opacity: 0 !important;
+        /* 不再需要改变 clip-path */
+    }
+
+    /* 4. 加快底层的背景色切换速度 */
+    /* 原本是 2.5s，移动端改为 0.5s 会感觉更跟手 */
+    html,
+    body {
+        transition: background-color 0.5s ease, color 0.5s ease !important;
+    }
+}
+
+/* Mobile Performance Optimization remains */
+
+@media (max-width: 1024px) {
+
+    /* 1. 禁用毛玻璃：这是导致手机卡顿的元凶 */
+    .main-card {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+
+        /* 2. 改用高不透明度纯色：弥补视觉质感 */
+        /* 深色模式下：几乎全黑 */
+        background: rgba(20, 20, 20, 0.95);
+
+        /* 3. 移除大阴影：减少 GPU 渲染开销 */
+        box-shadow: none !important;
+
+        /* 4. 移除边框：扁平化设计更适合移动端 */
+        border: none !important;
+    }
+
+    /* 5. 适配白昼模式 */
+    html.light-mode .main-card {
+        /* 白昼模式下：几乎全白 */
+        background: rgba(255, 255, 255, 0.98);
+    }
+}

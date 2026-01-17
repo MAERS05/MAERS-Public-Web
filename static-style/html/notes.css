@@ -1,0 +1,28 @@
+/* Notes Custom Style */
+:root {
+    --accent-color: #2ed573;
+}
+
+.grid-item.type-note .item-icon {
+    filter: hue-rotate(0deg);
+}
+
+/* Visitor customizations */
+/* 强制原生搜索框的“X”号显示为手型鼠标 */
+input[type="search"]::-webkit-search-cancel-button {
+    cursor: pointer;
+}
+
+/* Drawer Header Layout */
+.drawer-header-custom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 15px;
+}
+
+.drawer-title-row {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+}

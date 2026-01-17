@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <link rel="icon" type="image/svg+xml" href="ui/icon.svg">
+    <script src="dynamic-style/theme-init.js"></script>
+    <script>document.documentElement.classList.remove('light-mode');</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - MAERS</title>
+
+    <!-- 🚀 Resource Preloading -->
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/toast.css">
+    <link rel="stylesheet" href="static-style/html/admin.css">
+    <script defer src="shared/utils.js"></script>
+    <script defer src="data-manage/data-provider.js"></script>
+    <script defer src="dynamic-style/layout.js"></script>
+    <script defer src="dynamic-style/script.js"></script>
+
+    <script src="shared/toast.js"></script>
+</head>
+
+<body>
+    <div id="theme-mask"></div>
+    <div class="container">
+        <div class="main-card">
+            <div
+                style="position: relative; display: flex; justify-content: center; align-items: center; margin-bottom: 80px;">
+                <h1 class="admin-title">🛠️ SYSTEM_CONTROL_PANEL</h1>
+                <div style="position: absolute; right: 0; display: flex; gap: 10px;">
+                    <button onclick="MAERS.Admin.exportModules()"
+                        style="padding: 8px 16px; background: rgba(120, 255, 214, 0.1); border: 1px solid #78ffd6; color: #78ffd6; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: 0.2s;"
+                        onmouseover="this.style.background='#78ffd6'; this.style.color='#000'"
+                        onmouseout="this.style.background='rgba(120, 255, 214, 0.1)'; this.style.color='#78ffd6'">📤
+                        导出配置</button>
+                    <button onclick="document.getElementById('import-file').click()"
+                        style="padding: 8px 16px; background: rgba(255, 107, 107, 0.1); border: 1px solid #ff6b6b; color: #ff6b6b; border-radius: 20px; cursor: pointer; font-size: 0.9rem; transition: 0.2s;"
+                        onmouseover="this.style.background='#ff6b6b'; this.style.color='#fff'"
+                        onmouseout="this.style.background='rgba(255, 107, 107, 0.1)'; this.style.color='#ff6b6b'">📥
+                        导入配置</button>
+                    <input type="file" id="import-file" accept=".json" style="display: none;"
+                        onchange="MAERS.Admin.importModules(event)">
+                </div>
+            </div>
+            <div class="admin-grid" id="admin-grid"></div>
+        </div>
+    </div>
+    <script defer src="data-manage/admin-core.js"></script>
+</body>
+
+</html>

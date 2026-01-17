@@ -1,0 +1,13 @@
+/* Literature Custom Style */
+:root {
+    --accent-color: #ffa502;
+    --text-main: #f1f2f6;
+}
+
+.grid-item {
+    border-radius: 4px !important;
+}
+
+.grid-item.type-note .item-icon {
+    filter: hue-rotate(45deg);
+}

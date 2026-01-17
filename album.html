@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <script src="dynamic-style/theme-init.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
+    <title>Gallery - MAERS's Space</title>
+
+    <!-- 🚀 Resource Preloading -->
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/gallery-view.css">
+    <link rel="stylesheet" href="static-style/responsive.css">
+    <script src="dynamic-style/album-config.js"></script>
+    <script src="data-manage/data-provider.js"></script>
+    <script src="dynamic-style/layout.js"></script>
+    <style>
+        .container {
+            padding: 15px !important;
+            height: 100vh !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-card {
+            flex: 1;
+            padding: 40px !important;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .explorer-header {
+            margin-bottom: 30px;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="main-card">
+            <div class="gallery-content">
+                <div class="grid-layout" id="category-grid"></div>
+            </div>
+        </div>
+    </div>
+    <script defer src="dynamic-style/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            MAERS.Layout.renderPageHeader("📷 My Gallery"); // 自动生成头部
+            const grid = document.getElementById('category-grid');
+            const categories = (typeof CATEGORY_CONFIG !== 'undefined') ? CATEGORY_CONFIG : [];
+            categories.forEach((cat, index) => {
+                const a = document.createElement('a');
+                // 🔥🔥🔥 核心修复：自动透传 mode 参数 🔥🔥🔥
+                a.href = `photos.html?id=${cat.id}`;
+                // ... (后面样式代码保持不变) ...
+                a.className = `category-card ${cat.style_class || ''}`;
+                a.style.animationDelay = `${index * -1}s`;
+                a.innerHTML = `<div class="card-bg-glow"></div><div class="card-icon">${cat.icon}</div><div class="text-group"><div class="card-title">${cat.title}</div><div class="card-subtitle">${cat.subtitle}</div></div>`;
+                grid.appendChild(a);
+            });
+        });
+    </script>
+</body>
+
+</html>
