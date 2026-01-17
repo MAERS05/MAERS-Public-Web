@@ -25,6 +25,7 @@
 
 .brand-logo:hover {
     transform: rotate(8deg);
+    cursor: pointer;
 }
 
 .brand-title {

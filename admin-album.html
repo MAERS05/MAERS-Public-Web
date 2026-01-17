@@ -23,7 +23,11 @@
     <script defer src="dynamic-style/layout.js"></script>
     <script defer src="dynamic-style/script.js"></script>
     <script defer src="data-manage/album-controller.js"></script>
-    <script>MAERS.StyleInjector.inject();</script>
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            MAERS.StyleInjector.inject();
+        });
+    </script>
     <script src="shared/toast.js"></script>
     <link rel="stylesheet" href="static-style/html/admin-album.css">
 </head>

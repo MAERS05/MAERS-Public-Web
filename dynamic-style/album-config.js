@@ -1,1 +1,58 @@
-window.CATEGORY_CONFIG = [];
+window.CATEGORY_CONFIG = [
+    {
+        "icon": "🌿",
+        "title": "自然风光",
+        "subtitle": "Nature & Landscapes",
+        "style_class": "card-nature",
+        "id": "nature"
+    },
+    {
+        "icon": "🏛️",
+        "title": "人文地标",
+        "subtitle": "Structure & Scenery",
+        "style_class": "card-arch",
+        "id": "arch"
+    },
+    {
+        "icon": "🎨",
+        "title": "创作",
+        "subtitle": "Portraits & Avatars",
+        "style_class": "card-avatar",
+        "id": "avatar"
+    },
+    {
+        "icon": "🦥",
+        "title": "动植物",
+        "subtitle": "Creatures & Life",
+        "style_class": "card-bio",
+        "id": "bio"
+    },
+    {
+        "icon": "🏂",
+        "title": "生活",
+        "subtitle": "Daily & Moments",
+        "style_class": "card-life",
+        "id": "life"
+    },
+    {
+        "icon": "🏺",
+        "title": "展览",
+        "subtitle": "Collection & Artifacts",
+        "style_class": "card-exhibit",
+        "id": "exhibit"
+    },
+    {
+        "icon": "📸",
+        "title": "其它",
+        "subtitle": "Others & More",
+        "style_class": "card-other",
+        "id": "other"
+    },
+    {
+        "icon": "💤",
+        "title": "待定···",
+        "subtitle": "New & Pending",
+        "style_class": "card-new",
+        "id": "new"
+    }
+];

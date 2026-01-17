@@ -6,7 +6,9 @@
     --bg-light-base: #f2f0eb;
 
     /* 白昼背景纹理 */
-    --bg-light-texture: linear-gradient(180deg, #fffefc 0%, #f2f0eb 100%);
+    --bg-light-texture:
+        url('../ui/noise.svg'),
+        linear-gradient(180deg, #fffefc 0%, #f2f0eb 100%);
     --text-main: #f0f0f2;
     --text-sub: #a0a0a5;
     --text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 0, 0, 0.5);

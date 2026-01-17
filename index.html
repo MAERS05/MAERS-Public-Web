@@ -1,11 +1,86 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" style="background-color: #0a0a0a; color: #e0e0e0;">
+
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <!-- 🔥 第一优先级：关键主题CSS，在任何其他内容之前定义 -->
+    <style id="critical-theme-css">
+        /* 🔥 最高优先级：立即强制深色背景 */
+        html {
+            background-color: #0a0a0a !important;
+            color: #e0e0e0 !important;
+        }
+
+        /* 浅色主题覆盖 */
+        html.light-mode {
+            background-color: #ffffff !important;
+            color: #1a1a1a !important;
+        }
+
+        /* body 继承背景色 */
+        body {
+            background-color: inherit !important;
+            color: inherit !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* 🔥 防闪烁遮罩 - 使用真实 div 元素 */
+        #flash-guard {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            /* 🎨 同步 #theme-mask 的精确背景，防止色差跳变 */
+            /* 🎨 同步 #theme-mask 的主色调，移除复杂纹理以减小体积 */
+            background-color: #141417;
+            z-index: 99999;
+            pointer-events: none;
+            /* 🎨 优化动画：0.15s */
+            transition: opacity 0.15s;
+        }
+
+        html.light-mode #flash-guard {
+            background-color: #f2f0eb;
+            /* 浅色模式基础色 */
+        }
+    </style>
+
+    <!-- 🔥 第二优先级：主题检测脚本 (精简版) -->
+    <script>
+        (function () {
+            var isDark = true;
+            try {
+                var saved = localStorage.getItem('theme');
+                var config = JSON.parse(localStorage.getItem('autoThemeConfig')) || {};
+
+                if (config.enabled) {
+                    var now = new Date();
+                    var mins = now.getHours() * 60 + now.getMinutes();
+                    // 简单容错：如果没有设置时间，默认 7:00-19:00
+                    var d = (config.dayTime || "07:00").split(':');
+                    var n = (config.nightTime || "19:00").split(':');
+                    var s = parseInt(d[0]) * 60 + parseInt(d[1]);
+                    var e = parseInt(n[0]) * 60 + parseInt(n[1]);
+                    if (mins >= s && mins < e) isDark = false;
+                } else if (saved === 'light-mode') {
+                    isDark = false;
+                } else if (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+                    isDark = false;
+                }
+            } catch (e) { }
+
+            if (!isDark) {
+                document.documentElement.classList.add('light-mode');
+            }
+        })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Your Space</title>
+    <meta name="color-scheme" content="dark light">
+    <link rel="icon" type="image/svg+xml" href="ui/icon.svg">
+    <title>MAERS Space</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
@@ -22,11 +97,13 @@
 </head>
 
 <body>
+    <!-- 🔥 防闪烁遮罩 - 在页面内容渲染完成后会被移除 -->
+    <div id="flash-guard"></div>
     <div class="home-container">
         <div class="brand-area">
-            <img src="ui/placeholder.svg" alt="Logo" class="brand-logo">
+            <img src="ui/index.svg" alt="Logo" class="brand-logo" onclick="toggleGlobalShrink(event)">
             <div class="brand-title"><span class="maers-interactive"
-                    onclick="window.location.href='me.html'">YOUR</span> <span class="maers-interactive"
+                    onclick="window.location.href='me.html'">MAERS</span> <span class="maers-interactive"
                     onclick="window.location.href='space.html'">SPACE</span></div>
             <div class="brand-subtitle">Personal Knowledge & Creative Hub</div>
         </div>
@@ -61,17 +138,34 @@
                 <div class="card-title">Music</div>
                 <div class="card-desc">Personal playlist and rhythm. Listen to the vibe.</div>
             </div>
-            <div class="nav-card" onclick="void(0)">
-                <div class="card-bg-text">NEW</div>
-                <div class="card-icon">➕</div>
-                <div class="card-title">待添加</div>
-                <div class="card-desc">New features coming soon.</div>
+            <div class="nav-card" onclick="window.location.href='https://ai.maersy.com'"
+                style="border-color: rgba(0, 255, 255, 0.2);">
+                <div class="card-bg-text">AGEN</div>
+                <div class="card-icon">🤖</div>
+                <div class="card-title">AI Space</div>
+                <div class="card-desc">Nexus of intelligence and creative possibilities.</div>
             </div>
         </div>
         <footer style="margin-top: 60px; color: var(--text-sub); font-size: 0.8rem; opacity: 0.6;">
-            &copy; Your Personal Web. Powered by AI.
+            &copy; 2026 Maers Personal Web. Powered by AI.
         </footer>
     </div>
+    <!-- 🔥 页面内容加载完成，移除防闪烁遮罩并显示星星 -->
+    <script>
+        var guard = document.getElementById('flash-guard');
+        if (guard) {
+            setTimeout(function () {
+                guard.style.opacity = '0';
+            });
+
+            // ⏳ 动画时长 100ms = 100ms 后移除
+            setTimeout(function () {
+                guard.remove();
+                // 🌟 遮罩消失后，强制 body 透明 (必须加 important 才能覆盖 CSS)
+                document.body.style.setProperty('background-color', 'transparent', 'important');
+            }, 200);
+        }
+    </script>
 </body>
 
 </html>

@@ -51,8 +51,8 @@ body::before {
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: -1 !important;
-    pointer-events: none !important;
+    z-index: -1;
+    pointer-events: none;
     background-color: #141417;
     background-image:
         url('data:image/svg+xml;charset=utf-8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.02"/%3E%3C/svg%3E'),
@@ -60,6 +60,9 @@ body::before {
         linear-gradient(180deg, #141417 0%, #0a0a0c 100%);
     clip-path: circle(150% at 100% 0%);
     transition: clip-path 2.5s cubic-bezier(0.22, 1, 0.36, 1);
+    /* GPU 硬件加速 */
+    transform: translateZ(0);
+    will-change: clip-path;
 }
 
 #theme-mask::after {
@@ -106,8 +109,9 @@ body::before {
     }
 }
 
+/* 内联CSS的 !important 会覆盖这个，允许动画正常工作 */
 html.light-mode #theme-mask {
-    clip-path: circle(0% at 100% 0%) !important;
+    clip-path: circle(0% at 100% 0%);
 }
 
 html.light-mode #theme-mask::after {
@@ -186,7 +190,8 @@ html.shrink-view .container {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
 }
 
-html.shrink-view .main-card {
+html.shrink-view .main-card,
+html.shrink-view .home-container {
     transform: scale(0.65) translateY(50px);
     transform-origin: center top;
     border-radius: 40px;

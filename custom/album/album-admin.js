@@ -26,11 +26,13 @@
     });
 
     async function init() {
+        if (!grid) return;
         await loadData();
         render();
     }
 
     async function loadData() {
+        if (!grid) return;
         try {
             const res = await fetch(`dynamic-style/album-config.json?v=${Date.now()}`);
             if (res.ok) initialData = await res.json();
@@ -55,6 +57,7 @@
     }
 
     function render() {
+        if (!grid) return;
         grid.innerHTML = '';
         currentData.forEach((cat, index) => {
             const card = document.createElement('div');
@@ -135,7 +138,7 @@
         }).then(res => { if (res.ok) { loadData(); render(); } });
     }
 
-    if (saveBtn) {
+    if (saveBtn && grid) {
         saveBtn.onclick = async () => {
             const originalText = saveBtn.innerText;
             saveBtn.innerText = "⏳";

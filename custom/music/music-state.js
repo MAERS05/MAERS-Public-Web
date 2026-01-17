@@ -10,7 +10,7 @@
     global.MAERS = global.MAERS || {};
     MAERS.Music = MAERS.Music || {};
 
-    const STORAGE_KEY = 'maers_music_state_clean_v1';
+    const STORAGE_KEY = 'music_player_last_state';
     console.log("[MAERS.Music.State] 💾 Memory Plugin Loaded");
 
     // ================= 1. 状态保存逻辑 =================

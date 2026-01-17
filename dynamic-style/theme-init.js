@@ -2,8 +2,8 @@
     // 🔥 防止白色闪烁 (FOUC) - 立即应用背景色
     try {
         var isDark = true; // 默认深色
-        var savedTheme = localStorage.getItem('maers_theme');
-        var config = JSON.parse(localStorage.getItem('maers_theme_config')) || { enabled: false };
+        var savedTheme = localStorage.getItem('theme');
+        var config = JSON.parse(localStorage.getItem('autoThemeConfig')) || { enabled: false };
 
         if (config.enabled) {
             var now = new Date();
@@ -36,7 +36,7 @@
 
     // 1. 恢复缩放状态
     try {
-        if (localStorage.getItem('maers_zoom') === 'true') {
+        if (localStorage.getItem('globalZoomState') === 'true') {
             document.documentElement.classList.add('shrink-view');
         }
     } catch (e) { }
@@ -50,7 +50,7 @@
 
             // 👇 重点：把您的图标路径写在这里
             // 建议直接用文件路径，比那一长串乱码更干净、且能被浏览器缓存
-            link.href = 'ui/placeholder.svg';
+            link.href = 'ui/icon.svg';
 
             // 如果您非要用那串 Base64 乱码，就取消下面这行的注释，把乱码填进去：
             // link.href = 'data:image/svg+xml;base64,PHN2Zy...这里填那一堆乱码...';

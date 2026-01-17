@@ -234,7 +234,7 @@ def sync_js_file(module_name, data):
 ```
 
 ### 2. 安全性
-- 前端使用 `escapeHtml()` 转义用户输入
+- 前端使用 `escapeHtml()` 转义输入
 - 后端使用参数化查询防止 SQL 注入
 - 后台功能仅在 `localhost` 可用
 

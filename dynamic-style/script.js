@@ -24,7 +24,7 @@
 
         function safeLoadConfig() {
             try {
-                const raw = localStorage.getItem('maers_theme_config');
+                const raw = localStorage.getItem('autoThemeConfig');
                 if (!raw) return { ...DEFAULT_CONFIG };
 
                 const data = JSON.parse(raw);
@@ -37,7 +37,7 @@
                     else if (data.enabled === false) mode = 'manual';
                     const migrated = { ...DEFAULT_CONFIG, ...data, mode, version: CONFIG_VERSION };
                     delete migrated.enabled;
-                    localStorage.setItem('maers_theme_config', JSON.stringify(migrated));
+                    localStorage.setItem('autoThemeConfig', JSON.stringify(migrated));
                     return migrated;
                 }
                 return data;
@@ -103,10 +103,10 @@
 
                     autoBtn.textContent = getModeLabel(config.mode);
                     autoBtn.classList.toggle('active', config.mode !== 'manual');
-                    localStorage.setItem('maers_theme_config', JSON.stringify(config));
+                    localStorage.setItem('autoThemeConfig', JSON.stringify(config));
 
                     if (config.mode !== 'manual') {
-                        localStorage.removeItem('maers_theme');
+                        localStorage.removeItem('theme');
                     }
                     checkThemeStrategy();
                 });
@@ -123,7 +123,7 @@
                     e.stopPropagation();
                     config.dayTime = dayInput.value;
                     config.nightTime = nightInput.value;
-                    localStorage.setItem('maers_theme_config', JSON.stringify(config));
+                    localStorage.setItem('autoThemeConfig', JSON.stringify(config));
                     saveTrigger.classList.add('active');
                     setTimeout(() => { saveTrigger.classList.remove('active'); }, 1000);
                     if (config.mode === 'auto') checkThemeStrategy();
@@ -154,7 +154,7 @@
                     if (toggleSwitch) toggleSwitch.checked = isDark;
                     if (modeIcon) modeIcon.innerText = isDark ? "🌙" : "☀️";
 
-                    localStorage.setItem('maers_theme', theme);
+                    localStorage.setItem('theme', theme);
                 });
             } catch (err) {
                 console.error("[MAERS.Theme] Theme switch failed:", err);
@@ -165,14 +165,14 @@
         MAERS.Theme.apply = applyTheme;
 
         if (toggleSwitch) {
-            const saved = localStorage.getItem('maers_theme');
+            const saved = localStorage.getItem('theme');
             toggleSwitch.checked = (saved === 'dark-mode' || !saved);
             if (modeIcon) modeIcon.innerText = toggleSwitch.checked ? "🌙" : "☀️";
 
             toggleSwitch.addEventListener('change', (e) => {
                 if (config.mode !== 'manual') {
                     config.mode = 'manual';
-                    localStorage.setItem('maers_theme_config', JSON.stringify(config));
+                    localStorage.setItem('autoThemeConfig', JSON.stringify(config));
                     const btn = document.getElementById('auto-btn');
                     if (btn) {
                         btn.textContent = 'M';
@@ -203,7 +203,7 @@
                 applyTheme(isDay ? 'light-mode' : 'dark-mode');
             } else {
                 // 手动模式
-                const saved = localStorage.getItem('maers_theme');
+                const saved = localStorage.getItem('theme');
                 if (saved) applyTheme(saved);
                 else applyTheme('dark-mode');
             }
@@ -222,7 +222,7 @@
 
         // 智能缩放系统
         (function initZoomSystem() {
-            if (localStorage.getItem('maers_zoom') === 'true') {
+            if (localStorage.getItem('globalZoomState') === 'true') {
                 document.documentElement.classList.add('shrink-view');
                 setTimeout(() => { document.addEventListener('click', restoreGlobalView); }, 100);
             }
@@ -240,7 +240,7 @@
                 try {
                     if (e) { e.stopPropagation(); e.preventDefault(); }
                     const isShrunk = document.documentElement.classList.toggle('shrink-view');
-                    localStorage.setItem('maers_zoom', isShrunk);
+                    localStorage.setItem('globalZoomState', isShrunk);
 
                     if (isShrunk) {
                         setTimeout(() => { document.addEventListener('click', restoreGlobalView); }, 50);
@@ -262,7 +262,7 @@
 
                 document.documentElement.classList.remove('shrink-view');
                 document.removeEventListener('click', restoreGlobalView);
-                localStorage.setItem('maers_zoom', 'false');
+                localStorage.setItem('globalZoomState', 'false');
             }
 
             loadConfig().then(() => {

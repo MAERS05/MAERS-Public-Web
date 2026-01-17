@@ -1,0 +1,28 @@
+[2026-01-17 20:28:06] [PID:26508][TID:16824] [信息] Antigravity-Proxy DLL 已加载 (模拟 version.dll)
+[2026-01-17 20:28:06] [PID:26508][TID:16824] [信息] 使用配置文件路径: E:\Antigravity\config.json
+[2026-01-17 20:28:06] [PID:26508][TID:16824] [信息] 已加载目标进程列表, 共 2 项
+[2026-01-17 20:28:06] [PID:26508][TID:16824] [信息] 配置: proxy=127.0.0.1:7897 type=socks5, fake_ip=true, child_injection=true, traffic_logging=false
+[2026-01-17 20:28:06] [PID:26508][TID:16824] [信息] 配置加载成功。
+[2026-01-17 20:28:06] [PID:26508][TID:16824] [信息] 所有 API Hook 安装成功 (Phase 1-3)
+[2026-01-17 20:28:06] [PID:29840][TID:19164] [信息] Antigravity-Proxy DLL 已加载 (模拟 version.dll)
+[2026-01-17 20:28:06] [PID:29840][TID:19164] [信息] 使用配置文件路径: E:\Antigravity\config.json
+[2026-01-17 20:28:06] [PID:29840][TID:19164] [信息] 已加载目标进程列表, 共 2 项
+[2026-01-17 20:28:06] [PID:29840][TID:19164] [信息] 配置: proxy=127.0.0.1:7897 type=socks5, fake_ip=true, child_injection=true, traffic_logging=false
+[2026-01-17 20:28:06] [PID:29840][TID:19164] [信息] 配置加载成功。
+[2026-01-17 20:28:06] [PID:29840][TID:19164] [信息] 所有 API Hook 安装成功 (Phase 1-3)
+[2026-01-17 20:28:06] [PID:24492][TID:25868] [信息] Antigravity-Proxy DLL 已加载 (模拟 version.dll)
+[2026-01-17 20:28:06] [PID:24492][TID:25868] [信息] 使用配置文件路径: E:\Antigravity\config.json
+[2026-01-17 20:28:06] [PID:24492][TID:25868] [信息] 已加载目标进程列表, 共 2 项
+[2026-01-17 20:28:06] [PID:24492][TID:25868] [信息] 配置: proxy=127.0.0.1:7897 type=socks5, fake_ip=true, child_injection=true, traffic_logging=false
+[2026-01-17 20:28:06] [PID:24492][TID:25868] [信息] 配置加载成功。
+[2026-01-17 20:28:06] [PID:24492][TID:25868] [信息] 所有 API Hook 安装成功 (Phase 1-3)
+[2026-01-17 20:28:07] [PID:3800][TID:20568] [信息] Antigravity-Proxy DLL 已加载 (模拟 version.dll)
+[2026-01-17 20:28:07] [PID:3800][TID:20568] [信息] 使用配置文件路径: E:\Antigravity\config.json
+[2026-01-17 20:28:07] [PID:3800][TID:20568] [信息] 已加载目标进程列表, 共 2 项
+[2026-01-17 20:28:07] [PID:3800][TID:20568] [信息] 配置: proxy=127.0.0.1:7897 type=socks5, fake_ip=true, child_injection=true, traffic_logging=false
+[2026-01-17 20:28:07] [PID:3800][TID:20568] [信息] 配置加载成功。
+[2026-01-17 20:28:07] [PID:3800][TID:20568] [信息] 所有 API Hook 安装成功 (Phase 1-3)
+[2026-01-17 20:28:09] [PID:24492][TID:29800] [信息] Antigravity-Proxy DLL 已卸载
+[2026-01-17 20:28:09] [PID:3800][TID:3736] [信息] Antigravity-Proxy DLL 已卸载
+[2026-01-17 20:28:09] [PID:29840][TID:25056] [信息] Antigravity-Proxy DLL 已卸载
+[2026-01-17 20:28:09] [PID:26508][TID:22196] [信息] Antigravity-Proxy DLL 已卸载
