@@ -24,9 +24,27 @@
     <script defer src="dynamic-style/script.js"></script>
 
     <script src="shared/toast.js"></script>
+
+    <link rel="stylesheet" href="static-style/splash.css">
+    <script>
+        // Splash Screen Control
+        window.addEventListener('load', () => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                setTimeout(() => {
+                    splash.style.opacity = '0';
+                    setTimeout(() => splash.remove(), 500);
+                }, 200);
+            }
+        });
+    </script>
 </head>
 
 <body>
+    <!-- 🔥 Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-logo">🛠️</div>
+    </div>
     <div id="theme-mask"></div>
     <div class="container">
         <div class="main-card">

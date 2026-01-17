@@ -3,6 +3,7 @@
 
 <head>
 
+    <link rel="stylesheet" href="static-style/splash.css">
     <script>
         // Splash Screen Control
         window.addEventListener('load', () => {
@@ -10,8 +11,8 @@
             if (splash) {
                 setTimeout(() => {
                     splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 800); // Remove after transition
-                }, 300); // Short delay to ensure render stability
+                    setTimeout(() => splash.remove(), 500); // 0.5s transition
+                }, 200); // 200ms delay
             }
         });
     </script>
@@ -35,7 +36,7 @@
 <body class="admin-mode">
     <!-- 🔥 Splash Screen: 掩盖初始加载闪烁 -->
     <div id="splash-screen">
-        <img src="ui/music.png" class="splash-logo">
+        <div class="splash-logo">🛠️</div>
     </div>
     <script src="data-manage/data-provider.js"></script>
     <script src="dynamic-style/style-injector.js"></script>

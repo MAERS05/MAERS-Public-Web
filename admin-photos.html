@@ -131,9 +131,26 @@
         // 🔥 强制开启管理员模式
         window.IS_ADMIN = true;
     </script>
+    <link rel="stylesheet" href="static-style/splash.css">
+    <script>
+        // Splash Screen Control
+        window.addEventListener('load', () => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                setTimeout(() => {
+                    splash.style.opacity = '0';
+                    setTimeout(() => splash.remove(), 500);
+                }, 200); // 200ms delay
+            }
+        });
+    </script>
 </head>
 
 <body>
+    <!-- 🔥 Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-logo">🛠️</div>
+    </div>
     <div class="container">
         <div class="main-card content-mode">
             <div class="page-header-bar">

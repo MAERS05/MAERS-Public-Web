@@ -1,5 +1,28 @@
 (function () {
-    // 🔥 防止白色闪烁 (FOUC) - 立即应用背景色
+    // ---------------------------------------------------------
+    // 0. 全局防闪烁遮罩 (Global Flash Guard)
+    // ---------------------------------------------------------
+    // 逻辑：立即注入一个全屏遮罩样式，在页面判定完成后移除
+    // 这样所有引入此脚本的页面都能拥有 index.html 同款的无闪烁体验
+    var guardId = 'global-theme-guard-style';
+    if (!document.getElementById(guardId)) {
+        var css = 'html.js-loading::before { content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #141417; z-index: 99999; pointer-events: none; transition: opacity 0.2s ease-out; }';
+        var style = document.createElement('style');
+        style.id = guardId;
+        style.innerHTML = css;
+        document.head.appendChild(style);
+        document.documentElement.classList.add('js-loading');
+
+        // 兜底：500ms 后强制移除，防止脚本报错导致永久黑屏
+        setTimeout(function () {
+            document.documentElement.classList.remove('js-loading');
+        }, 500);
+    }
+
+    // ---------------------------------------------------------
+    // 1. 主题检测与应用 (Theme Detection)
+    // ---------------------------------------------------------
+    // 逻辑完全复刻自 index.html
     try {
         var isDark = true; // 默认深色
         var savedTheme = localStorage.getItem('theme');
@@ -8,6 +31,7 @@
         if (config.enabled) {
             var now = new Date();
             var mins = now.getHours() * 60 + now.getMinutes();
+            // 默认早7晚7
             var d = (config.dayTime || "07:00").split(':');
             var n = (config.nightTime || "19:00").split(':');
             var s = parseInt(d[0]) * 60 + parseInt(d[1]);
@@ -19,43 +43,78 @@
             isDark = false;
         }
 
-        // 立即应用背景色样式 (阻塞式内联)
+        // 应用主题
+        if (isDark) {
+            document.documentElement.classList.remove('light-mode');
+        } else {
+            document.documentElement.classList.add('light-mode');
+        }
+
+        // [Fallout Sync] 
+        // 这里的背景色强制设置保留作为非遮罩区域的兜底
+        // 但为了避免与遮罩冲突，延后执行或仅作为底色修正
         var bgColor = isDark ? '#0a0a0a' : '#ffffff';
         var textColor = isDark ? '#e0e0e0' : '#1a1a1a';
         document.documentElement.style.backgroundColor = bgColor;
         document.documentElement.style.color = textColor;
 
-        // 应用主题类
-        if (!isDark) document.documentElement.classList.add('light-mode');
-
     } catch (e) {
-        // 失败时使用默认深色
+        // 出错默认深色
         document.documentElement.style.backgroundColor = '#0a0a0a';
         document.documentElement.style.color = '#e0e0e0';
     }
 
-    // 1. 恢复缩放状态
+    // ---------------------------------------------------------
+    // 2. 缩放状态恢复 (Zoom Restoration)
+    // ---------------------------------------------------------
     try {
         if (localStorage.getItem('globalZoomState') === 'true') {
             document.documentElement.classList.add('shrink-view');
         }
     } catch (e) { }
 
+    // ---------------------------------------------------------
+    // 3. 图标注入 (Favicon)
+    // ---------------------------------------------------------
     try {
-        // 检测页面是否已经有图标了，如果没有才添加
         if (!document.querySelector("link[rel*='icon']")) {
             var link = document.createElement('link');
             link.type = 'image/svg+xml';
             link.rel = 'icon';
-
-            // 👇 重点：把您的图标路径写在这里
-            // 建议直接用文件路径，比那一长串乱码更干净、且能被浏览器缓存
             link.href = 'ui/icon.svg';
-
-            // 如果您非要用那串 Base64 乱码，就取消下面这行的注释，把乱码填进去：
-            // link.href = 'data:image/svg+xml;base64,PHN2Zy...这里填那一堆乱码...';
-
             document.getElementsByTagName('head')[0].appendChild(link);
         }
     } catch (e) { }
+
+    // ---------------------------------------------------------
+    // 4. 解除遮罩 (Remove Guard)
+    // ---------------------------------------------------------
+    // 页面内容基本就绪后移除遮罩
+    // 页面内容基本就绪后移除遮罩
+    function removeGuard() {
+        // 1. 移除全局伪元素遮罩
+        document.documentElement.classList.remove('js-loading');
+
+        // 2. [Index Special] 移除首页硬编码的 DOM 遮罩 (#flash-guard)
+        // 必须与 index.html 原有逻辑保持一致（透明 -> 移除）
+        var legacyGuard = document.getElementById('flash-guard');
+        if (legacyGuard) {
+            legacyGuard.style.opacity = '0';
+            setTimeout(function () {
+                legacyGuard.remove();
+                // 首页特效：遮罩消失后，强制 body 透明 (配合 CSS)
+                document.body.style.setProperty('background-color', 'transparent', 'important');
+            }, 200);
+        }
+    }
+
+    // 如果是 DOMContentLoaded 之后才执行此脚本，立即移除
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+        setTimeout(removeGuard, 100);
+    } else {
+        document.addEventListener('DOMContentLoaded', function () {
+            setTimeout(removeGuard, 100);
+        });
+    }
+
 })();

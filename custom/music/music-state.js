@@ -167,9 +167,111 @@
         return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
     }
 
+    // ================= 3. 清除状态逻辑 =================
+
+    function clearState() {
+        localStorage.removeItem(STORAGE_KEY);
+        console.log("[MAERS.Music.State] 🗑️ Player state cleared");
+
+        // 重置播放器状态
+        const Player = MAERS.Music.Player || {};
+        if (Player.currentPlaying) {
+            Player.currentPlaying = { bvid: null, page: 0, total: 0, catIdx: -1, colIdx: -1, albIdx: -1 };
+            Player.playedSeconds = 0;
+            Player.isPlaying = false;
+        }
+
+        // 清除 UI 状态
+        const seekSlider = document.getElementById('seek-slider');
+        const currLabel = document.getElementById('curr-time');
+        const totalLabel = document.getElementById('total-time');
+        if (seekSlider) seekSlider.value = 0;
+        if (currLabel) currLabel.innerText = '00:00';
+        if (totalLabel) totalLabel.innerText = '00:00';
+
+        // 隐藏播放信息
+        document.querySelectorAll('.header-playing-info').forEach(el => {
+            el.innerHTML = '';
+            el.classList.remove('show');
+        });
+
+        // 隐藏跳转和还原按钮
+        const jumpLink = document.getElementById('jump-link');
+        const resetLink = document.getElementById('reset-link');
+        if (jumpLink) jumpLink.style.display = 'none';
+        if (resetLink) resetLink.style.display = 'none';
+
+        // 移除播放高亮
+        document.querySelectorAll('.playing').forEach(el => el.classList.remove('playing'));
+
+        // 隐藏暂停提示
+        const tip = document.getElementById('next-tip');
+        if (tip) tip.style.display = 'none';
+
+        // 重置封面
+        const cover = document.getElementById('video-cover');
+        const frame = document.getElementById('bili-frame');
+        if (cover) cover.style.opacity = '1';
+        if (frame) {
+            frame.src = '';
+            frame.style.opacity = '0';
+        }
+
+        // 重置耳机动画
+        const icon = document.querySelector('.right-icon');
+        if (icon) {
+            icon.classList.remove('beating', 'paused');
+        }
+
+        // 提示用户
+        if (MAERS.Music.Player && MAERS.Music.Player.showTip) {
+            MAERS.Music.Player.showTip('记忆已清除');
+        }
+    }
+
+    // ================= 4. 按钮可见性控制 =================
+
+    function updateResetButtonVisibility() {
+        const Player = MAERS.Music.Player || {};
+        const jumpLink = document.getElementById('jump-link');
+        const resetLink = document.getElementById('reset-link');
+        const hasSavedState = localStorage.getItem(STORAGE_KEY);
+
+        if (!resetLink) return;
+
+        // 播放时：显示跳转按钮，隐藏还原按钮
+        // 暂停时：隐藏跳转按钮，显示还原按钮（如果有保存的状态）
+        if (Player.isPlaying) {
+            if (jumpLink) jumpLink.style.display = 'block';
+            resetLink.style.display = 'none';
+        } else {
+            if (jumpLink) jumpLink.style.display = 'none';
+            // 只有有保存状态时才显示还原按钮
+            resetLink.style.display = hasSavedState ? 'block' : 'none';
+        }
+    }
+
+    // 监听播放状态变化
+    setInterval(updateResetButtonVisibility, 500);
+
+    // 绑定还原按钮点击事件
+    document.addEventListener('DOMContentLoaded', () => {
+        const resetLink = document.getElementById('reset-link');
+        if (resetLink) {
+            resetLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                clearState();
+            });
+        }
+        // 初始化按钮可见性
+        updateResetButtonVisibility();
+    });
+
     // Mount to namespace
     MAERS.Music.State = {
         saveState,
+        clearState,
         restoreState,
         formatTime
     };

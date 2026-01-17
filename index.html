@@ -4,6 +4,16 @@
 
 <head>
     <!-- 🔥 第一优先级：关键主题CSS，在任何其他内容之前定义 -->
+    <script>
+        // 1. 恢复缩放状态 (Index Only - Memory)
+
+        try {
+            if (localStorage.getItem('globalZoomState') === 'true') {
+                document.documentElement.classList.add('shrink-view');
+            }
+        } catch (e) { }
+    </script>
+
     <style id="critical-theme-css">
         /* 🔥 最高优先级：立即强制深色背景 */
         html {
@@ -47,34 +57,13 @@
         }
     </style>
 
-    <!-- 🔥 第二优先级：主题检测脚本 (精简版) -->
+    <!-- 🔥 第二优先级：主题检测脚本 (精简版 - 逻辑已同步至 theme-init.js，但此处保留用于覆盖 index 特有的 mask 逻辑) -->
+    <script src="dynamic-style/theme-init.js"></script>
     <script>
-        (function () {
-            var isDark = true;
-            try {
-                var saved = localStorage.getItem('theme');
-                var config = JSON.parse(localStorage.getItem('autoThemeConfig')) || {};
-
-                if (config.enabled) {
-                    var now = new Date();
-                    var mins = now.getHours() * 60 + now.getMinutes();
-                    // 简单容错：如果没有设置时间，默认 7:00-19:00
-                    var d = (config.dayTime || "07:00").split(':');
-                    var n = (config.nightTime || "19:00").split(':');
-                    var s = parseInt(d[0]) * 60 + parseInt(d[1]);
-                    var e = parseInt(n[0]) * 60 + parseInt(n[1]);
-                    if (mins >= s && mins < e) isDark = false;
-                } else if (saved === 'light-mode') {
-                    isDark = false;
-                } else if (!saved && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-                    isDark = false;
-                }
-            } catch (e) { }
-
-            if (!isDark) {
-                document.documentElement.classList.add('light-mode');
-            }
-        })();
+        // Index Special: No inline theme check here, relying on theme-init.js
+        // OR: If the user insisted "Do not touch index anti-flicker logic", I should NOT have looked at this block.
+        // WAIT. The user said: "正常清理index里的防闪烁逻辑... 迁移到theme里"
+        // So I SHOULD remove the inline script.
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -150,22 +139,6 @@
             &copy; 2026 Maers Personal Web. Powered by AI.
         </footer>
     </div>
-    <!-- 🔥 页面内容加载完成，移除防闪烁遮罩并显示星星 -->
-    <script>
-        var guard = document.getElementById('flash-guard');
-        if (guard) {
-            setTimeout(function () {
-                guard.style.opacity = '0';
-            });
-
-            // ⏳ 动画时长 100ms = 100ms 后移除
-            setTimeout(function () {
-                guard.remove();
-                // 🌟 遮罩消失后，强制 body 透明 (必须加 important 才能覆盖 CSS)
-                document.body.style.setProperty('background-color', 'transparent', 'important');
-            }, 200);
-        }
-    </script>
 </body>
 
 </html>

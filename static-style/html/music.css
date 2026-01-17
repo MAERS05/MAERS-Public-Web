@@ -833,6 +833,38 @@ input,
     border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+/* 还原按钮（仅暂停时显示） */
+.reset-link {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 101;
+    display: none;
+    transition: transform 0.2s;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.reset-link:hover {
+    transform: scale(1.1);
+}
+
+.reset-icon {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(2px);
+    color: rgba(255, 255, 255, 0.8);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .video-cover {
     position: absolute;
     top: 0;

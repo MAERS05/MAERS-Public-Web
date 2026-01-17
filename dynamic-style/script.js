@@ -257,7 +257,7 @@
             function restoreGlobalView(e) {
                 const t = e.target;
                 if (t.closest('.zoom-trigger-icon') || t.closest('.zoom-trigger-whole')) return;
-                if (t.closest('.main-card')) return;
+                if (t.closest('.main-card') || t.closest('.nav-card') || t.closest('.brand-area')) return;
                 if (t.closest('.theme-switch-wrapper') || t.closest('.auto-mode-btn') || t.closest('.lightbox')) return;
 
                 document.documentElement.classList.remove('shrink-view');

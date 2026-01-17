@@ -1,1 +1,1 @@
-musicData = [];
+var musicData = [];
