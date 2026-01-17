@@ -22,12 +22,12 @@ def dispatch_get(path, query_params):
         bvid = query_params.get('bvid', [None])[0]
         return bili.get_video_info(bvid)
     
-    # 4. Music
+    # 4. Music - 获取音乐数据 API
     if parsed_path == '/api/music_data':
-         # music.py 好像没有 get ?
-         # 查看 server.py 原逻辑，音乐获取直接 load json，这里 data-provider 是直接请求 json 文件的
-         # 如果有 API 请求，可以添加
-         pass
+        data = cms.load_json('data/music-data.json', 'data/music-data.js')
+        if data is not None:
+            return 200, data
+        return 404, {"error": "Music data not found"}
 
     return 404, None  # 返回 None 让 SimpleHTTPRequestHandler 处理静态文件
 

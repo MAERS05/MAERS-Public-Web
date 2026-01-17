@@ -246,13 +246,24 @@ def load_json(path, fallback_path=None):
 
 def save_json(filepath, data, js_path=None, var_name=None):
     """【兼容性保留】供 server.py 中非 CMS 模块使用"""
-    # 简单实现，不再包含复杂锁
     try:
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        # 🔥 关键修复：如果提供了 js_path，同步生成 JS 文件供前端读取
+        if js_path and var_name:
+            js_full_path = os.path.join(PROJECT_ROOT, js_path) if not os.path.isabs(js_path) else js_path
+            os.makedirs(os.path.dirname(js_full_path), exist_ok=True)
+            js_content = f"window.{var_name} = {json.dumps(data, ensure_ascii=False, indent=2)};\n"
+            with open(js_full_path, 'w', encoding='utf-8') as f:
+                f.write(js_content)
+            print(f"✅ JS 同步成功: {js_path}")
+        
         return True
-    except: return False
+    except Exception as e:
+        print(f"❌ save_json 失败: {e}")
+        return False
 
 def handle_request(path, method, query_params, body_data):
     try:
