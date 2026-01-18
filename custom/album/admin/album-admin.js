@@ -75,9 +75,9 @@
                 if (e.target.closest('.action-btn')) return;
                 window.location.href = `admin-photos.html?id=${cat.id}`;
             };
-            const safeTitle = cat.title.replace(/'/g, "\\'");
-            const safeSub = cat.subtitle.replace(/'/g, "\\'");
-            const safeIcon = cat.icon.replace(/'/g, "\\'");
+            const safeTitle = cat.title.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const safeSub = cat.subtitle.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            const safeIcon = cat.icon.replace(/'/g, "\\'").replace(/"/g, "&quot;");
             card.innerHTML = `
                 <div class="card-bg-glow"></div>
                 <div class="admin-actions">
@@ -135,7 +135,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: item.id, title, subtitle, icon })
-        }).then(res => { if (res.ok) { loadData(); render(); } });
+        }).then(async res => { if (res.ok) { await loadData(); render(); } });
     }
 
     if (saveBtn && grid) {

@@ -175,19 +175,45 @@
         }).catch(err => alert("网络错误"));
     }
 
-    function resetAlbum(c, l, a) {
-        if (!confirm("确定重置该视频吗？\n这将恢复所有被删除的分P，并将标题归位。")) return;
-        fetch(`${API_BASE}/api/reset_tracks`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ catIdx: c, colIdx: l, albIdx: a })
-        }).then(res => {
-            if (res.ok) {
-                const UI = MAERS.Music.UI || {};
-                if (UI.loadMusicData) UI.loadMusicData().then(() => { if (UI.refreshCurrentView) UI.refreshCurrentView(); });
-            } else {
-                alert("重置失败");
-            }
-        }).catch(err => alert("网络错误"));
+    async function resetAlbum(c, l, a) {
+        if (!confirm("确定重置该视频吗？\n这将从B站重新抓取数据，恢复所有被删除的分P和原始分P名称。")) return;
+        const UI = MAERS.Music.UI || {};
+        const Player = MAERS.Music.Player || {};
+        const alb = UI.libraryData[c].collections[l].albums[a];
+        const bvid = alb.bvid;
+        
+        if (!bvid) {
+            alert("该专辑缺少 BVID，无法重置");
+            return;
+        }
+        
+        if (Player.showTip) Player.showTip("正在从B站重新抓取数据...");
+        try {
+            const response = await fetch(`${API_BASE}/api/get_bili_info?bvid=${bvid}`);
+            if (!response.ok) throw new Error("无法连接到抓取接口");
+            const info = await response.json();
+            
+            // 更新专辑数据
+            alb.total = info.pages.length;
+            alb.duration = info.duration;
+            alb.durations = {};
+            alb.custom_parts = [];
+            alb.page_mapping = [];
+            
+            info.pages.forEach(p => {
+                alb.durations[p.page] = p.duration;
+                alb.custom_parts.push(p.part);
+                alb.page_mapping.push(p.page);
+            });
+            
+            if (UI.saveData) UI.saveData();
+            if (UI.refreshCurrentView) UI.refreshCurrentView();
+            if (Player.showTip) Player.showTip("✅ 重置成功！");
+        } catch (err) {
+            console.error(err);
+            alert("重置失败：无法从B站获取视频信息");
+            if (Player.showTip) Player.showTip("❌ 重置失败");
+        }
     }
 
     // Mount to namespace
