@@ -1,1 +1,0 @@
-window.CATEGORY_CONFIG = [];
