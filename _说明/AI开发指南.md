@@ -18,14 +18,16 @@
 ## 📋 项目核心信息
 
 ### 基本信息
+
 - **项目名称**: MAERS Personal Web
-- **技术栈**: 
+- **技术栈**:
   - 前端: 原生 HTML/CSS/JavaScript (无框架)
   - 后端: Python 3.8+ (标准库 + SQLite)
 - **架构模式**: 静态优先 + 动态管理
 - **命名空间**: 所有功能挂载到 `window.MAERS.*`
 
 ### 核心理念
+
 1. **无框架依赖** - 不使用 React/Vue/Angular
 2. **零构建工具** - 不使用 Webpack/Vite
 3. **JS封装JSON** - 数据以 `.js` 文件形式提供，而非 `.json`
@@ -54,19 +56,41 @@ MAERS-Personal-Web/
 │   └── photos-data.js  # 自动生成的静态数据
 ├── custom/             # 🎨 模块化业务逻辑
 │   ├── album/          # 相册模块
-│   │   ├── album-view.js
-│   │   └── album-admin.js
+│   │   ├── admin/      # 管理端
+│   │   │   ├── album-admin.js
+│   │   │   ├── admin-album.css
+│   │   │   └── album-config.json
+│   │   └── viewer/     # 访问端
+│   │       ├── album-view.js
+│   │       ├── album-viewer.css
+│   │       └── album-config.js
 │   ├── cms/            # 笔记模块
-│   │   ├── cms-view.js
-│   │   ├── cms-editor.js
-│   │   └── cms-drag.js
-│   └── music/          # 音乐模块
-│       ├── music-ui.js
-│       ├── music-player.js
-│       ├── music-render.js
-│       ├── music-control.js
-│       ├── music-drag.js
-│       └── music-state.js
+│   │   ├── admin/
+│   │   │   ├── cms-editor.js
+│   │   │   ├── cms-drag.js
+│   │   │   └── admin-cms.css
+│   │   └── viewer/
+│   │       ├── cms-view.js
+│   │       └── cms-common.css
+│   ├── music/          # 音乐模块
+│   │   ├── admin/
+│   │   │   ├── music-admin.js
+│   │   │   ├── music-drag.js
+│   │   │   └── admin-music.css
+│   │   └── viewer/
+│   │       ├── music-ui.js
+│   │       ├── music-player.js
+│   │       ├── music-render.js
+│   │       ├── music-control.js
+│   │       ├── music-state.js
+│   │       └── music.css
+│   └── index/          # 首页模块
+│       ├── admin/
+│       │   ├── admin-core.js
+│       │   ├── admin.css
+│       │   └── modules.json
+│       └── viewer/
+│           └── index.css
 ├── data-manage/        # 📊 数据控制器
 │   ├── api-client.js
 │   ├── data-provider.js
@@ -79,12 +103,15 @@ MAERS-Personal-Web/
 │   ├── namespace.js    # 命名空间定义
 │   ├── templates.js    # HTML 模板
 │   └── toast.js        # 提示框
-├── static-style/       # 🎨 CSS 样式
+├── static-style/       # 🎨 CSS 样式系统
 │   ├── theme.css       # 主题变量
 │   ├── components.css  # 通用组件
-│   └── html/           # 页面特定样式
+│   ├── responsive.css  # 响应式布局
+│   └── splash.css      # 开场动画
 ├── dynamic-style/      # ⚡ 动态配置
-│   └── modules.json    # 模块配置
+│   ├── style-injector.js # 样式注入
+│   ├── layout.js       # 布局计算
+│   └── script.js       # 核心交互
 └── *.html              # 📄 页面入口
 ```
 
@@ -99,11 +126,11 @@ MAERS-Personal-Web/
 window.MAERS = window.MAERS || {};
 
 // 模块组织
-MAERS.Utils = {};          // 通用工具
-MAERS.CMS = {};            // CMS 模块
-MAERS.Music = {};          // 音乐模块
-MAERS.Album = {};          // 相册模块
-MAERS.Admin = {};          // 管理功能
+MAERS.Utils = {}; // 通用工具
+MAERS.CMS = {}; // CMS 模块
+MAERS.Music = {}; // 音乐模块
+MAERS.Album = {}; // 相册模块
+MAERS.Admin = {}; // 管理功能
 
 // 调用示例
 MAERS.Utils.Search.filterNodes(tree, "关键词");
@@ -135,11 +162,11 @@ window.MAERS_DATA = {
 
 ```javascript
 // data-provider.js 中的环境判断
-const isLocal = window.location.hostname === 'localhost';
+const isLocal = window.location.hostname === "localhost";
 if (isLocal && window.IS_ADMIN) {
-    // 调用 API
+  // 调用 API
 } else {
-    // 读取静态 JS
+  // 读取静态 JS
 }
 ```
 
@@ -150,6 +177,7 @@ if (isLocal && window.IS_ADMIN) {
 ### 场景1: 添加新的 CMS 功能
 
 **需要修改的文件：**
+
 1. `custom/cms/cms-view.js` - UI 渲染逻辑
 2. `data-manage/cms-controller.js` - 数据控制
 3. `_studio/services/cms.py` - 后端逻辑
@@ -159,6 +187,7 @@ if (isLocal && window.IS_ADMIN) {
 ### 场景2: 修改样式
 
 **需要修改的文件：**
+
 1. `static-style/theme.css` - 全局变量（颜色、字体）
 2. `static-style/html/*.css` - 页面特定样式
 3. `static-style/components.css` - 组件样式
@@ -166,6 +195,7 @@ if (isLocal && window.IS_ADMIN) {
 ### 场景3: 添加新的 API 接口
 
 **需要修改的文件：**
+
 1. `_studio/routes.py` - 添加路由
 2. `_studio/services/*.py` - 实现业务逻辑
 3. `data-manage/*-controller.js` - 前端调用
@@ -177,12 +207,14 @@ if (isLocal && window.IS_ADMIN) {
 **位置**: `shared/utils.js` 中的 `MAERS.Utils.Search`
 
 **核心功能：**
+
 - 拼音搜索 (`getPinyinInitials`)
 - 节点查找 (`findNode`, `findPath`)
 - 树过滤 (`filterNodes`)
 - 标签筛选 (`collectTags`)
 
 **使用示例：**
+
 ```javascript
 // 拼音搜索
 const pinyin = MAERS.Utils.Search.getPinyinInitials("中文");
@@ -196,15 +228,18 @@ const filtered = MAERS.Utils.Search.filterNodes(tree, "关键词");
 ## 🎯 给 AI 的关键提示
 
 ### 代码风格
+
 1. **使用命名空间** - 不直接定义全局函数
 2. **参数化配置** - 使用 CSS 变量和 JSON 配置
 3. **防御性编程** - 添加参数校验和错误处理
 
 ### 文件路径
-- ✅ 正确: `custom/cms/cms-view.js`
-- ❌ 错误: `custom/cms-view.js` (旧结构)
+
+- ✅ 正确: `custom/cms/viewer/cms-view.js`
+- ❌ 错误: `custom/cms/cms-view.js` (旧结构)
 
 ### HTML 事件处理
+
 ```html
 <!-- 正确：使用命名空间 -->
 <button onclick="MAERS.Admin.exportModules()">导出</button>
@@ -214,6 +249,7 @@ const filtered = MAERS.Utils.Search.filterNodes(tree, "关键词");
 ```
 
 ### 数据管理层
+
 - `data-manage/` 目录包含所有控制器逻辑
 - `admin-core.js` - 后台核心管理
 - `music-admin.js` - 音乐管理
@@ -225,6 +261,7 @@ const filtered = MAERS.Utils.Search.filterNodes(tree, "关键词");
 ## 📌 重要约定
 
 ### 1. 数据同步机制
+
 ```python
 # 后端每次修改数据后，都要重新生成静态 JS
 def sync_js_file(module_name, data):
@@ -234,11 +271,13 @@ def sync_js_file(module_name, data):
 ```
 
 ### 2. 安全性
+
 - 前端使用 `escapeHtml()` 转义输入
 - 后端使用参数化查询防止 SQL 注入
 - 后台功能仅在 `localhost` 可用
 
 ### 3. 性能优化
+
 - 图片自动压缩为 AVIF/WebP
 - 使用 `defer` 加载非关键脚本
 - 瀑布流使用虚拟滚动（计划中）
@@ -251,15 +290,15 @@ def sync_js_file(module_name, data):
 我在开发 MAERS 项目，这是一个基于原生 JS 和 Python 的个人网站。
 
 项目使用命名空间模式，所有功能挂载到 window.MAERS.*。
-目录结构：custom/ 下按模块分组（album/, cms/, music/）。
+目录结构：custom/ 下按模块分组（custom/album/admin, custom/album/viewer...）。
 
 请帮我 [具体需求]，注意：
 1. 使用 MAERS.* 命名空间
-2. 文件路径为 custom/[模块]/[文件].js
+2. 明确文件是在 admin/ 还是 viewer/ 目录下
 3. 遵循项目的代码风格
 ```
 
 ---
 
-**最后更新**: 2026-01-17  
-**版本**: v2.7（目录结构重构后）
+**最后更新**: 2026-01-18  
+**版本**: v2.8（目录结构重构后）

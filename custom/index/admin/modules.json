@@ -1,0 +1,32 @@
+[
+  {
+    "title": "图片管理",
+    "icon": "🖼️",
+    "url": "admin-album.html?type=photos",
+    "style": "custom/album/admin/admin-album.css"
+  },
+  {
+    "title": "音视管理",
+    "icon": "🎧",
+    "url": "admin-music.html",
+    "style": "custom/music/admin/admin-music.css"
+  },
+  {
+    "title": "笔记管理",
+    "icon": "✒️",
+    "url": "admin-cms.html?module=notes",
+    "style": "custom/notes/viewer/notes.css"
+  },
+  {
+    "title": "文学管理",
+    "icon": "📙",
+    "url": "admin-cms.html?module=literature",
+    "style": "custom/literature/viewer/literature.css"
+  },
+  {
+    "title": "记录管理",
+    "icon": "📝",
+    "url": "admin-cms.html?module=record",
+    "style": "custom/record/viewer/record.css"
+  }
+]

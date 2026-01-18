@@ -44,7 +44,7 @@
             allowTags: false,
             allowMove: true,
             allowContent: false,
-            dataFile: 'dynamic-style/album-config.json'
+            dataFile: 'custom/album/admin/album-config.json'
         },
         music: {
             icon: '🎵',

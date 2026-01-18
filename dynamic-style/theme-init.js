@@ -6,7 +6,7 @@
     // 这样所有引入此脚本的页面都能拥有 index.html 同款的无闪烁体验
     var guardId = 'global-theme-guard-style';
     if (!document.getElementById(guardId)) {
-        var css = 'html.js-loading::before { content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #141417; z-index: 99999; pointer-events: none; transition: opacity 0.2s ease-out; }';
+        var css = 'html.js-loading::before { content: ""; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #141417; z-index: 99999; pointer-events: none; transition: opacity 0.2s ease-out; } html.light-mode.js-loading::before { background-color: #f2f0eb; }';
         var style = document.createElement('style');
         style.id = guardId;
         style.innerHTML = css;

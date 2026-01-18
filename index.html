@@ -6,7 +6,6 @@
     <!-- 🔥 第一优先级：关键主题CSS，在任何其他内容之前定义 -->
     <script>
         // 1. 恢复缩放状态 (Index Only - Memory)
-
         try {
             if (localStorage.getItem('globalZoomState') === 'true') {
                 document.documentElement.classList.add('shrink-view');
@@ -59,12 +58,6 @@
 
     <!-- 🔥 第二优先级：主题检测脚本 (精简版 - 逻辑已同步至 theme-init.js，但此处保留用于覆盖 index 特有的 mask 逻辑) -->
     <script src="dynamic-style/theme-init.js"></script>
-    <script>
-        // Index Special: No inline theme check here, relying on theme-init.js
-        // OR: If the user insisted "Do not touch index anti-flicker logic", I should NOT have looked at this block.
-        // WAIT. The user said: "正常清理index里的防闪烁逻辑... 迁移到theme里"
-        // So I SHOULD remove the inline script.
-    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="dark light">
@@ -81,7 +74,7 @@
     <link rel="stylesheet" href="static-style/style.css">
     <script defer src="dynamic-style/layout.js"></script>
     <script defer src="dynamic-style/script.js"></script>
-    <link rel="stylesheet" href="static-style/html/index.css">
+    <link rel="stylesheet" href="custom/index/viewer/index.css">
 
 </head>
 

@@ -1,1 +1,1 @@
-var musicData = [];
+window.musicData = [];

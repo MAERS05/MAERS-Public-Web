@@ -1,0 +1,283 @@
+/* Photos Viewer Styles - Photo Grid & Lightbox */
+
+/* ==========================================================================
+   Photo Grid Layout
+   ========================================================================== */
+
+.photo-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+    align-content: flex-start;
+    flex: 1;
+    min-height: 0;
+    padding: 10px;
+    padding-right: 10px;
+    overflow-y: auto;
+}
+
+.photo-grid::after {
+    content: '';
+    flex-grow: 99999;
+}
+
+/* ==========================================================================
+   Custom Scrollbar for Photo Grid
+   ========================================================================== */
+
+.photo-grid::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+}
+
+.photo-grid::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.photo-grid::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 10px;
+}
+
+.photo-grid::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+.photo-grid {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* Light mode scrollbar - explicitly dark */
+html.light-mode .photo-grid::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+html.light-mode .photo-grid::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+html.light-mode .photo-grid {
+    scrollbar-color: rgba(0, 0, 0, 0.6) transparent;
+}
+
+/* ==========================================================================
+   Photo Item Styles
+   ========================================================================== */
+
+.photo-item {
+    height: 240px;
+    flex-grow: 1;
+    width: auto;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    transform: translateZ(0);
+    border: none;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
+}
+
+.photo-item:hover {
+    transform: scale(1.05) translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    z-index: 50;
+}
+
+.photo-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    min-width: 150px;
+    display: block;
+    pointer-events: none;
+    image-rendering: -webkit-optimize-contrast;
+    transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.5s ease;
+    opacity: 0;
+}
+
+.photo-item img.loaded {
+    opacity: 1;
+}
+
+/* ==========================================================================
+   Lightbox Viewer
+   ========================================================================== */
+
+.lightbox {
+    touch-action: manipulation;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.3s;
+    z-index: 3000;
+}
+
+.lightbox.active {
+    opacity: 1;
+    pointer-events: all;
+}
+
+#lightbox-img {
+    width: 95vw;
+    height: 85vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+    transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+#lightbox-img.loading-hd {
+    opacity: 0.5;
+    filter: blur(5px);
+}
+
+/* ==========================================================================
+   Lightbox Controls
+   ========================================================================== */
+
+.close-lightbox {
+    position: absolute;
+    top: 30px;
+    right: 40px;
+    color: white;
+    font-size: 3rem;
+    cursor: pointer;
+    border: none;
+    background: none;
+}
+
+.lb-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    font-size: 2rem;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 3010;
+    user-select: none;
+    backdrop-filter: blur(5px);
+}
+
+.lb-nav:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.lb-nav:active {
+    transform: translateY(-50%) scale(0.95);
+}
+
+.lb-prev {
+    left: 20px;
+}
+
+.lb-next {
+    right: 20px;
+}
+
+/* ==========================================================================
+   HD Switch & View Raw Button
+   ========================================================================== */
+
+.hd-switch-wrapper {
+    position: absolute;
+    top: 30px;
+    left: 40px;
+    width: 44px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    cursor: pointer;
+    z-index: 3020;
+    padding: 0;
+    box-sizing: border-box;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.hd-switch-wrapper:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: scale(1.05);
+}
+
+.hd-text {
+    font-weight: 900;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.6);
+    line-height: 1;
+    pointer-events: none;
+}
+
+.hd-switch-wrapper.active {
+    background: rgba(120, 255, 214, 0.9);
+    border-color: transparent;
+    box-shadow: 0 0 15px rgba(120, 255, 214, 0.4);
+}
+
+.hd-switch-wrapper.active .hd-text {
+    color: #000;
+}
+
+.btn-view-raw {
+    position: absolute;
+    top: 68px;
+    width: 80px;
+    height: 28px;
+    left: 22px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 700;
+    font-size: 0.75rem;
+    letter-spacing: 2px;
+    padding-left: 3px;
+    border-radius: 6px;
+    text-decoration: none;
+    cursor: pointer;
+    z-index: 3020;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+}
+
+.btn-view-raw:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.05);
+}
+
+/* ==========================================================================
+   Touch Optimization
+   ========================================================================== */
+
+.photo-item, .lb-nav {
+    touch-action: manipulation;
+}

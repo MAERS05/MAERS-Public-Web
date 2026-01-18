@@ -30,7 +30,8 @@
     <link rel="stylesheet" href="static-style/theme.css">
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
-    <link rel="stylesheet" href="static-style/html/admin-music.css">
+    <link rel="stylesheet" href="custom/music/viewer/music.css">
+    <link rel="stylesheet" href="custom/music/admin/admin-music.css">
 </head>
 
 <body class="admin-mode">
@@ -158,13 +159,13 @@
     </div>
     <!-- 脚本引入顺序至关重要 -->
     <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/music/music-player.js"></script> <!-- 核心播放器 -->
-    <script defer src="custom/music/music-render.js"></script> <!-- 渲染逻辑 -->
-    <script defer src="custom/music/music-control.js"></script> <!-- 播放控制 -->
-    <script defer src="custom/music/music-drag.js"></script> <!-- 拖拽排序 -->
-    <script defer src="data-manage/music-admin.js"></script> <!-- 管理逻辑 -->
-    <script defer src="custom/music/music-ui.js"></script> <!-- 列表UI逻辑 -->
-    <script defer src="custom/music/music-state.js"></script> <!-- 状态记忆 -->
+    <script defer src="custom/music/viewer/music-player.js"></script> <!-- 核心播放器 -->
+    <script defer src="custom/music/viewer/music-render.js"></script> <!-- 渲染逻辑 -->
+    <script defer src="custom/music/viewer/music-control.js"></script> <!-- 播放控制 -->
+    <script defer src="custom/music/admin/music-drag.js"></script> <!-- 拖拽排序 -->
+    <script defer src="custom/music/admin/music-admin.js"></script> <!-- 管理逻辑 -->
+    <script defer src="custom/music/viewer/music-ui.js"></script> <!-- 列表UI逻辑 -->
+    <script defer src="custom/music/viewer/music-state.js"></script> <!-- 状态记忆 -->
     <script src="shared/toast.js"></script>
     <script>
         // 消息监听 (来自 iframe 或其他窗口)
