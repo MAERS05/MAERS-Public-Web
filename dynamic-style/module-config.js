@@ -1,0 +1,103 @@
+/**
+ * MAERS Module Configuration (module-config.js)
+ * 模块配置常量，替代硬编码的 iconMap 和 titleMap
+ * @version 2.0.0
+ */
+
+(function (global) {
+    'use strict';
+
+    global.MAERS = global.MAERS || {};
+
+    const MODULE_CONFIG = {
+        notes: {
+            icon: '📝',
+            title: 'Study Notes',
+            displayTitle: '✒️ Study Notes',
+            allowTags: true,
+            allowMove: true,
+            allowContent: true,
+            dataFile: 'data/notes-tree.json'
+        },
+        literature: {
+            icon: '📙',
+            title: 'Literature',
+            displayTitle: '📙 Literature',
+            allowTags: true,
+            allowMove: true,
+            allowContent: true,
+            dataFile: 'data/literature-tree.json'
+        },
+        record: {
+            icon: '📝',
+            title: 'Records',
+            displayTitle: '📝 Records',
+            allowTags: true,
+            allowMove: true,
+            allowContent: true,
+            dataFile: 'data/record-tree.json'
+        },
+        album: {
+            icon: '🖼️',
+            title: 'Album',
+            displayTitle: '🖼️ Album',
+            allowTags: false,
+            allowMove: true,
+            allowContent: false,
+            dataFile: 'custom/album/admin/album-config.json'
+        },
+        music: {
+            icon: '🎵',
+            title: 'Music',
+            displayTitle: '🎵 Music',
+            allowTags: false,
+            allowMove: false,
+            allowContent: false,
+            dataFile: 'data/music-data.json'
+        }
+    };
+
+    MAERS.ModuleConfig = {
+        // 原始配置对象
+        _config: MODULE_CONFIG,
+
+        /**
+         * 获取模块配置
+         * @param {string} moduleName - 模块名称
+         * @returns {Object} 模块配置
+         */
+        get(moduleName) {
+            return MODULE_CONFIG[moduleName] || MODULE_CONFIG.notes;
+        },
+
+        /**
+         * 获取模块图标
+         * @param {string} moduleName - 模块名称
+         * @returns {string} 图标
+         */
+        getIcon(moduleName) {
+            const config = this.get(moduleName);
+            return config.icon;
+        },
+
+        /**
+         * 获取模块标题
+         * @param {string} moduleName - 模块名称
+         * @returns {string} 标题
+         */
+        getTitle(moduleName) {
+            const config = this.get(moduleName);
+            return config.displayTitle;
+        },
+
+        /**
+         * 获取节点类型图标
+         * @param {string} type - 节点类型 (folder 或 note)
+         * @returns {string} 图标
+         */
+        getNodeIcon(type) {
+            return type === 'folder' ? '📁' : '📝';
+        }
+    };
+
+})(typeof window !== 'undefined' ? window : this);

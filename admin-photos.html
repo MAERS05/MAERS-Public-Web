@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <script src="dynamic-style/theme-init.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
+    <title>Photos Admin - MAERS</title>
+
+    <!-- 🚀 Resource Preloading -->
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="custom/photos/viewer/photos-viewer.css">
+    <link rel="stylesheet" href="custom/photos/admin/photos-admin.css">
+    <link rel="stylesheet" href="static-style/responsive.css">
+    <link rel="stylesheet" href="static-style/toast.css">
+    <script defer src="shared/utils.js"></script>
+    <script defer src="data-manage/api-client.js"></script>
+    <script defer src="data-manage/data-provider.js"></script>
+    <script defer src="dynamic-style/layout.js"></script>
+    <script defer src="dynamic-style/script.js"></script>
+    <script defer src="custom/photos/admin/photos-controller.js"></script>
+    <script defer src="custom/photos/viewer/photos-view.js"></script>
+    <script defer src="custom/album/admin/album-admin.js"></script>
+    <script src="shared/toast.js"></script>
+
+    <script src="custom/album/viewer/album-config.js"></script>
+    <script src="data-manage/data-provider.js"></script>
+    <script src="dynamic-style/style-injector.js"></script>
+    <script src="dynamic-style/layout.js"></script>
+    <script>MAERS.StyleInjector.inject('图片管理');</script>
+    <style>
+        .header-actions {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            z-index: 100;
+            gap: 10px;
+        }
+
+        /* 保存按钮 - 纯净版 (无发光，无变色) */
+        #save-order-btn {
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--pill-border);
+            border-radius: 20px;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: var(--text-main);
+        }
+
+        #save-order-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.05);
+        }
+
+        #save-order-btn:active {
+            transform: scale(0.95);
+        }
+
+        #save-order-btn.has-changes {
+            background: #ff4757;
+            border-color: #ff4757;
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        /* 上传按钮 (Label实现) */
+        .upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 40px;
+            padding: 0 20px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--pill-border);
+            cursor: pointer !important;
+            transition: 0.3s;
+            color: var(--text-main);
+            font-weight: bold;
+            white-space: nowrap;
+            user-select: none;
+        }
+
+        .upload-label:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        /* [Optimal] 消除移动端点击延迟 */
+        a,
+        button,
+        input,
+        .photo-item,
+        .list-item,
+        .card-icon,
+        .tech-pill {
+            touch-action: manipulation;
+        }
+    </style>
+    <script>
+        // 🔥 强制开启管理员模式
+        window.IS_ADMIN = true;
+    </script>
+    <link rel="stylesheet" href="static-style/splash.css">
+    <script>
+        // Splash Screen Control
+        window.addEventListener('load', () => {
+            const splash = document.getElementById('splash-screen');
+            if (splash) {
+                setTimeout(() => {
+                    splash.style.opacity = '0';
+                    setTimeout(() => splash.remove(), 500);
+                }, 200); // 200ms delay
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <!-- 🔥 Splash Screen -->
+    <div id="splash-screen">
+        <div class="splash-logo">🛠️</div>
+    </div>
+    <div class="container">
+        <div class="main-card content-mode">
+            <div class="page-header-bar">
+                <a href="admin-album.html" class="back-btn">← Back to Albums</a>
+                <div class="header-title" id="page-title">Loading...</div>
+                <div class="header-actions">
+                    <!-- 仅图标，无多余状态 -->
+                    <button id="save-order-btn" style="display:none;" title="保存排序">💾</button>
+                    <label class="upload-label" id="upload-btn" style="display:none;" for="file-input">
+                        ＋ 上传图片
+                    </label>
+                    <input type="file" id="file-input" accept="image/*" multiple>
+                </div>
+            </div>
+            <div class="photo-grid" id="gallery-container"></div>
+        </div>
+    </div>
+    <div class="lightbox" id="lightbox">
+        <button class="close-lightbox">&times;</button>
+        <button class="lb-nav lb-prev">&#10094;</button>
+        <button class="lb-nav lb-next">&#10095;</button>
+        <img id="lightbox-img" src="" alt="Preview">
+        <div class="hd-switch-wrapper" id="hd-switch"><span class="hd-text">HD</span></div>
+
+    </div>
+    <!-- 必须严格按照这个顺序引用，因为它们有依赖关系 -->
+    <!-- 1. API 核心 (新增! 必须在 data-provider 之前) -->
+    <script src="data-manage/api-client.js"></script>
+    <!-- 2. 数据层 (新增! 必须在 album-core 之前) -->
+    <script src="data-manage/data-provider.js"></script>
+    <!-- 3. 静态数据源 -->
+    <script src="data/photos-data.js"></script>
+    <!-- 4. 布局与交互 -->
+    <script src="dynamic-style/script.js"></script>
+    <!-- 5. 画廊核心逻辑 (它依赖上面所有文件) -->
+
+</body>
+
+</html>

@@ -1,0 +1,396 @@
+/* ==========================================================================
+   UI Components & Widgets
+   ========================================================================== */
+
+/* --- 1. Global Transitions (UI Elements) --- */
+.main-card,
+.category-card,
+.icon-btn,
+.back-btn,
+.theme-switch-label,
+.tech-pill,
+.photo-item,
+.auto-mode-btn,
+.playlist-window,
+.search-results {
+    transition:
+        background-color 0.8s ease,
+        border-color 3s ease,
+        box-shadow 0.4s ease,
+        color 0.4s ease,
+        transform 0.4s ease;
+    backface-visibility: hidden;
+    contain: layout style;
+}
+
+/* --- 2. Scrollbar --- */
+::-webkit-scrollbar {
+    display: none;
+}
+
+html,
+body {
+    scrollbar-width: none;
+}
+
+/* --- 3. Cards --- */
+.main-card {
+    flex: 1;
+    width: 100%;
+    min-height: 600px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 30px;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: var(--card-backdrop);
+    padding: 50px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.main-card.clean-layout {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    padding: 0 !important;
+    overflow: visible !important;
+}
+
+.main-card.content-mode {
+    max-height: 93vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-top: 25px;
+    padding-bottom: 25px;
+}
+
+/* --- 4. Theme Switcher --- */
+.theme-switch-wrapper {
+    position: fixed;
+    top: 7px;
+    right: 30px;
+    z-index: 10000;
+    cursor: pointer !important;
+}
+
+.theme-switch-checkbox {
+    display: none;
+}
+
+.theme-switch-label {
+    width: 50px;
+    height: 26px;
+    background-color: var(--toggle-bg);
+    border-radius: 50px;
+    position: relative;
+    cursor: pointer !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: block;
+    user-select: none;
+}
+
+.theme-switch-label .ball {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    background-color: #ffffff;
+    color: #ffa500;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease;
+    z-index: 2;
+    cursor: pointer !important;
+    will-change: transform;
+}
+
+.theme-switch-checkbox:checked+.ball {
+    transform: translateX(24px);
+    background-color: #484848;
+    color: #f1c40f;
+}
+
+#mode-icon {
+    display: inline-block;
+    transition: transform 0.4s ease;
+    user-select: none;
+}
+
+/* --- 5. Auto Mode Button & Popover --- */
+.auto-mode-btn {
+    position: fixed;
+    top: 5px;
+    right: 90px;
+    z-index: 10000;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--toggle-bg);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-sub);
+    font-size: 0.8rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.auto-mode-btn.active {
+    color: var(--text-main);
+    border-color: rgba(255, 255, 255, 0.5);
+    background: var(--toggle-bg);
+}
+
+.auto-mode-btn:hover {
+    transform: scale(1.1);
+}
+
+.auto-mode-btn::after {
+    content: "S系统/A自动/M手动";
+    position: absolute;
+    top: 120%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-5px);
+    background: rgba(255, 255, 255, 0.9);
+    color: #000;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 3000;
+}
+
+.auto-mode-btn:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+body.light-mode .auto-mode-btn::after {
+    background: rgba(0, 0, 0, 0.8);
+    color: #fff;
+}
+
+.auto-settings-popover {
+    position: fixed;
+    top: 60px;
+    right: 80px;
+    width: 220px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    border-radius: 14px;
+    padding: 15px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    display: none;
+    flex-direction: column;
+    z-index: 1999;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+}
+
+.auto-settings-popover.show {
+    display: flex;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+}
+
+.popover-header {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: var(--text-main);
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--pill-border);
+    padding-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.save-trigger {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.save-trigger:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+body.light-mode .save-trigger:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.save-icon {
+    display: block;
+    width: 12px;
+    height: 7px;
+    border-left: 2px solid var(--text-sub);
+    border-bottom: 2px solid var(--text-sub);
+    transform: rotate(-45deg) translateY(-1px);
+    transition: all 0.3s;
+    opacity: 0.6;
+}
+
+.save-trigger:hover .save-icon {
+    opacity: 1;
+    border-color: var(--text-main);
+}
+
+.save-trigger.active .save-icon {
+    border-color: #78ffd6;
+    transform: rotate(-45deg) scale(1.2) translateY(-1px);
+    opacity: 1;
+}
+
+html.light-mode .save-trigger.active .save-icon {
+    border-color: #00b894;
+}
+
+.setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-sub);
+    margin-bottom: 8px;
+}
+
+.setting-row:last-child {
+    margin-bottom: 0;
+}
+
+.setting-row input {
+    background: rgba(128, 128, 128, 0.15);
+    border: 1px solid var(--pill-border);
+    color: var(--text-main);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: inherit;
+    width: 85px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+html.light-mode .setting-row input {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* --- 6. Buttons --- */
+.back-btn {
+    text-decoration: none;
+    color: var(--text-sub);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid var(--pill-border);
+}
+
+.back-btn:hover {
+    background: var(--pill-hover-bg);
+    color: var(--text-main);
+    transform: translateX(-5px);
+}
+
+.icon-btn {
+    color: var(--text-sub);
+    text-decoration: none;
+    font-size: 1.08rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 23px;
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid var(--pill-border);
+    border-radius: 100px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.icon-btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.6);
+    transform: scale(1.1) translateY(-4px);
+    box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.5px;
+}
+
+/* Light Mode Buttons */
+html.light-mode .back-btn,
+html.light-mode .icon-btn,
+html.light-mode .btn-upload,
+html.light-mode .auto-mode-btn,
+html.light-mode .theme-switch-label {
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    color: #333 !important;
+    box-shadow: none !important;
+}
+
+html.light-mode .back-btn:hover,
+html.light-mode .icon-btn:hover {
+    border-color: rgba(0, 0, 0, 0.3) !important;
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* --- 8. Header Bar --- */
+.page-header-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 10px;
+    min-height: 40px;
+}
+
+.page-title,
+.header-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--text-main);
+    text-shadow: var(--text-shadow);
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+}
+
+.page-header-bar .header-title {
+    margin-left: auto !important;
+    margin-right: 20px;
+    text-align: right;
+    font-size: 1.8rem;
+}
+
+.header-actions {
+    margin-left: 0 !important;
+}
