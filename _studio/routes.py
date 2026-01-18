@@ -2,7 +2,8 @@ import urllib.parse
 import json
 
 # Services
-from services import cms, album, music, bili, category
+# Services
+from services import cms, photos, music, bili, album
 import config
 
 def dispatch_get(path, query_params):
@@ -37,15 +38,15 @@ def dispatch_post(path, query_params, body_data, file_data=None):
     if path.startswith('/api/cms/'):
         return cms.handle_request(path, 'POST', query_params, body_data)
     
-    # 2. Album (Upload/Delete/Reorder)
+    # 2. Photos (Upload/Delete/Reorder) (Ex-Album)
     if path == '/upload' and file_data:
-        return 200, album.handle_upload(query_params, file_data)
+        return 200, photos.handle_upload(query_params, file_data)
     
     if path == '/delete':
-        return 200, album.handle_delete(body_data)
+        return 200, photos.handle_delete(body_data)
 
     if path == '/reorder':
-        return 200, album.handle_reorder(query_params, body_data)
+        return 200, photos.handle_reorder(query_params, body_data)
 
     # 3. Music
     if path == '/api/save_music':
@@ -60,12 +61,12 @@ def dispatch_post(path, query_params, body_data, file_data=None):
         music.reset_tracks(body_data)
         return 200, {}
 
-    # 4. Modules & Categories
+    # 4. Modules & Albums (Categories)
     if path == '/api/save_modules':
         cms.save_json(config.MODULES_JSON_FILE, body_data)
         return 200, {"status": "success"}
 
     if path in ['/api/add_category', '/api/delete_category', '/api/reorder_category', '/api/update_category']:
-        return category.handle_ops(path, body_data)
+        return album.handle_ops(path, body_data)
 
     return 404, {"error": "API not found"}
