@@ -74,6 +74,7 @@
     <link rel="stylesheet" href="static-style/style.css">
     <script defer src="dynamic-style/layout.js"></script>
     <script defer src="dynamic-style/script.js"></script>
+    <script defer src="custom/index/viewer/index-viewer.js"></script>
     <link rel="stylesheet" href="custom/index/viewer/index.css">
 
 </head>
@@ -83,45 +84,42 @@
     <div id="flash-guard"></div>
     <div class="home-container">
         <div class="brand-area">
-            <img src="ui/index.svg" alt="Logo" class="brand-logo" onclick="toggleGlobalShrink(event)">
-            <div class="brand-title"><span class="maers-interactive"
-                    onclick="window.location.href='me.html'">MAERS</span> <span class="maers-interactive"
-                    onclick="window.location.href='space.html'">SPACE</span></div>
+            <img src="ui/index.svg" alt="Logo" class="brand-logo" id="brand-logo">
+            <div class="brand-title"><span class="maers-interactive" id="brand-maers">MAERS</span> <span class="maers-interactive" id="brand-space">SPACE</span></div>
             <div class="brand-subtitle">Personal Knowledge & Creative Hub</div>
         </div>
         <div class="nav-grid">
-            <div class="nav-card" onclick="window.location.href='notes.html'">
+            <div class="nav-card" id="nav-notes">
                 <div class="card-bg-text">KNOW</div>
                 <div class="card-icon">✒️</div>
                 <div class="card-title">Notes</div>
                 <div class="card-desc">Building a mental framework for learning.</div>
             </div>
-            <div class="nav-card" onclick="window.location.href='record.html'">
+            <div class="nav-card" id="nav-record">
                 <div class="card-bg-text">IDEA</div>
                 <div class="card-icon">💡</div>
                 <div class="card-title">Record</div>
                 <div class="card-desc">Recording resonance sentence and insights.</div>
             </div>
-            <div class="nav-card" onclick="window.location.href='literature.html'">
+            <div class="nav-card" id="nav-literature">
                 <div class="card-bg-text">BOOK</div>
                 <div class="card-icon">📚</div>
                 <div class="card-title">Literature</div>
                 <div class="card-desc">Private bookshelf for golden lines and thoughts.</div>
             </div>
-            <div class="nav-card" onclick="window.location.href='album.html'">
+            <div class="nav-card" id="nav-album">
                 <div class="card-bg-text">PHOT</div>
                 <div class="card-icon">📸</div>
                 <div class="card-title">Lens</div>
                 <div class="card-desc">Personal visual photography archive album.</div>
             </div>
-            <div class="nav-card" onclick="window.location.href='music.html'">
+            <div class="nav-card" id="nav-music">
                 <div class="card-bg-text">FLOW</div>
                 <div class="card-icon">🎵</div>
                 <div class="card-title">Music</div>
                 <div class="card-desc">Personal playlist and rhythm. Listen to the vibe.</div>
             </div>
-            <div class="nav-card" onclick="window.location.href='https://ai.maersy.com'"
-                style="border-color: rgba(0, 255, 255, 0.2);">
+            <div class="nav-card" id="nav-ai" style="border-color: rgba(0, 255, 255, 0.2);">
                 <div class="card-bg-text">AGEN</div>
                 <div class="card-icon">🤖</div>
                 <div class="card-title">AI Space</div>

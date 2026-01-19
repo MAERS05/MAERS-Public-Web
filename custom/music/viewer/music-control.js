@@ -216,10 +216,29 @@
         }
     }
 
+    // Event Binding
+    document.addEventListener('DOMContentLoaded', () => {
+        const prevBtn = document.getElementById('play-prev-btn');
+        const nextBtn = document.getElementById('play-next-btn');
+
+        if (prevBtn) {
+            prevBtn.onclick = null;
+            prevBtn.addEventListener('click', playPrev);
+        }
+        if (nextBtn) {
+            nextBtn.onclick = null;
+            nextBtn.addEventListener('click', playNext);
+        }
+    });
+
     // Mount to namespace
     MAERS.Music.Control = {
         playNext,
         playPrev
     };
+
+    // 🔧 兼容性：为了 music.html 里的 message listener，保留 global，或者更新 html
+    global.playNext = playNext;
+    global.playPrev = playPrev;
 
 })(typeof window !== 'undefined' ? window : this);

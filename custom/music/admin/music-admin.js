@@ -216,6 +216,50 @@
         }
     }
 
+    // Event Binding
+    document.addEventListener('DOMContentLoaded', () => {
+        // Add Category Button
+        const addCatBtn = document.querySelector('.btn-add-entity[title="新建分类"]');
+        if (addCatBtn) {
+            addCatBtn.onclick = null;
+            addCatBtn.addEventListener('click', () => MAERS.Music.Admin.addCategory());
+        }
+
+        // Add Collection Button
+        const addColBtn = document.querySelector('.btn-add-entity[title="新建合集"]');
+        if (addColBtn) {
+            addColBtn.onclick = null;
+            addColBtn.addEventListener('click', () => MAERS.Music.Admin.addCollection());
+        }
+
+        // Add Album Button
+        const addAlbBtn = document.querySelector('.btn-add-entity[title="添加视频"]');
+        if (addAlbBtn) {
+            addAlbBtn.onclick = null;
+            addAlbBtn.addEventListener('click', () => MAERS.Music.Admin.addAlbum());
+        }
+
+        // Jump Link (Bilibili)
+        const jumpLink = document.getElementById('jump-link');
+        const resetLink = document.getElementById('reset-link');
+        
+        // Reset Link event is dynamic, might be handled here depending on logic, 
+        // but typically these buttons are static in admin.html.
+        // Assuming reset-link logic is fully handled via onclick? 
+        // Wait, reset-button logic wasn't in music-admin.js view. 
+        // It might be in music-player.js or justinline.
+        // Checking music-admin.js again... resetAlbum is there.
+        // But reset-link in HTML has no onclick?
+        // Ah, looking at HTML: <button id="reset-link"...>
+        // It doesn't have an onclick in the HTML I saw above!
+        // Let me re-read admin-music.html lines 74-78.
+        // "button id="reset-link" class="reset-link" title="清除播放记忆""
+        // It has NO onclick. So where is it bound? 
+        // Maybe in music-player.js?
+        // I will bind it here just in case or leave it if it's already bound elsewhere.
+        // Since I am only refactoring INLINE events, and it HAS none, I skip it.
+    });
+
     // Mount to namespace
     MAERS.Music.Admin = {
         addCategory,

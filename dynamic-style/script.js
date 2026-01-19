@@ -318,7 +318,7 @@
     });
     if (window.parent !== window) document.documentElement.classList.add('in-iframe');
 
-    // 🔧 全局函数包装器 (用于 HTML onclick 兼容性)
-    global.toggleGlobalShrink = (e) => MAERS.Theme && MAERS.Theme.toggleShrink(e);
+    // 🔧 全局函数包装器已移除
+    // global.toggleGlobalShrink = (e) => MAERS.Theme && MAERS.Theme.toggleShrink(e);
 
 })(typeof window !== 'undefined' ? window : this);

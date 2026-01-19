@@ -58,7 +58,7 @@
           <h1 class="admin-title">🛠️ SYSTEM_CONTROL_PANEL</h1>
           <div style="position: absolute; right: 0; display: flex; gap: 10px">
             <button
-              onclick="MAERS.Admin.exportModules()"
+              id="export-btn"
               style="
                 padding: 8px 16px;
                 background: rgba(120, 255, 214, 0.1);
@@ -69,19 +69,11 @@
                 font-size: 0.9rem;
                 transition: 0.2s;
               "
-              onmouseover="
-                this.style.background = '#78ffd6';
-                this.style.color = '#000';
-              "
-              onmouseout="
-                this.style.background = 'rgba(120, 255, 214, 0.1)';
-                this.style.color = '#78ffd6';
-              "
             >
               📤 导出配置
             </button>
             <button
-              onclick="document.getElementById('import-file').click()"
+              id="import-btn"
               style="
                 padding: 8px 16px;
                 background: rgba(255, 107, 107, 0.1);
@@ -92,14 +84,6 @@
                 font-size: 0.9rem;
                 transition: 0.2s;
               "
-              onmouseover="
-                this.style.background = '#ff6b6b';
-                this.style.color = '#fff';
-              "
-              onmouseout="
-                this.style.background = 'rgba(255, 107, 107, 0.1)';
-                this.style.color = '#ff6b6b';
-              "
             >
               📥 导入配置
             </button>
@@ -108,7 +92,6 @@
               id="import-file"
               accept=".json"
               style="display: none"
-              onchange="MAERS.Admin.importModules(event)"
             />
           </div>
         </div>

@@ -651,11 +651,34 @@
             enterFolder,
             showLightbox,
             closeLightbox,
-            refreshView,
             // UI Actions
             uiCreateNode, uiRenameNode, uiDeleteNode, uiPickNode, uiCancelPick, uiAddTag, uiRemoveTag
         };
     })();
+
+    // Event Binding
+    document.addEventListener('DOMContentLoaded', () => {
+        // Tag Drawer
+        const tagToggleBtn = document.querySelector('.tag-toggle-btn');
+        const overlay = document.getElementById('drawer-overlay');
+        const closeDrawerBtn = document.querySelector('.btn-close-drawer');
+        const clearTagsBtn = document.querySelector('.btn-clear-tags');
+        const drawerSearch = document.getElementById('tag-drawer-search');
+
+        if (tagToggleBtn) tagToggleBtn.addEventListener('click', () => MAERS.CMS.View.toggleTagDrawer());
+        if (overlay) overlay.addEventListener('click', () => MAERS.CMS.View.toggleTagDrawer());
+        if (closeDrawerBtn) closeDrawerBtn.addEventListener('click', () => MAERS.CMS.View.toggleTagDrawer());
+        if (clearTagsBtn) clearTagsBtn.addEventListener('click', () => MAERS.CMS.View.clearTagFilter());
+        if (drawerSearch) drawerSearch.addEventListener('input', () => MAERS.CMS.View.refreshDrawerList());
+
+        // Editor Close (Static binding, dynamic ones handled in Editor.open)
+        // Actually, Editor Close buttons are inside the static HTML structure of #immersive-reader
+        // We can bind them here since #immersive-reader is in the static HTML
+        const editorCloseBtns = document.querySelectorAll('.close-btn');
+        editorCloseBtns.forEach(btn => {
+            btn.addEventListener('click', () => MAERS.CMS.Editor && MAERS.CMS.Editor.close());
+        });
+    });
 
     // Mount to namespace
     MAERS.CMS.View = CmsView;

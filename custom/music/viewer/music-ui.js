@@ -234,6 +234,28 @@
         if (!e.target.closest('.search-box-wrapper')) searchResults.classList.remove('active');
     });
 
+    // Event Binding
+    document.addEventListener('DOMContentLoaded', () => {
+        // Nav Buttons
+        const backL1 = document.getElementById('nav-back-L1-text');
+        const homeL1 = document.getElementById('nav-home-L1');
+        const backL2 = document.getElementById('nav-back-L2-text');
+        const homeL2 = document.getElementById('nav-home-L2');
+        
+        if (backL1) backL1.addEventListener('click', () => goBack(0));
+        if (homeL1) homeL1.addEventListener('click', () => goBack(0));
+        if (backL2) backL2.addEventListener('click', () => goBack(1));
+        if (homeL2) homeL2.addEventListener('click', () => goBack(0));
+        
+        // Search Input is already bound above
+
+        // Header Zoom Trigger
+        const zoomTrigger = document.querySelector('.zoom-trigger-whole');
+        if(zoomTrigger && typeof toggleGlobalShrink === 'function') {
+           zoomTrigger.addEventListener('click', (e) => toggleGlobalShrink(e));
+        }
+    });
+
     // Mount to namespace
     MAERS.Music.UI = Object.assign(UI, {
         loadMusicData,
@@ -253,9 +275,9 @@
         playPrev: () => MAERS.Music.Control && MAERS.Music.Control.playPrev()
     });
 
-    // 🔧 全局函数包装器 (用于 HTML onclick 兼容性)
-    global.playNext = () => MAERS.Music.Control && MAERS.Music.Control.playNext();
-    global.playPrev = () => MAERS.Music.Control && MAERS.Music.Control.playPrev();
-    global.goBack = (level) => MAERS.Music.UI && MAERS.Music.UI.goBack(level);
+    // 🔧 全局函数包装器已移除
+    // global.playNext = ...
+    // global.playPrev = ...
+    // global.goBack = ...
 
 })(typeof window !== 'undefined' ? window : this);

@@ -60,12 +60,10 @@
                     <div class="header-title">📌 CMS Admin</div>
                 </div>
                 <!-- 🔥 修改点：新增 header-right 容器，包含搜索框和 Tags 按钮 -->
-                <div class="header-right">
-                    <div class="header-tools-row">
                         <div class="search-box">
                             <input type="search" class="search-input" id="search-input" placeholder="名称,Name">
                         </div>
-                        <button class="tag-toggle-btn" onclick="MAERS.CMS.View.toggleTagDrawer()">
+                        <button class="tag-toggle-btn">
                             🏷️ Tags
                         </button>
                     </div>
@@ -88,7 +86,7 @@
                 <span class="reader-title" id="reader-title">Untitled</span>
             </div>
             <div class="reader-actions">
-                <button class="close-btn" onclick="MAERS.CMS.Editor.close()">✕</button>
+                <button class="close-btn">✕</button>
             </div>
         </div>
         <div class="reader-scroll-area">
@@ -97,22 +95,21 @@
         </div>
     </div>
     <!-- 🔥 新增：标签侧边栏 (Drawer) -->
-    <div id="drawer-overlay" class="drawer-overlay" onclick="MAERS.CMS.View.toggleTagDrawer()"></div>
+    <div id="drawer-overlay" class="drawer-overlay"></div>
     <div id="tag-drawer" class="tag-drawer">
         <div class="drawer-header" style="flex-direction: column; align-items: flex-start; gap: 15px;">
             <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                 <h3>Filter by Tags</h3>
-                <button class="btn-close-drawer" onclick="MAERS.CMS.View.toggleTagDrawer()">×</button>
+                <button class="btn-close-drawer">×</button>
             </div>
             <!-- 🔥 新增：标签专用搜索框 -->
-            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags"
-                oninput="MAERS.CMS.View.refreshDrawerList()">
+            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags">
         </div>
         <div class="drawer-body" id="drawer-list">
             <!-- JS 动态生成列表 -->
         </div>
         <div class="drawer-footer">
-            <button class="btn-clear-tags" onclick="MAERS.CMS.View.clearTagFilter()">Clear All</button>
+            <button class="btn-clear-tags">Clear All</button>
         </div>
     </div>
 </body>

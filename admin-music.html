@@ -57,7 +57,7 @@
                 <a href="admin.html" class="back-btn">← Back</a>
                 <div class="center-title">Music & Video Space <span class="admin-tag admin-badge">EDIT</span>
                 </div>
-                <div class="right-icon zoom-trigger-whole" onclick="toggleGlobalShrink(event)">🎧</div>
+                <div class="right-icon zoom-trigger-whole">🎧</div>
             </div>
             <!-- 主内容区 -->
             <div class="content-wrapper" style="opacity: 0; transition: opacity 0.5s ease;">
@@ -85,11 +85,11 @@
                     <!-- 播放控制条 -->
                     <div class="custom-control-bar">
                         <div class="control-btns">
-                            <button class="ctrl-btn" onclick="playPrev()">◀◀</button>
-                            <button class="ctrl-btn" onclick="remoteTogglePlay()" id="master-play-btn"
+                            <button class="ctrl-btn" id="play-prev-btn">◀◀</button>
+                            <button class="ctrl-btn" id="master-play-btn"
                                 class="master-play-btn-large"><span class="play-icon-layer">▶</span><span
                                     class="pause-icon-layer">||</span></button>
-                            <button class="ctrl-btn" onclick="playNext()">▶▶</button>
+                            <button class="ctrl-btn" id="play-next-btn">▶▶</button>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span id="curr-time" class="time-label">00:00</span>
@@ -111,8 +111,7 @@
                                 <div class="view-header">
                                     <div class="header-left-group"><span>🍸 音乐分类</span></div>
                                     <span class="header-playing-info"></span>
-                                    <div class="add-btn btn-add-entity" onclick="MAERS.Music.Admin.addCategory()"
-                                        title="新建分类">＋
+                                    <div class="add-btn btn-add-entity" title="新建分类">＋
                                     </div>
                                 </div>
                                 <div class="view-content" id="list-level-0"></div>
@@ -121,15 +120,14 @@
                             <div class="level-view">
                                 <div class="view-header">
                                     <div class="header-left-group">
-                                        <span class="nav-back" onclick="goBack(0)">← 返回</span>
-                                        <svg class="home-icon-svg" viewBox="0 0 24 24" onclick="goBack(0)">
+                                        <span class="nav-back" id="nav-back-L1-text">← 返回</span>
+                                        <svg class="home-icon-svg" viewBox="0 0 24 24" id="nav-home-L1">
                                             <path d="M4 21 L4 9 L12 3 L20 9 L20 21 H15 V13 H9 V21 H4"></path>
                                         </svg>
                                         <span id="title-level-1" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>
-                                    <div class="add-btn btn-add-entity" onclick="MAERS.Music.Admin.addCollection()"
-                                        title="新建合集">＋
+                                    <div class="add-btn btn-add-entity" title="新建合集">＋
                                     </div>
                                 </div>
                                 <div class="view-content" id="list-level-1"></div>
@@ -138,15 +136,14 @@
                             <div class="level-view">
                                 <div class="view-header">
                                     <div class="header-left-group">
-                                        <span class="nav-back" onclick="goBack(1)">← 返回</span>
-                                        <svg class="home-icon-svg" viewBox="0 0 24 24" onclick="goBack(0)">
+                                        <span class="nav-back" id="nav-back-L2-text">← 返回</span>
+                                        <svg class="home-icon-svg" viewBox="0 0 24 24" id="nav-home-L2">
                                             <path d="M4 21 L4 9 L12 3 L20 9 L20 21 H15 V13 H9 V21 H4"></path>
                                         </svg>
                                         <span id="title-level-2" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>
-                                    <div class="add-btn btn-add-entity" onclick="MAERS.Music.Admin.addAlbum()"
-                                        title="添加视频">
+                                    <div class="add-btn btn-add-entity" title="添加视频">
                                         ＋</div>
                                 </div>
                                 <div class="view-content" id="list-level-2"></div>
@@ -170,9 +167,17 @@
     <script>
         // 消息监听 (来自 iframe 或其他窗口)
         window.addEventListener('message', function (event) {
-            if (event.data === 'toggle') remoteTogglePlay();
-            else if (event.data === 'next') playNext();
-            else if (event.data === 'prev') playPrev();
+            if (event.data === 'toggle') MAERS.Music.Player && MAERS.Music.Player.togglePlay();
+            else if (event.data === 'next') MAERS.Music.Control && MAERS.Music.Control.playNext();
+            else if (event.data === 'prev') MAERS.Music.Control && MAERS.Music.Control.playPrev();
+        });
+        
+        // Header Zoom Trigger
+        document.addEventListener('DOMContentLoaded', () => {
+            const zoomTrigger = document.querySelector('.zoom-trigger-whole');
+            if(zoomTrigger && typeof toggleGlobalShrink === 'function') {
+               zoomTrigger.addEventListener('click', (e) => toggleGlobalShrink(e));
+            }
         });
     </script>
 </body>

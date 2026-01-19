@@ -158,6 +158,46 @@
         importModules
     };
 
+    // Event Binding
+    document.addEventListener('DOMContentLoaded', () => {
+        const exportBtn = document.getElementById('export-btn');
+        const importBtn = document.getElementById('import-btn');
+        const importFile = document.getElementById('import-file');
+
+        if (exportBtn) {
+            exportBtn.addEventListener('click', () => MAERS.Admin.exportModules());
+            // Hover effects (simulated with CSS usually, but JS here for parity with original)
+            exportBtn.addEventListener('mouseover', function() {
+                this.style.background = '#78ffd6';
+                this.style.color = '#000';
+            });
+            exportBtn.addEventListener('mouseout', function() {
+                this.style.background = 'rgba(120, 255, 214, 0.1)';
+                this.style.color = '#78ffd6';
+            });
+        }
+
+        if (importBtn) {
+            importBtn.addEventListener('click', () => {
+                if (importFile) importFile.click();
+            });
+            importBtn.addEventListener('mouseover', function() {
+                this.style.background = '#ff6b6b';
+                this.style.color = '#fff';
+            });
+            importBtn.addEventListener('mouseout', function() {
+                this.style.background = 'rgba(255, 107, 107, 0.1)';
+                this.style.color = '#ff6b6b';
+            });
+        }
+
+        if (importFile) {
+            importFile.addEventListener('change', (e) => MAERS.Admin.importModules(e));
+        }
+
+        // Add New Module card binding (in render function)
+    });
+
     // Initialize
     loadModules();
 

@@ -240,12 +240,13 @@ const filtered = MAERS.Utils.Search.filterNodes(tree, "关键词");
 
 ### HTML 事件处理
 
-```html
-<!-- 正确：使用命名空间 -->
-<button onclick="MAERS.Admin.exportModules()">导出</button>
+**严格禁止内联事件 (`onclick`, `onmouseover` 等)**。必须使用 `addEventListener`。
 
-<!-- 错误：直接调用全局函数 -->
-<button onclick="exportModules()">导出</button>
+```javascript
+// ✅ 正确：在 JS 文件中绑定
+document
+  .getElementById("my-btn")
+  .addEventListener("click", MAERS.Admin.exportModules);
 ```
 
 ### 数据管理层
