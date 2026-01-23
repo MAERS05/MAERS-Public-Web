@@ -2,58 +2,58 @@
    Theme Variables (Dark/Light Mode)
    ========================================================================== */
 :root {
-    --bg-base: #0a0a0c;
-    --bg-light-base: #f2f0eb;
+  --bg-base: #0a0a0c;
+  --bg-light-base: #f2f0eb;
 
-    /* 白昼背景纹理 */
-    --bg-light-texture:
-        url('../ui/noise.svg'),
-        linear-gradient(180deg, #fffefc 0%, #f2f0eb 100%);
-    --text-main: #f0f0f2;
-    --text-sub: #a0a0a5;
-    --text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 0, 0, 0.5);
+  /* 白昼背景纹理 */
+  --bg-light-texture:
+    url("../ui/noise.svg"), linear-gradient(180deg, #fffefc 0%, #f2f0eb 100%);
+  --text-main: #f0f0f2;
+  --text-sub: #a0a0a5;
+  --text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 0, 0, 0.5);
 
-    --card-bg: rgba(25, 25, 30, 0.6);
-    --card-border: rgba(255, 255, 255, 0.08);
-    --card-shadow: 0 40px 80px rgba(0, 0, 0, 0.8);
-    --card-backdrop: blur(40px);
+  --card-bg: transparent;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --card-shadow: none;
+  --card-backdrop: none;
 
-    --pill-bg: rgba(255, 255, 255, 0.08);
-    --pill-border: rgba(255, 255, 255, 0.15);
-    --pill-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
-    --pill-hover-bg: rgba(255, 255, 255, 0.12);
+  --pill-bg: rgba(255, 255, 255, 0.08);
+  --pill-border: rgba(255, 255, 255, 0.15);
+  --pill-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  --pill-hover-bg: rgba(255, 255, 255, 0.12);
 
-    --toggle-bg: #1a1a1a;
-    --toggle-circle: #000000;
-    --font-main: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-    --scrollbar-thumb: rgba(255, 255, 255, 0.35);
-    --scrollbar-thumb-hover: rgba(255, 255, 255, 0.6);
+  --toggle-bg: #1a1a1a;
+  --toggle-circle: #000000;
+  --font-main: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.35);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.6);
 
-    /* 分类渐变色 */
-    --accent-nature: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%);
-    --accent-arch: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    --accent-avatar: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);
-    --accent-life: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-    --accent-bio: linear-gradient(135deg, #9fab95 0%, #cfd6cd 100%);
-    --accent-exhibit: linear-gradient(135deg, #e57254 0%, #f0a68d 100%);
+  /* 分类渐变色 */
+  --accent-nature: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%);
+  --accent-arch: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  --accent-avatar: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);
+  --accent-life: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+  --accent-bio: linear-gradient(135deg, #9fab95 0%, #cfd6cd 100%);
+  --accent-exhibit: linear-gradient(135deg, #e57254 0%, #f0a68d 100%);
 }
 
 html.light-mode {
-    --text-main: #333330;
-    --text-sub: #8a8a85;
-    --text-shadow: none;
+  --text-main: #333330;
+  --text-sub: #8a8a85;
+  --text-shadow: none;
 
-    --card-bg: rgba(255, 255, 255, 0.6);
-    --card-border: rgba(255, 255, 255, 0.4);
-    --card-shadow: 0 10px 40px rgba(100, 90, 80, 0.05);
+  --card-bg: rgba(255, 255, 255, 0.6);
+  --card-border: rgba(255, 255, 255, 0.4);
+  --card-shadow: 0 10px 40px rgba(100, 90, 80, 0.05);
 
-    --pill-bg: rgba(255, 255, 255, 0.7);
-    --pill-border: rgba(0, 0, 0, 0.1);
-    --pill-shadow: 0 8px 20px rgba(100, 90, 80, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
-    --pill-hover-bg: #ffffff;
+  --pill-bg: rgba(255, 255, 255, 0.7);
+  --pill-border: rgba(0, 0, 0, 0.1);
+  --pill-shadow:
+    0 8px 20px rgba(100, 90, 80, 0.1), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  --pill-hover-bg: #ffffff;
 
-    --scrollbar-thumb: rgba(0, 0, 0, 0.6);
-    --scrollbar-thumb-hover: rgba(0, 0, 0, 0.8);
-    --toggle-bg: #e0ded8;
-    --toggle-circle: #ffffff;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.6);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.8);
+  --toggle-bg: #e0ded8;
+  --toggle-circle: #ffffff;
 }

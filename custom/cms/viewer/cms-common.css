@@ -178,6 +178,7 @@ html.light-mode .grid-item:hover {
 .item-icon {
     font-size: 2.2rem;
     margin-bottom: 10px;
+    display: none; /* 隐藏默认图标 */
 }
 
 .item-title {
