@@ -100,6 +100,11 @@ export function applyFilter() {
             Render.renderGrid(list);
         }
     }
+
+    // [Fix]: Update breadcrumb (overlay) when filtering
+    if (Render?.renderBreadcrumb) {
+        Render.renderBreadcrumb();
+    }
 }
 
 export const Search = {

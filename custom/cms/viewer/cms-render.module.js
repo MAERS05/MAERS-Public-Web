@@ -262,7 +262,20 @@ export function renderGrid(list, isSearch = false, shouldResetManager = false, s
 export function renderBreadcrumb() {
     const container = document.getElementById("breadcrumb");
     if (!container) return;
+
+    // Check Filter State
+    const searchInput = document.getElementById('search-input'); // Or State.SELECTORS.SEARCH_INPUT
+    const hasSearch = searchInput && searchInput.value.trim().length > 0;
+    const hasFilter = State.AppState.activeFilters.size > 0;
+
+    // Clear
     container.innerHTML = "";
+
+    // Append Overlay (Absolute positioned, covers crumbs)
+    const overlay = document.createElement("div");
+    overlay.className = `breadcrumb-overlay ${hasSearch || hasFilter ? 'active' : ''}`;
+    overlay.innerText = "All";
+    container.appendChild(overlay);
 
     const rootSpan = document.createElement("span");
     rootSpan.className = `crumb-item ${State.AppState.pathStack.length === 1 ? "active" : ""}`;

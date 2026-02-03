@@ -124,13 +124,88 @@ export function setupGridEventDelegation() {
                     Recent.addToHistory(node);
                 }
 
+                // 1. Open Note Immediately
                 if (Editor?.openNote) {
                     Editor.openNote(node);
                 } else if (Editor?.open) {
                     Editor.open(node);
                 }
+
+                // 2. Handle Navigation Logic ONLY if in Search/Filter Context
+                // We check state AFTER opening the note to ensure instant UI response.
+
+                // Allow browser to render the opened note first (microtask/timeout)
+                setTimeout(() => {
+                    const searchInput = document.getElementById('search-input');
+                    const hasSearch = searchInput && searchInput.value.trim().length > 0;
+                    const hasFilter = State.AppState.activeFilters.size > 0;
+
+                    if (hasSearch || hasFilter) {
+                        // User is filtering. Ask intent.
+                        // Using timeout ensures the Editor is visible behind this modal.
+                        // YES (OK) -> Preview Only -> Do Nothing
+                        // NO (Cancel) -> Go to location -> Navigate
+
+                        const isPreviewOnly = confirm("是否仅预览？\n\n【确定】仅预览 (保持当前筛选列表)\n【取消】跳转到文件所在目录 (清空筛选并定位)");
+
+                        // If User chose Cancel (which means "Go to location"), we navigate.
+                        if (!isPreviewOnly) {
+                            navigateToFileContext(node);
+                        }
+                    }
+                    // If NO filter, we assume user is already in context (or we don't force navigation),
+                    // per user instruction "only check when filtered".
+                }, 100);
+
+                // Helper function for navigation (updating stack, grid, etc.)
+                function navigateToFileContext(targetNode) {
+                    const newStack = [];
+                    let curr = targetNode;
+
+                    let parentId = curr.parentId;
+                    while (parentId && parentId !== 'root') {
+                        const parent = State.AppState.allNodes.find(n => n.id === parentId);
+                        if (parent) {
+                            newStack.unshift(parent);
+                            parentId = parent.parentId;
+                        } else {
+                            break;
+                        }
+                    }
+                    newStack.unshift('root');
+
+                    // 1. Update Path Stack
+                    State.AppState.pathStack = newStack;
+
+                    // 2. Clear Filters & Search
+                    if (State.AppState.activeFilters.size > 0) {
+                        State.AppState.activeFilters.clear();
+                        if (Tags?.renderTags) Tags.renderTags();
+                    }
+                    const sInput = document.getElementById('search-input');
+                    if (sInput) sInput.value = '';
+
+                    // 3. Render Breadcrumb
+                    if (Render?.renderBreadcrumb) {
+                        Render.renderBreadcrumb();
+                    }
+
+                    // 4. Render Grid
+                    const navTarget = newStack[newStack.length - 1];
+                    let targetList = [];
+
+                    if (navTarget === 'root') {
+                        targetList = State.AppState.root;
+                    } else {
+                        targetList = navTarget.children;
+                    }
+
+                    if (Render?.renderGrid) {
+                        Render.renderGrid(targetList, false, true);
+                    }
+                }
+                return;
             }
-            return;
         }
     });
 
