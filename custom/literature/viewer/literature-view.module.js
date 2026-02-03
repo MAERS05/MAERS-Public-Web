@@ -235,23 +235,11 @@ class FlowEngine {
                 if (!this.isGridMode) {
                     card.style.zIndex = 9999;
                 }
-                // Switch to AVIF on hover
-                const avif = card.dataset.avif;
-                if (avif) {
-                    const cover = card.querySelector('.book-cover');
-                    if (cover) cover.style.backgroundImage = `url('${avif}')`;
-                }
             });
             card.addEventListener('mouseleave', () => {
                 this.state.isPaused = false;
                 card.classList.remove('is-hovered');
                 card.style.zIndex = '';
-                // Switch back to WebP on leave
-                const webp = card.dataset.webp;
-                if (webp) {
-                    const cover = card.querySelector('.book-cover');
-                    if (cover) cover.style.backgroundImage = `url('${webp}')`;
-                }
             });
 
             // 点击事件：打开编辑器
@@ -510,24 +498,21 @@ class FlowEngine {
                             book.el.dataset.webp = '';
                             book.el.dataset.avif = '';
                         } else if (data.coverImage) {
-                            // 构造 WebP 和 AVIF 路径
+                            // 构造 WebP 路径
                             const pathParts = data.coverImage.split('/');
                             const filename = pathParts[pathParts.length - 1];
                             const basename = filename.replace(/\.[^/.]+$/, "");
 
                             const webpUrl = `photos/thumbnails/covers/${basename}.webp`;
-                            const avifUrl = `photos/previews/covers/${basename}.avif`;
 
                             // 默认显示 WebP
                             coverEl.style.backgroundImage = `url('${webpUrl}')`;
 
                             // 存入 dataset 供 hover 事件使用
                             book.el.dataset.webp = webpUrl;
-                            book.el.dataset.avif = avifUrl;
                         } else {
                             coverEl.style.backgroundImage = '';
                             book.el.dataset.webp = '';
-                            book.el.dataset.avif = '';
                         }
                     }
 
