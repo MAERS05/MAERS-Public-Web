@@ -85,8 +85,6 @@ export function applyFilter() {
     if (LiteratureView?.setMode) {
         if (hasFilter) {
             LiteratureView.setMode('grid');
-        } else {
-            LiteratureView.setMode('gallery');
         }
     }
 
