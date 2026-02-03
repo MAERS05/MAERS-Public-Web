@@ -141,4 +141,29 @@
         });
     }
 
+    // 4. [New] Register Service Worker for Cache Busting
+    if ('serviceWorker' in navigator) {
+        // 延迟注册，避免影响首屏关键资源加载
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/maers-version-controller.js').then(registration => {
+                // console.log('SW registered:', registration);
+
+                // 检测是否是从旧版 SW 更新过来的
+                registration.onupdatefound = () => {
+                    const installingWorker = registration.installing;
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed') {
+                            if (navigator.serviceWorker.controller) {
+                                // 新版本已就绪，可以在这里提示用户刷新，或者自动刷新
+                                console.log('[MAERS] New version available.');
+                            }
+                        }
+                    };
+                };
+            }).catch(error => {
+                console.log('SW registration failed:', error);
+            });
+        });
+    }
+
 })();

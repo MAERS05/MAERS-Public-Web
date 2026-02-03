@@ -14,20 +14,52 @@
     <!-- The Linear High-Fidelity Style -->
     <link rel="stylesheet" href="custom/games/viewer/linear-gallery.css">
 
-    <!-- Layout handled by module -->
+    <style>
+        .placeholder-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: var(--text-sub);
+            /* Ensure it takes full height of the card */
+            min-height: 60vh;
+        }
+
+        .placeholder-text {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 10px;
+            margin-bottom: 5px;
+        }
+
+        /* [Optimal] 消除移动端点击延迟 */
+        a,
+        button,
+        input {
+            touch-action: manipulation;
+        }
+    </style>
 </head>
 
 <body>
-    <div class="container" style="padding:0; overflow:hidden;">
-
-        <!-- The 3D Stage -->
-        <div class="ln-stage">
-
-            <!-- The Floating Window -->
-            <div class="ln-window">
-                <!-- Content removed as per user request -->
+    <div class="container">
+        <div class="main-card clean-layout">
+            <div class="placeholder-content">
+                <div style="font-size: 4rem; opacity: 0.5; font-weight: 300; margin-bottom: 0;">GAMES</div>
+                <div class="placeholder-text">待更新ing...</div>
+                <p>Fun needs time to be created.</p>
             </div>
         </div>
+
+        <!-- The 3D Stage (Hidden for now) -->
+        <!-- 
+        <div class="ln-stage" style="display: none;">
+            <div class="ln-window"></div>
+        </div> 
+        -->
     </div>
 
     <script type="module">
