@@ -3,7 +3,7 @@
    ========================================================================== */
 :root {
   --bg-base: #0a0a0c;
-  --bg-light-base: #f2f0eb;
+  --bg-light-base: #ffffff;
 
   /* 白昼背景纹理 (已移除 noise.svg) */
   --bg-light-texture: linear-gradient(180deg, #fffefc 0%, #f2f0eb 100%);
