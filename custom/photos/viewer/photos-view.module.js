@@ -25,7 +25,15 @@ export function initView(controller, admin = null, adminCore = null) {
 // View State
 const ViewState = {
     currentIdx: 0,
-    isHD: false
+    isHD: false,
+    sortMode: 0, // 0: Default, 1: Time Desc, 2: Time Asc
+    originalData: []
+};
+
+const SortMode = {
+    DEFAULT: 0,
+    TIME_DESC: 1,
+    TIME_ASC: 2
 };
 
 let container = null;
@@ -51,10 +59,47 @@ async function init() {
 
     // 初始加载
     await Controller.reloadData();
+    // Backup original order
+    ViewState.originalData = [...Controller.State.loadedData];
 
     // Initialize Manager (if admin)
     if (Controller.State.isAdmin && Admin?.initManager) {
         Admin.initManager(Controller.State.loadedData);
+    }
+
+    // Bind Sort Dropdown
+    const triggerBtn = document.getElementById('sort-trigger-btn');
+    const menuEl = document.getElementById('sort-menu');
+
+    if (triggerBtn && menuEl) {
+        // Toggle menu
+        triggerBtn.onclick = (e) => {
+            e.stopPropagation();
+            menuEl.classList.toggle('show');
+            triggerBtn.classList.toggle('active');
+        };
+
+        // Item selection
+        menuEl.querySelectorAll('.sort-item').forEach(item => {
+            item.onclick = (e) => {
+                e.stopPropagation();
+                const mode = parseInt(item.dataset.mode);
+                setSortMode(mode);
+                // Close menu
+                menuEl.classList.remove('show');
+                triggerBtn.classList.remove('active');
+            };
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (!triggerBtn.contains(e.target) && !menuEl.contains(e.target)) {
+                menuEl.classList.remove('show');
+                triggerBtn.classList.remove('active');
+            }
+        });
+
+        updateSortUI();
     }
 
     render();
@@ -62,6 +107,129 @@ async function init() {
     bindLightbox();
 
     setupTiltEffect();
+}
+
+function setSortMode(mode) {
+    ViewState.sortMode = mode;
+    updateSortUI();
+    applySort();
+}
+
+function updateSortUI() {
+    const label = document.getElementById('sort-label');
+    const items = document.querySelectorAll('.sort-item');
+
+    if (!label) return;
+
+    // Update Label
+    switch (ViewState.sortMode) {
+        case SortMode.DEFAULT:
+            label.textContent = "默认";
+            break;
+        case SortMode.TIME_DESC:
+            // Mode 1: New -> Old
+            label.textContent = "时间顺序";
+            break;
+        case SortMode.TIME_ASC:
+            // Mode 2: Old -> New
+            label.textContent = "时间倒序";
+            break;
+    }
+
+    // Update Menu Active State
+    items.forEach(item => {
+        if (parseInt(item.dataset.mode) === ViewState.sortMode) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+}
+
+function applySort() {
+    let list = [...ViewState.originalData];
+
+    // 如果 originalData 为空但 loadedData 有值（可能初始化错位），尝试同步
+    if (list.length === 0 && Controller.State.loadedData.length > 0) {
+        list = [...Controller.State.loadedData];
+        ViewState.originalData = [...list];
+    }
+
+    if (ViewState.sortMode === SortMode.TIME_DESC) {
+        list.sort((a, b) => getTime(b) - getTime(a));
+    } else if (ViewState.sortMode === SortMode.TIME_ASC) {
+        list.sort((a, b) => getTime(a) - getTime(b));
+    }
+
+    Controller.State.loadedData = list;
+
+    // 纯前端展示排序，不触发 Admin 的 Dirty Check
+    // 这样管理员点击排序后，"保存"按钮不会亮起，也不会误以为需要保存
+
+    render();
+}
+
+function getTime(item) {
+    // 1. 尝试从文件名(name)或路径(path)中提取
+    const targets = [item.name, item.path];
+
+    for (const str of targets) {
+        if (!str) continue;
+
+        // Pattern A: 13位毫秒时间戳 (e.g. 1768296440061, img_176...)
+        // 排除 202x 开头的（那是日期格式），通常时间戳是 17x 或 16x 开头
+        const tsMatch = str.match(/(1[6-9]\d{11})/);
+        if (tsMatch) return parseInt(tsMatch[1]);
+
+        // Pattern B: yyyyMMdd_HHmmss_SS (带序号, e.g. 20260115_184233_72)
+        // 优先匹配更长的带序号格式，以确保把序号算入排序权重
+        const seqMatch = str.match(/(20\d{6})_(\d{6})_(\d+)/);
+        if (seqMatch) {
+            const dateStr = seqMatch[1]; // 20260115
+            const timeStr = seqMatch[2]; // 184233
+            const seq = parseInt(seqMatch[3]); // 72
+
+            const year = dateStr.substring(0, 4);
+            const month = dateStr.substring(4, 6);
+            const day = dateStr.substring(6, 8);
+            const hour = timeStr.substring(0, 2);
+            const min = timeStr.substring(2, 4);
+            const sec = timeStr.substring(4, 6);
+
+            // 将序号作为毫秒加入，确保同秒内的顺序
+            // 假设序号不会超过 999，即使超过也不影响大体时间序
+            return new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}`).getTime() + seq;
+        }
+
+        // Pattern C: yyyyMMdd_HHmmss (标准, e.g. 20260128_184019, IMG_20250108_175319)
+        const dateMatch = str.match(/20\d{2}[01]\d[0-3]\d[-_]\d{6}/);
+        if (dateMatch) {
+            // "20260128_184019" -> "2026-01-28T18:40:19"
+            const s = dateMatch[0].replace(/[-_]/, ''); // 20260128184019
+            const year = s.substring(0, 4);
+            const month = s.substring(4, 6);
+            const day = s.substring(6, 8);
+            const hour = s.substring(8, 10);
+            const min = s.substring(10, 12);
+            const sec = s.substring(12, 14);
+            return new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}`).getTime();
+        }
+
+        // Pattern D: yyyyMMddHHmmss (Pure 14 digits)
+        const pureDateMatch = str.match(/(20\d{12})/);
+        if (pureDateMatch) {
+            const s = pureDateMatch[1];
+            const year = s.substring(0, 4);
+            const month = s.substring(4, 6);
+            const day = s.substring(6, 8);
+            const hour = s.substring(8, 10);
+            const min = s.substring(10, 12);
+            const sec = s.substring(12, 14);
+            return new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}`).getTime();
+        }
+    }
+
+    return 0;
 }
 
 export function render() {

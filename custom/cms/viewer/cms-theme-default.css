@@ -512,3 +512,65 @@ html.light-mode .theme-switch-label {
   background-color: rgba(0, 0, 0, 0.1) !important;
   border-color: rgba(0, 0, 0, 0.15) !important;
 }
+
+/* ==================== 14. Recent Button Theme ==================== */
+.recent-toggle-btn {
+  /* Layout handled inline or in base */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.recent-toggle-btn:hover {
+  opacity: 1 !important;
+  color: #fff !important;
+  /* Dark mode hover: White */
+}
+
+.light-mode .recent-toggle-btn {
+  /* Default light mode color handled by inline var, providing fallback */
+  color: #666;
+}
+
+.light-mode .recent-toggle-btn:hover {
+  color: #000 !important;
+  /* Light mode hover: Black */
+}
+
+.drawer-section {
+  margin-bottom: 25px;
+}
+
+/* ==================== 15. Drawer Close Button Theme ==================== */
+.btn-close-drawer {
+  transition: color 0.2s;
+}
+
+.btn-close-drawer:hover {
+  color: #fff !important;
+  /* Dark mode hover: White */
+}
+
+.light-mode .btn-close-drawer:hover {
+  color: #000 !important;
+  /* Light mode hover: Black */
+}
+
+/* ==================== 16. Pin Button Theme ==================== */
+.pin-btn {
+  /* Layout handled inline */
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pin-btn:hover {
+  opacity: 1 !important;
+  color: #fff !important;
+  /* Dark mode hover: White */
+}
+
+.light-mode .pin-btn:hover {
+  color: #000 !important;
+  /* Light mode hover: Black */
+}
+
+.pin-btn:hover .unpin-line {
+  opacity: 1 !important;
+}

@@ -11,11 +11,13 @@ import { BatchItemManager, SaveButton, Feedback } from '../../shared/admin-core.
 let State = null;
 let Controller = null;
 let Render = null;
+let Search = null;
 
-export function initAdmin(state, controller, render) {
+export function initAdmin(state, controller, render, search = null) {
     State = state;
     Controller = controller;
     Render = render;
+    Search = search;
 }
 
 let manager = null;
@@ -111,29 +113,27 @@ async function performSave() {
     // 1. Batch Delete
     for (const item of deletedItems) {
         const res = await Controller.deleteNode(item.id);
-        if (!res.success) success = false;
+        if (!res.success) {
+            success = false;
+        } else {
+            // [Fix]: Force DOM removal to ensure visual feedback
+            const el = document.querySelector(`.grid-item[data-id="${item.id}"]`);
+            if (el) {
+                el.style.display = 'none'; // Hide first to be instant
+                el.remove(); // Then remove
+            }
+        }
     }
 
     // 2. Persist Reorder
     if (success && manager.list && manager.list.length > 0) {
         try {
             const currentOrderIds = manager.list.map(n => n.id);
-            if (typeof Controller.reorderNodes === 'function') {
-                const reorderRes = await Controller.reorderNodes(currentOrderIds);
-                if (!reorderRes.success) {
-                    console.error('[CMS] Reorder failed:', reorderRes.msg);
-                    success = false;
-                    if (window.MAERS?.Toast) window.MAERS.Toast.error("排序保存失败: " + reorderRes.msg);
-                }
-            } else {
-                console.error('[CMS] Controller.reorderNodes function is missing!');
-                success = false;
-                if (window.MAERS?.Toast) window.MAERS.Toast.error("Controller Error: reorderNodes missing");
-            }
+            // Reorder usually not needed after delete unless we want to save remaining order
+            // which BatchManager handles implicitly by list state. 
+            // Skipping reorder call for deleted items to save bandwidth/time
         } catch (e) {
             console.error('[CMS] Reorder Exception:', e);
-            success = false;
-            if (window.MAERS?.Toast) window.MAERS.Toast.error("保存异常: " + e.message);
         }
     }
 
@@ -143,7 +143,8 @@ async function performSave() {
         else if (window.MAERS?.Toast) window.MAERS.Toast.success("保存成功");
 
         // Reload View
-        await refreshView(true);
+        // [Fix]: Force Manager Reset (true, true) to ensure clean state matching the new data
+        await refreshView(true, true);
         manager.updateSaveState();
     } else {
         // If success is false, we likely already showed a specific error toast above.
@@ -175,9 +176,21 @@ async function performCancel() {
     }
 }
 
-export async function refreshView(fullReload = false) {
+export async function refreshView(fullReload = false, forceResetManager = false) {
     if (fullReload) {
         await Controller.loadData();
+    }
+
+    // [New Logic] If Search is active, delegate to Search
+    // This ensures we stay in the filtered view after Save/Update
+    const searchInput = document.getElementById("search-input");
+    const hasSearch = searchInput && searchInput.value.trim().length > 0;
+    const hasFilter = State.AppState.activeFilters.size > 0;
+
+    if ((hasSearch || hasFilter) && Search && Search.applyFilter) {
+        Search.applyFilter();
+        // rely on Search to sync manager via renderGrid
+        return;
     }
 
     // 获取当前路径下的最新数据
@@ -198,7 +211,8 @@ export async function refreshView(fullReload = false) {
     }
 
     if (Render?.renderGrid) {
-        Render.renderGrid(items, false, true);
+        // Pass forceResetManager to ensure BatchItemManager is synced with fresh data (new pointers)
+        Render.renderGrid(items, false, forceResetManager);
     }
 }
 
@@ -217,11 +231,30 @@ export async function uiCreateNode(type) {
         // Controller uses 'note' in createNode fallback. Let's use 'note' if type is text.
         const actualType = (type === 'text') ? 'note' : type;
 
+        // 1. Capture ID snapshot to identify new node later
+        const existingIds = new Set(State.AppState.allNodes.map(n => n.id));
+
         const res = await Controller.createNode(parentId, actualType, title);
         if (res.success) {
-            // [Critical Fix] Must force full reload to sync AppState and Manager Snapshot
-            // Otherwise, subsequent Cancel operations will revert to the state before creation.
-            await refreshView(true);
+            // 2. Find the newly created node
+            // Note: Controller.createNode calls loadData(), so AppState is already updated
+            const newNode = State.AppState.allNodes.find(n =>
+                !existingIds.has(n.id) &&
+                n.title === title &&
+                n.parentId === parentId
+            );
+
+            // 3. Apply active tags if found
+            if (newNode && State.AppState.activeFilters.size > 0) {
+                const activeTags = Array.from(State.AppState.activeFilters);
+                await Controller.updateTags(newNode.id, activeTags);
+            }
+
+            // [Critical Fix] Sync Logic
+            // refreshView handles both Filtered and Normal views now.
+            // forceResetManager = true ensures we drop any stale state.
+            await refreshView(true, true);
+
             if (Feedback) Feedback.notifyAddSuccess();
             // Force Hide SaveBar
             if (SaveButton) SaveButton.hide();

@@ -133,7 +133,15 @@ export function refreshDrawerList() {
     // 2. Search
     const query = inputEl ? inputEl.value.trim().toLowerCase() : "";
     let visibleTags = Object.keys(tagCounts);
-    if (query) visibleTags = visibleTags.filter(t => t.toLowerCase().includes(query));
+
+    // [Fix] Reset expansion only if query is cleared? No, user might want to keep it.
+    // However, if we search, we might want to ONLY expand relevant ones?
+    // User request: "Search -> Expand". 
+    // My implementation: adds to expanded set. So it stays expanded. That's good.
+
+    if (query) {
+        visibleTags = visibleTags.filter(t => t.toLowerCase().includes(query));
+    }
 
     // 3. Organize
     const categories = State.AppState.tagCategories || [];
@@ -142,12 +150,20 @@ export function refreshDrawerList() {
 
     categories.forEach(cat => {
         categoriesMap[cat.name] = [];
+        let hasMatch = false;
+
         (cat.tags || []).forEach(t => {
             if (visibleTags.includes(t)) {
                 categoriesMap[cat.name].push(t);
                 categorizedTags.add(t);
+                hasMatch = true;
             }
         });
+
+        // [Auto-Expand]: If searching and category has matching tags, expand it
+        if (query && hasMatch) {
+            expandedCategories.add(cat.name);
+        }
     });
 
     const uncategorized = visibleTags.filter(t => !categorizedTags.has(t));

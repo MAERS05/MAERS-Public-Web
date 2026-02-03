@@ -36,6 +36,10 @@
 -   **禁止**使用 `var` 声明变量（全部使用 `const/let`）。
 -   **禁止**向全局 `window` 对象挂载新变量（除非是 Explicit Debugging Interface）。
 -   **禁止**删除 `flash-guard.js` 的同步引用。
+-   **禁止**在业务模块的主 CSS 文件中编写 `max-width` 媒体查询（必须去 `zmobile adaptation` 目录）。
+-   **禁止**滥用 `!important`。**尽量**通过 CSS 权重管理（如 `body` 前缀策略）解决冲突，仅在覆盖行内样式或第三方库强样式等必要场景下使用。
+-   **禁止**保留“僵尸代码”或无用注释。修改功能时，**必须删除**旧逻辑，绝不允许采取“保留旧代码但在下方通过新代码覆盖”的增量式写法。
+-   **禁止**编写无意义的占位代码（如无效的 `0` 或 `none`）。每一行代码都必须有明确的运行时价值。
 
 ---
 
@@ -76,6 +80,25 @@ function bindEvents(el) {
     /* 使用全局变量 */
     background-color: var(--card-bg);
     border: 1px solid var(--card-border);
+}
+```
+
+### 3.3 移动端适配 CSS 模板
+任何移动端 (`@media`) 样式**必须**写在 `custom/zmobile adaptation/` 对应的文件中。
+**关键规则**：必须在模块的主 CSS 文件头部使用 `@import` 引入适配文件，**禁止**在 HTML 中直接使用 `<link>` 标签引入。
+
+```css
+/* custom/example/viewer/example.css - 头两行 */
+@import "../../zmobile adaptation/mobile-example.css";
+
+.example-container { ... }
+```
+
+```css
+/* custom/zmobile adaptation/mobile-example.css */
+/* 必须加 body 前缀提升权重 */
+body .example-container {
+    flex-direction: column;
 }
 ```
 

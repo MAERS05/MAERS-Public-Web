@@ -33,8 +33,6 @@ body.admin-mode .admin-tag {
 }
 
 .add-btn:hover {
-    background: var(--text-main);
-    color: var(--bg-type);
     transform: scale(1.1);
 }
 

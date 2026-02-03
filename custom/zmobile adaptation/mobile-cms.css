@@ -1,0 +1,87 @@
+/* ==========================================================================
+   📱 Mobile CMS Styles (Extracted from cms-base.css)
+   ========================================================================== */
+
+@media (max-width: 900px) {
+
+    /* Container & Card Padding Optimization */
+    body .container {
+        padding: 10px;
+        padding-bottom: 80px;
+        /* More space for bottom player if exists */
+    }
+
+    body .main-card {
+        padding: 20px 15px;
+        min-height: 85vh;
+    }
+
+    /* Header Layout */
+    body .explorer-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    body .header-left {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    body .header-right {
+        width: 100%;
+        align-items: stretch;
+    }
+
+    body .header-tools-row {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* Search Box */
+    body .search-input {
+        width: 100%;
+        min-width: unset;
+        font-size: 16px;
+        /* Prevent iOS zoom */
+    }
+
+    /* Grid Layout Optimization */
+    body .folder-grid {
+        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+        gap: 10px;
+    }
+
+    body .grid-item {
+        padding: 15px;
+        border-radius: 0 10px 0 0;
+    }
+
+    body .item-title {
+        font-size: 0.95rem;
+    }
+
+    /* Reader View */
+    body .reader-toolbar {
+        padding: 0 15px;
+        height: 50px;
+    }
+
+    body .reader-scroll-area {
+        padding-top: 20px;
+    }
+
+    body .paper-sheet {
+        padding: 0 10px;
+        margin-bottom: 60px;
+        font-size: 0.95rem;
+    }
+
+    /* Lightbox */
+    body .lightbox-close {
+        top: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+    }
+}

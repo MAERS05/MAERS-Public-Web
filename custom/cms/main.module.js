@@ -18,6 +18,7 @@ import { Events, initEvents } from './viewer/cms-events.module.js';
 import { Tags, initTags } from './viewer/cms-tags.module.js';
 import { View, init as initView, initView as initViewModule, setupViewEventListeners } from './viewer/cms-view.module.js';
 import { Render, initRender } from './viewer/cms-render.module.js';
+import { Recent, initRecent } from './viewer/cms-recent.module.js';
 import { Controller, AppState, CONFIG, bootstrap } from './admin/cms-controller.module.js';
 import { Editor, initEditor } from './admin/cms-editor.module.js';
 
@@ -29,7 +30,7 @@ initTheme();
 // CMS System
 initStateModule(Controller);
 initSearch(State, Render, Tags);
-initEvents(State, Render, null, Tags, Editor); // No Admin in user view
+initEvents(State, Render, null, Tags, Editor, null, Recent); // No Admin, No LitView (yet), Yes Recent
 initTags(State, Controller, Search);
 initRender(State, null, Controller, Events, null); // No Admin/Drag in user view
 initViewModule({
@@ -50,4 +51,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     await bootstrap(View);
     // Setup event listeners after bootstrap
     setupViewEventListeners();
+    initRecent(State, Controller, View);
 });

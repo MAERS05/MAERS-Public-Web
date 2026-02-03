@@ -15,6 +15,7 @@ let Lightbox = null;
 let Admin = null;
 let Controller = null;
 let Editor = null;
+let CustomView = null;
 
 export function initView(modules) {
     State = modules.State;
@@ -26,6 +27,7 @@ export function initView(modules) {
     Admin = modules.Admin;
     Controller = modules.Controller;
     Editor = modules.Editor;
+    CustomView = modules.CustomView;
 }
 
 /**
@@ -97,6 +99,7 @@ export const View = {
     closeLightbox: () => Lightbox?.closeLightbox(),
 
     // Admin Module
+    // Admin Module
     uiCreateNode: (type) => Admin?.uiCreateNode(type),
     uiRenameNode: (e, id, old) => Admin?.uiRenameNode(e, id, old),
     uiDeleteNode: (e, id) => Admin?.uiDeleteNode(e, id),
@@ -107,7 +110,16 @@ export const View = {
     uiRemoveTag: (e, id, tag) => Admin?.uiRemoveTag(e, id, tag),
     uiUploadCover: (e, id) => Admin?.uiUploadCover(e, id),
     uiRemoveCover: (e, id) => Admin?.uiRemoveCover(e, id),
-    refreshView: () => Admin?.refreshView()
+    refreshView: () => Admin?.refreshView(),
+
+    // Editor / Viewer
+    openFile: (node) => {
+        if (CustomView && CustomView.openNode) {
+            CustomView.openNode(node);
+        } else {
+            Editor?.open(node);
+        }
+    }
 };
 
 // Event Binding (to be called from entry point after DOM is ready)

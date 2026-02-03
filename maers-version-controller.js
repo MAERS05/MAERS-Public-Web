@@ -5,7 +5,7 @@
  * 更新方式：每次发布新版本前，更新下方的 VERSION 常量即可。
  */
 
-const VERSION = '2026.02.03-1626'; // 📅 修改此处触发全站更新
+const VERSION = '2026.02.03-2326'; // 📅 修改此处触发全站更新
 const CACHE_NAME = `maers-cache-${VERSION}`;
 
 // 监听安装事件

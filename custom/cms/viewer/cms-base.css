@@ -1,3 +1,5 @@
+@import "../../zmobile adaptation/mobile-cms.css";
+
 /* CMS Base Layout Styles - Structure Only, No Theme */
 /* This file contains pure layout and structure definitions without visual styling */
 
@@ -145,6 +147,7 @@
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  word-break: break-all;
 }
 
 .item-divider {
@@ -335,6 +338,14 @@
   gap: 15px;
 }
 
+
+.drawer-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
 .drawer-header h3 {
   margin: 0;
   font-size: 1.2rem;
@@ -352,6 +363,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  overscroll-behavior: contain;
 }
 
 .drawer-item {

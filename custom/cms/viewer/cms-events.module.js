@@ -11,14 +11,16 @@ let Admin = null;
 let Tags = null;
 let Editor = null;
 let LiteratureView = null;
+let Recent = null;
 
-export function initEvents(state, render, admin = null, tags = null, editor = null, literatureView = null) {
+export function initEvents(state, render, admin = null, tags = null, editor = null, literatureView = null, recent = null) {
     State = state;
     Render = render;
     Admin = admin;
     Tags = tags;
     Editor = editor;
     LiteratureView = literatureView;
+    Recent = recent;
 }
 
 export function setupGridEventDelegation() {
@@ -27,6 +29,7 @@ export function setupGridEventDelegation() {
     if (!container) return;
 
     container.addEventListener("click", (e) => {
+        // ... (existing code for tags, actions, create buttons)
         const tag = e.target.closest(".mini-tag");
         const actionBtn = e.target.closest(".action-mini");
         const card = e.target.closest(".grid-item");
@@ -47,7 +50,7 @@ export function setupGridEventDelegation() {
             const id = actionBtn.dataset.id;
 
             if (!Admin) return;
-
+            // ... (switch case for actions)
             switch (action) {
                 case 'pick':
                     if (Admin.uiPickNode) Admin.uiPickNode(e, id);
@@ -114,6 +117,11 @@ export function setupGridEventDelegation() {
             } else {
                 if (!State.IS_ADMIN && LiteratureView?.engine) {
                     LiteratureView.engine.promoteBook(node);
+                }
+
+                // [Recent Files]
+                if (Recent?.addToHistory) {
+                    Recent.addToHistory(node);
                 }
 
                 if (Editor?.openNote) {

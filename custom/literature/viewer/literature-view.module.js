@@ -45,6 +45,14 @@ export const LiteratureView = {
 
         viewport.appendChild(pathContainer);
         document.body.insertBefore(viewport, document.body.firstChild);
+    },
+
+    openNode: function (node) {
+        if (this.engine) {
+            this.engine.pauseAnimation();
+            this.engine.viewport.style.display = 'none';
+            if (Editor) Editor.open(node);
+        }
     }
 };
 
@@ -409,6 +417,8 @@ class FlowEngine {
         const modeBtn = document.createElement('span');
         modeBtn.className = 'mode-text-btn';
         modeBtn.textContent = mode;
+        // Tooltip logic: Flow mode (currently showing) -> Click to go to Grid (Show All)
+        modeBtn.title = this.isGridMode ? '展示最近36本' : '展示所有书籍';
         modeBtn.addEventListener('click', () => this.toggleMode());
         titleEl.appendChild(modeBtn);
 

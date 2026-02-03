@@ -63,8 +63,18 @@ export function applyFilter() {
     const Search = SearchUtils;
     if (!Search) return;
 
+    // [Fix] Search Scope: Based on current path, not always root.
+    // This allows filtering "within" a folder when navigating.
+    let searchScope = State.AppState.root;
+    if (State.AppState.pathStack && State.AppState.pathStack.length > 0) {
+        const current = State.AppState.pathStack[State.AppState.pathStack.length - 1];
+        if (current !== 'root' && current.children) {
+            searchScope = current.children;
+        }
+    }
+
     const results = Search.filterNodes(
-        State.AppState.root,
+        searchScope,
         State.AppState.activeFilters,
         keywordStr,
     );

@@ -1,0 +1,101 @@
+/* ==========================================================================
+   📱 Mobile Global Styles (Extracted from style.css)
+   ========================================================================== */
+
+/* 1. Layout Media Queries */
+@media (max-width: 1024px) {
+    body .container {
+        padding-top: 60px;
+        height: auto;
+        overflow: auto;
+        padding-left: 15px;
+        padding-right: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    body .grid-layout {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        display: block;
+    }
+
+    body .category-card {
+        margin-bottom: 20px;
+        height: 160px;
+        flex-direction: row;
+        gap: 20px;
+        padding: 0 30px;
+        justify-content: flex-start;
+    }
+
+    body .card-icon {
+        font-size: 3rem;
+        margin-bottom: 0;
+    }
+
+    body .text-group {
+        text-align: left;
+    }
+}
+
+/* 2. Mobile Performance Optimization: Simple Fade Transition */
+@media (max-width: 1024px) {
+
+    /* 重写遮罩层动画逻辑 */
+    #theme-mask {
+        /* 强制取消几何裁剪过渡，改为透明度过渡 */
+        transition: opacity 0.5s ease-in-out !important;
+
+        /* 默认状态（黑夜）是显示的，且铺满全屏 */
+        opacity: 1;
+        clip-path: none !important;
+        /* 移除圆形裁剪，改为普通图层 */
+
+        /* [可选] 禁用背景的微光呼吸动画，进一步省电 */
+        animation: none !important;
+    }
+
+    /* 禁用星星闪烁动画 (性能杀手) */
+    #theme-mask::after {
+        display: none !important;
+        /* 移动端太小看不清星星，直接隐藏以大幅提升性能 */
+    }
+
+    /* 定义白昼模式下的状态 */
+    html.light-mode #theme-mask {
+        /* 白昼模式下，遮罩层简单地变透明 */
+        opacity: 0 !important;
+    }
+
+    /* 加快底层的背景色切换速度 */
+    html,
+    body {
+        transition: background-color 0.5s ease, color 0.5s ease !important;
+    }
+}
+
+@media (max-width: 1024px) {
+
+    /* 1. 禁用毛玻璃：这是导致手机卡顿的元凶 */
+    body .main-card {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+
+        /* 2. 改用高不透明度纯色：弥补视觉质感 */
+        /* 深色模式下：几乎全黑 */
+        background: rgba(20, 20, 20, 0.95);
+
+        /* 3. 移除大阴影：减少 GPU 渲染开销 */
+        box-shadow: none !important;
+
+        /* 4. 移除边框：扁平化设计更适合移动端 */
+        border: none !important;
+    }
+
+    /* 5. 适配白昼模式 */
+    html.light-mode .main-card {
+        /* 白昼模式下：几乎全白 */
+        background: rgba(255, 255, 255, 0.98);
+    }
+}

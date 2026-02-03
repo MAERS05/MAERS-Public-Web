@@ -19,6 +19,7 @@ import { Render, initRender } from '../cms/viewer/cms-render.module.js';
 import { Events, initEvents } from '../cms/viewer/cms-events.module.js';
 import { Admin } from '../cms/viewer/cms-admin.module.js';
 import { View, initView, setupViewEventListeners } from '../cms/viewer/cms-view.module.js';
+import { Recent, initRecent } from '../cms/viewer/cms-recent.module.js';
 
 // 3. CMS Admin Modules
 import { Controller, bootstrap } from '../cms/admin/cms-controller.module.js';
@@ -40,7 +41,7 @@ initTheme();
 // 1. Init Dependencies
 initStateModule(Controller);
 initSearch(State, Render, Tags, LiteratureView);
-initEvents(State, Render, null, Tags, Editor, LiteratureView);
+initEvents(State, Render, null, Tags, Editor, LiteratureView, Recent);
 initTags(State, Controller, Search);
 initRender(State, null, Controller, Events, null, LiteratureView);
 initLightbox();
@@ -57,7 +58,8 @@ initView({
     Events,
     Lightbox,
     Admin,
-    Controller
+    Controller,
+    CustomView: LiteratureView
 });
 
 // Initialize Literature View with Editor dependency
@@ -69,6 +71,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await bootstrap(View);
     // Bind global CMS UI listeners (Tags drawer, etc.)
     setupViewEventListeners();
+    // Initialize Recent Files
+    initRecent(State, Controller, View);
     // Initialize Literature View (Flow Engine)
     await LiteratureView.init();
 });

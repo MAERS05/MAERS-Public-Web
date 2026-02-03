@@ -12,6 +12,8 @@ import { Tags, initTags } from './viewer/cms-tags.module.js';
 import { View, init as initView, initView as initViewModule, setupViewEventListeners } from './viewer/cms-view.module.js';
 import { Render, initRender } from './viewer/cms-render.module.js';
 import { Admin, initAdmin } from './viewer/cms-admin.module.js';
+import { Recent, initRecent } from './viewer/cms-recent.module.js';
+import { LiteratureView } from '../literature/viewer/literature-view.module.js';
 import { Controller, AppState, CONFIG, bootstrap } from './admin/cms-controller.module.js';
 import { Drag, initDrag } from './admin/cms-drag.module.js';
 import { Editor, initEditor } from './admin/cms-editor.module.js';
@@ -20,12 +22,12 @@ import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../sh
 
 // Initialize dependency injection
 initStateModule(Controller);
-initSearch(State, Render, Tags);
-initAdmin(State, Controller, Render);
-initEvents(State, Render, Admin, Tags, Editor);
+initSearch(State, Render, Tags, LiteratureView);
+initAdmin(State, Controller, Render, Search);
+initEvents(State, Render, Admin, Tags, Editor, LiteratureView, Recent);
 initTags(State, Controller, Search);
 initDrag(Admin, Controller, State);
-initRender(State, Admin, Controller, Events, Drag);
+initRender(State, Admin, Controller, Events, Drag, LiteratureView, Search);
 initViewModule({
     State,
     Search,
@@ -46,6 +48,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Setup event listeners after bootstrap
         setupViewEventListeners();
+
+        // Initialize Recent Files
+        initRecent(State, Controller, View);
 
     } catch (error) {
         console.error('[MAERS.CMS] Bootstrap FAILED:', error);

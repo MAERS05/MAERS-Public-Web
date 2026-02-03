@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
     <link rel="stylesheet" href="custom/photos/viewer/photos-viewer.css">
+    <link rel="stylesheet" href="custom/photos/viewer/photos-header-btn.css">
     <link rel="stylesheet" href="static-style/responsive.css">
 
     <!-- 数据现在通过 ES6 模块异步加载 (data/photos-data.json) -->
@@ -65,6 +66,7 @@
             transform: scale(0.95);
         }
 
+        /* 上传按钮 (Label实现) - Theme handled by header-action-btn class */
         .upload-label {
             display: flex;
             align-items: center;
@@ -72,18 +74,14 @@
             height: 40px;
             padding: 0 20px;
             border-radius: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--pill-border);
             cursor: pointer !important;
             transition: 0.3s;
-            color: var(--text-main);
             font-weight: bold;
             white-space: nowrap;
             user-select: none;
         }
 
         .upload-label:hover {
-            background: rgba(255, 255, 255, 0.25);
             transform: translateY(-2px);
         }
 
@@ -154,8 +152,20 @@
                 <a href="album.html" class="back-btn">← Back</a>
                 <div class="header-title" id="page-title">Loading...</div>
                 <div class="header-actions">
+                    <div class="sort-dropdown-container">
+                        <button id="sort-trigger-btn" class="header-action-btn pill-btn" title="排序方式">
+                            <span id="sort-label">默认</span>
+                            <span class="arrow-icon">▾</span>
+                        </button>
+                        <div class="sort-dropdown-menu" id="sort-menu">
+                            <div class="sort-item active" data-mode="0">默认</div>
+                            <div class="sort-item" data-mode="1">时间顺序 (新→旧)</div>
+                            <div class="sort-item" data-mode="2">时间倒序 (旧→新)</div>
+                        </div>
+                    </div>
                     <button id="save-order-btn" style="display:none;" title="保存排序">💾</button>
-                    <label class="upload-label" id="upload-btn" style="display:none;" for="file-input">
+                    <label class="upload-label header-action-btn" id="upload-btn" style="display:none;"
+                        for="file-input">
                         ＋ 上传图片
                     </label>
                     <input type="file" id="file-input" accept="image/*" multiple>

@@ -13,14 +13,16 @@ let Controller = null;
 let Events = null;
 let Drag = null;
 let LiteratureView = null;
+let Search = null;
 
-export function initRender(state, admin = null, controller = null, events = null, drag = null, literatureView = null) {
+export function initRender(state, admin = null, controller = null, events = null, drag = null, literatureView = null, search = null) {
     State = state;
     Admin = admin;
     Controller = controller;
     Events = events;
     Drag = drag;
     LiteratureView = literatureView;
+    Search = search;
 }
 
 // const DEFAULT_COVER = 'photos/images/covers/default-book-cover.png'; Remove unused constant
@@ -305,19 +307,47 @@ export function renderBreadcrumb() {
 export function navigateTo(index) {
     if (index === -1) {
         State.AppState.pathStack = ["root"];
-        // Navigation implies Reset
-        renderGrid(State.AppState.root, false, true);
     } else {
         State.AppState.pathStack = State.AppState.pathStack.slice(0, index + 1);
-        const target = State.AppState.pathStack[State.AppState.pathStack.length - 1];
-        // Navigation implies Reset
-        renderGrid(target.children, false, true);
     }
+
+    // [Fix]: Re-apply filter if active, instead of resetting to full grid
+    if (Search && Search.applyFilter) {
+        const searchInput = document.getElementById(State.SELECTORS.SEARCH_INPUT.slice(1));
+        const hasSearch = searchInput && searchInput.value.trim().length > 0;
+        const hasFilter = State.AppState.activeFilters.size > 0;
+
+        if (hasSearch || hasFilter) {
+            renderBreadcrumb();
+            Search.applyFilter();
+            return;
+        }
+    }
+
+    const target = State.AppState.pathStack[State.AppState.pathStack.length - 1];
+    const list = target === "root" ? State.AppState.root : target.children;
+
+    // Navigation implies Reset
+    renderGrid(list, false, true);
     renderBreadcrumb();
 }
 
 export function enterFolder(node) {
     State.AppState.pathStack.push(node);
+
+    // [Fix]: Re-apply filter if active
+    if (Search && Search.applyFilter) {
+        const searchInput = document.getElementById(State.SELECTORS.SEARCH_INPUT.slice(1));
+        const hasSearch = searchInput && searchInput.value.trim().length > 0;
+        const hasFilter = State.AppState.activeFilters.size > 0;
+
+        if (hasSearch || hasFilter) {
+            renderBreadcrumb();
+            Search.applyFilter();
+            return;
+        }
+    }
+
     renderBreadcrumb();
     // Entering folder implies Reset
     renderGrid(node.children, false, true);

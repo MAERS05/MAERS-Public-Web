@@ -1,0 +1,179 @@
+/* custom/photos/viewer/photos-header-btn.css */
+
+/* Dropdown Container */
+.sort-dropdown-container {
+    position: relative;
+    z-index: 101;
+    /* Higher than header actions */
+    /* margin-top removed as requested to revert */
+}
+
+/* Pill Button Style */
+.header-action-btn {
+    /* Base styles from previous step (circle) are overridden here */
+    font-size: 0.9rem;
+    /* Revert to 0.9rem */
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--pill-border);
+    border-radius: 20px;
+    /* Revert to 20px */
+    height: 40px;
+    /* Revert to 40px */
+    padding: 0 15px;
+    /* Revert to 15px */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s;
+    color: var(--text-main);
+    width: auto;
+    /* Allow auto width based on text */
+    outline: none;
+    user-select: none;
+}
+
+.header-action-btn:hover,
+.header-action-btn.active {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.header-action-btn:active {
+    transform: scale(0.98);
+}
+
+.arrow-icon {
+    font-size: 1.1rem;
+    /* Slightly larger (was 0.8rem) */
+    opacity: 0.7;
+    transition: transform 0.2s;
+    margin-top: 2px;
+    /* Move down slightly */
+}
+
+/* Rotate arrow when open */
+.header-action-btn.active .arrow-icon {
+    transform: rotate(180deg);
+}
+
+/* Light Mode Overrides */
+html.light-mode .header-action-btn {
+    background: transparent;
+    border-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-main);
+    /* Ensure text is dark */
+}
+
+html.light-mode .header-action-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Dropdown Menu */
+.sort-dropdown-menu {
+    position: absolute;
+    top: 110%;
+    /* Below button */
+    right: 0;
+    width: 200px;
+    /* Slightly wider */
+    background: var(--card-bg);
+    /* Use theme bg */
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    padding: 6px;
+    display: none;
+    /* Hidden by default */
+    flex-direction: column;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: fadeInMenu 0.1s ease-out;
+}
+
+/* Light Mode Menu Specifics */
+html.light-mode .sort-dropdown-menu {
+    background: rgba(255, 255, 255, 0.95);
+    /* More opaque for readability */
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.sort-dropdown-menu.show {
+    display: flex;
+}
+
+/* Menu Items */
+.sort-item {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    /* Strict usage of variable */
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s;
+    user-select: none;
+    display: flex;
+    align-items: center;
+}
+
+/* Light Mode Item Text */
+html.light-mode .sort-item {
+    color: #333;
+    /* Force dark text if var fails */
+}
+
+.sort-item:hover {
+    background: rgba(125, 125, 125, 0.1);
+}
+
+.sort-item.active {
+    background: var(--primary-color, rgba(0, 120, 215, 0.1));
+    /* Use subtle blue tint */
+    font-weight: bold;
+    color: var(--primary-text, var(--text-main));
+    /* Keep text readable */
+}
+
+/* Specific for light mode active item to ensure contrast */
+html.light-mode .sort-item.active {
+    background: rgba(0, 0, 0, 0.08);
+    /* Darker gray background */
+    color: #000;
+}
+
+/* Dark mode specific adjustments */
+html:not(.light-mode) .sort-dropdown-menu {
+    background: rgba(18, 18, 18, 0.95);
+    /* Neural dark gray/black, no blue */
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Ensure items in dark mode are clean */
+html:not(.light-mode) .sort-item {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+html:not(.light-mode) .sort-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+html:not(.light-mode) .sort-item.active {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+}
+
+@keyframes fadeInMenu {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
