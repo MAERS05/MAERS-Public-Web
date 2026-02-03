@@ -1,6 +1,5 @@
 /* ==========================================================================
    MAERS Space - Core Stylesheet
-   Entry point for global layout and imports.
    ========================================================================== */
 
 /* 2. Basic Resets & Performance */
@@ -29,17 +28,6 @@ body {
     background: transparent;
     transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
-
-/* White mode texture layer removed */
-body::before {
-    display: none !important;
-}
-
-/* Ambient Light Flow Removed - Pure Clean Background */
-html.light-mode body::after {
-    display: none;
-}
-
 
 
 /* 3. Theme Mask (Animated Background) */

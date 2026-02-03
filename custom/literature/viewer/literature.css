@@ -275,9 +275,6 @@
 .folder-grid .type-note::before,
 .folder-grid .type-note::after {
     display: none !important;
-    content: none !important;
-    clip-path: none !important;
-    box-shadow: none !important;
 }
 
 

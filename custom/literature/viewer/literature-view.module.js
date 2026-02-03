@@ -506,7 +506,7 @@ class FlowEngine {
 
                         // 图片路径处理
                         if (data.isPlaceholder) {
-                            coverEl.style.backgroundImage = "url('photos/images/covers/default-book-cover.png')";
+                            coverEl.style.backgroundImage = '';
                             book.el.dataset.webp = '';
                             book.el.dataset.avif = '';
                         } else if (data.coverImage) {
@@ -525,7 +525,7 @@ class FlowEngine {
                             book.el.dataset.webp = webpUrl;
                             book.el.dataset.avif = avifUrl;
                         } else {
-                            coverEl.style.backgroundImage = "url('photos/images/covers/default-book-cover.png')";
+                            coverEl.style.backgroundImage = '';
                             book.el.dataset.webp = '';
                             book.el.dataset.avif = '';
                         }

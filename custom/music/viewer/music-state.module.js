@@ -261,8 +261,6 @@ function updateResetButtonVisibility() {
 }
 
 // 监听播放状态变化
-// 监听播放状态变化
-// setInterval(updateResetButtonVisibility, 500); // Removed: Use event driven approach
 
 // 绑定还原按钮点击事件
 document.addEventListener('DOMContentLoaded', () => {

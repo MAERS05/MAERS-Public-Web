@@ -150,7 +150,7 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
-于屏幕中央而不是偏上方 .reader-toolbar {
+.reader-toolbar {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.2);
 }
@@ -341,7 +341,6 @@
 .light-mode .crumb-item:hover {
   background: rgba(0, 0, 0, 0.05);
 }
-
 
 
 .light-mode .reader-toolbar {

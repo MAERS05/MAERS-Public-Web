@@ -23,14 +23,10 @@ export function initRender(state, admin = null, controller = null, events = null
     LiteratureView = literatureView;
 }
 
-const DEFAULT_COVER = 'photos/images/covers/default-book-cover.png';
-
-/**
- * Get cover URL for a node (with AVIF optimization for custom covers)
- */
+// const DEFAULT_COVER = 'photos/images/covers/default-book-cover.png'; Remove unused constant
 function getCoverUrl(node, isLitModule) {
     if (!isLitModule) return null;
-    if (!node.coverImage) return DEFAULT_COVER;
+    if (!node.coverImage) return null;
     const pathParts = node.coverImage.split('/');
     const filename = pathParts[pathParts.length - 1];
     const basename = filename.replace(/\.[^/.]+$/, "");

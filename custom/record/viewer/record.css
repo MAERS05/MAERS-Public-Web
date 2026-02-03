@@ -192,21 +192,14 @@ html.light-mode .grid-item .mini-tag.active {
    Remove all unwanted decorations, icons, and pseudo-shapes
    ========================================================================== */
 .folder-grid .grid-item .item-icon,
-/* Icons */
 .grid-item .item-divider,
-/* Dividers */
 .folder-grid .grid-item::before,
-/* Glow bars */
 .folder-grid .grid-item::after,
-/* Shadows */
 .folder-grid .type-folder::before,
-/* Folder shapes */
 .folder-grid .type-folder::after,
 .folder-grid .type-note::before,
-/* Note shapes */
 .folder-grid .type-note::after {
     display: none !important;
-    content: none !important;
 }
 
 /* 
