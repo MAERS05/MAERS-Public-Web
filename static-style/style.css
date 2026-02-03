@@ -13,7 +13,7 @@
 html {
     height: 100%;
     background-color: var(--bg-base);
-    transition: background-color 2.5s ease;
+    transition: background-color 1.2s ease;
 }
 
 html.light-mode {
@@ -30,19 +30,17 @@ body {
     transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* White mode texture layer */
+/* White mode texture layer removed */
 body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -2;
-    background-image: var(--bg-light-texture);
-    pointer-events: none;
-    will-change: opacity;
+    display: none !important;
 }
+
+/* Ambient Light Flow Removed - Pure Clean Background */
+html.light-mode body::after {
+    display: none;
+}
+
+
 
 /* 3. Theme Mask (Animated Background) */
 #theme-mask {
@@ -59,7 +57,7 @@ body::before {
         radial-gradient(80% 80% at 50% -20%, rgba(40, 40, 55, 0.4) 0%, transparent 60%),
         linear-gradient(180deg, #141417 0%, #0a0a0c 100%);
     clip-path: circle(150% at 100% 0%);
-    transition: clip-path 2.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: clip-path 1.6s cubic-bezier(0.22, 1, 0.36, 1);
     /* GPU 硬件加速 */
     transform: translateZ(0);
     will-change: clip-path;
@@ -82,17 +80,49 @@ body::before {
 }
 
 @keyframes stars-random-flicker {
-    0% { opacity: 0.5; }
-    3% { opacity: 0.2; }
-    18% { opacity: 0.6; }
-    22% { opacity: 0.15; }
-    41% { opacity: 0.55; }
-    47% { opacity: 0.25; }
-    63% { opacity: 0.65; }
-    68% { opacity: 0.18; }
-    84% { opacity: 0.45; }
-    91% { opacity: 0.3; }
-    100% { opacity: 0.5; }
+    0% {
+        opacity: 0.5;
+    }
+
+    3% {
+        opacity: 0.2;
+    }
+
+    18% {
+        opacity: 0.6;
+    }
+
+    22% {
+        opacity: 0.15;
+    }
+
+    41% {
+        opacity: 0.55;
+    }
+
+    47% {
+        opacity: 0.25;
+    }
+
+    63% {
+        opacity: 0.65;
+    }
+
+    68% {
+        opacity: 0.18;
+    }
+
+    84% {
+        opacity: 0.45;
+    }
+
+    91% {
+        opacity: 0.3;
+    }
+
+    100% {
+        opacity: 0.5;
+    }
 }
 
 /* 内联CSS的 !important 会覆盖这个，允许动画正常工作 */
@@ -178,8 +208,9 @@ html.shrink-view .container {
 
 html.shrink-view .main-card,
 html.shrink-view .home-container {
-    transform: scale(0.65) translateY(50px);
-    transform-origin: center top;
+    transform: scale(0.65);
+    /* Slightly larger for better visibility */
+    transform-origin: center center;
     border-radius: 40px;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.5s, box-shadow 0.5s;
@@ -199,9 +230,9 @@ html.shrink-view::after {
 
 .zoom-trigger-icon,
 .zoom-trigger-whole {
-    cursor: pointer !important;
+    cursor: pointer;
     display: inline-block;
-    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
     user-select: none;
     position: relative;
     z-index: 10;
@@ -209,9 +240,9 @@ html.shrink-view::after {
 
 .zoom-trigger-icon:hover,
 .zoom-trigger-whole:hover {
-    transform: scale(1.15) !important;
+    transform: scale(1.15);
     /* filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)) !important; Removed glow */
-    cursor: pointer !important;
+    cursor: pointer;
 }
 
 /* 8. Lightbox State */

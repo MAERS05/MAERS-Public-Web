@@ -278,6 +278,19 @@ html.light-mode .photo-grid {
    Touch Optimization
    ========================================================================== */
 
-.photo-item, .lb-nav {
+.photo-item,
+.lb-nav {
     touch-action: manipulation;
+}
+
+/* ==========================================================================
+   Admin Actions Positioning (Layout Only)
+   ========================================================================== */
+.photo-admin-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 20;
+    display: inline-flex;
+    gap: 4px;
 }

@@ -1,103 +1,67 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <link rel="icon" type="image/svg+xml" href="ui/icon.svg" />
-    <script src="dynamic-style/theme-init.js"></script>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Panel - MAERS</title>
 
-    <!-- 🚀 Resource Preloading -->
-    <link rel="preload" href="static-style/theme.css" as="style" />
-    <link rel="preload" href="static-style/components.css" as="style" />
+<head>
+  <link rel="icon" type="image/svg+xml" href="ui/icon.svg" />
+  <script src="dynamic-style/flash-guard.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel - MAERS</title>
 
-    <link rel="stylesheet" href="static-style/theme.css" />
-    <link rel="stylesheet" href="static-style/components.css" />
-    <link rel="stylesheet" href="static-style/style.css" />
-    <link rel="stylesheet" href="static-style/toast.css" />
-    <link rel="stylesheet" href="custom/index/admin/admin.css" />
-    <script defer src="shared/utils.js"></script>
-    <script defer src="data-manage/data-provider.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
+  <!-- 🚀 Resource Preloading -->
+  <link rel="preload" href="static-style/theme.css" as="style" />
+  <link rel="preload" href="static-style/components.css" as="style" />
 
-    <script src="shared/toast.js"></script>
+  <link rel="stylesheet" href="static-style/theme.css" />
+  <link rel="stylesheet" href="static-style/components.css" />
+  <link rel="stylesheet" href="static-style/style.css" />
+  <link rel="stylesheet" href="static-style/toast.css" />
+  <link rel="stylesheet" href="custom/index/admin/admin.css" />
 
-    <link rel="stylesheet" href="static-style/splash.css" />
-    <script>
-      // Splash Screen Control
-      window.addEventListener("load", () => {
-        const splash = document.getElementById("splash-screen");
-        if (splash) {
-          setTimeout(() => {
-            splash.style.opacity = "0";
-            setTimeout(() => splash.remove(), 500);
-          }, 200);
-        }
-      });
-    </script>
-  </head>
+  <!-- Dependencies handled by main.js -->
+  <script type="module" src="custom/index/admin/main.module.js"></script>
 
-  <body>
-    <!-- 🔥 Splash Screen -->
-    <div id="splash-screen">
-      <div class="splash-logo">🛠️</div>
-    </div>
-    <div id="theme-mask"></div>
-    <div class="container">
-      <div class="main-card">
-        <div
-          style="
-            position: relative;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 80px;
-          "
-        >
-          <h1 class="admin-title">🛠️ SYSTEM_CONTROL_PANEL</h1>
-          <div style="position: absolute; right: 0; display: flex; gap: 10px">
-            <button
-              id="export-btn"
-              style="
-                padding: 8px 16px;
-                background: rgba(120, 255, 214, 0.1);
-                border: 1px solid #78ffd6;
-                color: #78ffd6;
-                border-radius: 20px;
-                cursor: pointer;
-                font-size: 0.9rem;
-                transition: 0.2s;
-              "
-            >
-              📤 导出配置
-            </button>
-            <button
-              id="import-btn"
-              style="
-                padding: 8px 16px;
-                background: rgba(255, 107, 107, 0.1);
-                border: 1px solid #ff6b6b;
-                color: #ff6b6b;
-                border-radius: 20px;
-                cursor: pointer;
-                font-size: 0.9rem;
-                transition: 0.2s;
-              "
-            >
-              📥 导入配置
-            </button>
-            <input
-              type="file"
-              id="import-file"
-              accept=".json"
-              style="display: none"
-            />
-          </div>
+  <style>
+    /* 统一 admin 布局：全屏填充 */
+    .container {
+      padding: 15px !important;
+      height: 100vh !important;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: none !important;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="theme-mask"></div>
+  <div class="container">
+    <div class="main-card">
+      <div class="admin-header">
+        <h1 class="header-title admin-title">🛠️ SYSTEM_CONTROL_PANEL</h1>
+        <div class="admin-header-actions">
+          <button id="export-btn" class="btn-export">
+            📤 导出配置
+          </button>
+          <button id="import-btn" class="btn-import">
+            📥 导入配置
+          </button>
+          <input type="file" id="import-file" accept=".json" style="display: none" />
         </div>
-        <div class="admin-grid" id="admin-grid"></div>
       </div>
+      <div class="admin-grid" id="admin-grid"></div>
     </div>
-    <script defer src="custom/index/admin/admin-core.js"></script>
-  </body>
+  </div>
+  <!-- 首页核心面板逻辑 (ES6) -->
+
+</body>
+
 </html>

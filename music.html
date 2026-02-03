@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="custom/config.js"></script>
+    <script src="dynamic-style/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
@@ -18,11 +19,24 @@
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
     <link rel="stylesheet" href="custom/music/viewer/music.css">
-    <!-- 基础脚本 -->
-    <script defer src="data-manage/data-provider.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
-    <!-- 数据 (本地模式可写，线上模式只读) -->
-    <script src="data/music-data.js"></script>
+
+    <!-- 数据现在通过 ES6 模块异步加载 (data/music-data.json) -->
+    <style>
+        /* [Fix] Match album.html layout behavior */
+        .container {
+            padding: 15px !important;
+            height: 100vh !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+    </style>
 </head>
 
 <body>
@@ -58,8 +72,9 @@
                         </div>
                         <!-- 画中画按钮 -->
                         <button class="pip-float-btn" title="画中画模式">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="3"/>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="3" />
                             </svg>
                         </button>
                     </div>
@@ -67,9 +82,8 @@
                     <div class="custom-control-bar">
                         <div class="control-btns">
                             <button class="ctrl-btn" id="play-prev-btn">◀◀</button>
-                            <button class="ctrl-btn" id="master-play-btn"
-                                class="master-play-btn-large"><span class="play-icon-layer">▶</span><span
-                                    class="pause-icon-layer">||</span></button>
+                            <button class="ctrl-btn" id="master-play-btn" class="master-play-btn-large"><span
+                                    class="play-icon-layer">▶</span><span class="pause-icon-layer">||</span></button>
                             <button class="ctrl-btn" id="play-next-btn">▶▶</button>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -132,13 +146,9 @@
             </div>
         </div>
     </div>
-    <!-- 脚本引入顺序至关重要 -->
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/music/viewer/music-player.js"></script> <!-- 核心播放器 -->
-    <script defer src="custom/music/viewer/music-render.js"></script> <!-- 渲染逻辑 -->
-    <script defer src="custom/music/viewer/music-control.js"></script> <!-- 播放控制 -->
-    <script defer src="custom/music/viewer/music-ui.js"></script> <!-- 列表UI逻辑 -->
-    <script defer src="custom/music/viewer/music-state.js"></script> <!-- 状态记忆 -->
+
+    <!-- ES6 模块入口 (整合所有 Music 模块) -->
+    <script type="module" src="custom/music/main.module.js"></script>
     <script>
         // 消息监听 (来自 iframe 或其他窗口)
         window.addEventListener('message', function (event) {

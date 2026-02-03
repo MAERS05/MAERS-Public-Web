@@ -1,118 +1,127 @@
-<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-    <title>CMS Admin - MAERS</title>
-    <!-- 🚀 Resource Preloading -->
-    <link rel="preload" href="static-style/theme.css" as="style">
-    <link rel="preload" href="static-style/components.css" as="style">
-    <!-- 引入样式库 -->
-    <link rel="stylesheet" href="static-style/theme.css">
-    <link rel="stylesheet" href="static-style/components.css">
-    <link rel="stylesheet" href="static-style/style.css">
-    <link rel="stylesheet" href="static-style/toast.css">
-    <link rel="stylesheet" href="plugins/vditor-assets/index.css" />
-    <link rel="stylesheet" href="custom/cms/viewer/cms-common.css">
-    <script src="plugins/vditor-assets/index.min.js"></script>
-    <script src="plugins/marked.min.js"></script>
-    <script defer src="shared/utils.js"></script>
-    <script defer src="dynamic-style/module-config.js"></script>
-    <script defer src="data-manage/data-provider.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/cms/admin/cms-controller.js"></script>
-    <script defer src="custom/cms/viewer/cms-view.js"></script>
-    <script defer src="custom/cms/admin/cms-drag.js"></script>
-    <script defer src="custom/cms/admin/cms-editor.js"></script>
-    <script src="shared/toast.js"></script>
-    <script>window.IS_ADMIN = true;</script>
-    <link rel="stylesheet" href="custom/cms/admin/admin-cms.css">
-    <link rel="stylesheet" href="static-style/splash.css">
-    <script>
-        // Splash Screen Control
-        window.addEventListener('load', () => {
-            const splash = document.getElementById('splash-screen');
-            if (splash) {
-                setTimeout(() => {
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 500);
-                }, 200);
-            }
-        });
-    </script>
+  <script src="dynamic-style/flash-guard.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+    content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes" />
+  <title>CMS Admin - MAERS</title>
+  <!-- 🚀 Resource Preloading -->
+  <link rel="preload" href="static-style/theme.css" as="style" />
+  <link rel="preload" href="static-style/components.css" as="style" />
+  <!-- 引入样式库 -->
+  <link rel="stylesheet" href="static-style/theme.css" />
+  <link rel="stylesheet" href="static-style/components.css" />
+  <link rel="stylesheet" href="static-style/style.css" />
+  <link rel="stylesheet" href="static-style/toast.css" />
+  <link rel="stylesheet" href="plugins/vditor-assets/index.css" />
+  <link rel="stylesheet" href="custom/cms/viewer/cms-base.css" />
+  <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css" />
+  <script src="plugins/vditor-assets/index.min.js"></script>
+  <script src="plugins/marked.min.js"></script>
+  <script type="module" src="shared/utils.module.js"></script>
+  <script type="module" src="dynamic-style/module-config.module.js"></script>
+  <script type="module" src="data-manage/api-client.module.js"></script>
+  <script type="module" src="data-manage/data-provider.module.js"></script>
+  <script type="module" src="dynamic-style/layout.module.js"></script>
+  <script type="module" src="dynamic-style/script.module.js"></script>
+
+  <!-- CMS ES6 Admin Module Entry Point -->
+  <script type="module" src="custom/cms/admin-main.module.js"></script>
+  <script type="module" src="shared/toast.module.js"></script>
+  <script>
+    window.IS_ADMIN = true;
+  </script>
+  <link rel="stylesheet" href="custom/cms/admin/admin-cms.css" />
+  <link rel="stylesheet" href="static-style/splash.css" />
+
+  <style>
+    /* 统一 admin 布局：全屏填充 */
+    .container {
+      padding: 15px !important;
+      height: 100vh !important;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .main-card {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      max-height: none !important;
+    }
+  </style>
 </head>
 
 <body>
-    <!-- 🔥 Splash Screen -->
-    <div id="splash-screen">
-        <div class="splash-logo">🛠️</div>
+
+  <div class="container">
+    <div class="main-card">
+      <!-- 头部：标题与工具栏 -->
+      <div class="explorer-header">
+        <div class="header-left">
+          <a href="admin.html" class="back-btn">← Back</a>
+          <div class="header-title">📙 Literature</div>
+        </div>
+        <div class="header-right">
+          <div class="header-tools-row">
+            <div class="search-box">
+              <input type="search" class="search-input" id="search-input" placeholder="名称,Name" />
+            </div>
+            <button class="tag-toggle-btn">🏷️ Tags</button>
+          </div>
+        </div>
+      </div>
+      <!-- 面包屑 -->
+      <div class="breadcrumb-bar" id="breadcrumb"></div>
+      <!-- 网格列表 -->
+      <div id="grid-container" class="folder-grid"></div>
+      <!-- 笔记阅读器 -->
+      <div id="reader-container" class="reader-view">
+        <div class="markdown-body" id="note-content"></div>
+      </div>
     </div>
-    <div class="container">
-        <div class="main-card">
-            <!-- 头部：标题与工具栏 -->
-            <div class="explorer-header">
-                <div class="header-left">
-                    <a href="admin.html" class="back-btn">← Back</a>
-                    <div class="header-title">📌 CMS Admin</div>
-                </div>
-                <div class="header-right">
-                    <div class="header-tools-row">
-                        <div class="search-box">
-                            <input type="search" class="search-input" id="search-input" placeholder="名称,Name">
-                        </div>
-                        <button class="tag-toggle-btn">
-                            🏷️ Tags
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- 面包屑 -->
-            <div class="breadcrumb-bar" id="breadcrumb"></div>
-            <!-- 网格列表 -->
-            <div id="grid-container" class="folder-grid"></div>
-            <!-- 笔记阅读器 -->
-            <div id="reader-container" class="reader-view">
-                <div class="markdown-body" id="note-content"></div>
-            </div>
-        </div>
+  </div>
+  <div id="immersive-reader" class="immersive-layer">
+    <div class="reader-toolbar">
+      <div class="reader-meta">
+        <span class="reader-icon">📝</span>
+        <span class="reader-title" id="reader-title">Untitled</span>
+      </div>
+      <div class="reader-actions">
+        <button class="close-btn">✕</button>
+      </div>
     </div>
-    <div id="immersive-reader" class="immersive-layer">
-        <div class="reader-toolbar">
-            <div class="reader-meta">
-                <span class="reader-icon">📝</span>
-                <span class="reader-title" id="reader-title">Untitled</span>
-            </div>
-            <div class="reader-actions">
-                <button class="close-btn">✕</button>
-            </div>
-        </div>
-        <div class="reader-scroll-area">
-            <div class="markdown-body paper-sheet" id="reader-content"></div>
-            <div class="reader-footer">— End of Note —</div>
-        </div>
+    <div class="reader-scroll-area">
+      <div class="markdown-body paper-sheet" id="reader-content"></div>
+      <div class="reader-footer">— End of Note —</div>
     </div>
-    <!-- 🔥 新增：标签侧边栏 (Drawer) -->
-    <div id="drawer-overlay" class="drawer-overlay"></div>
-    <div id="tag-drawer" class="tag-drawer">
-        <div class="drawer-header" style="flex-direction: column; align-items: flex-start; gap: 15px;">
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                <h3>Filter by Tags</h3>
-                <button class="btn-close-drawer">×</button>
-            </div>
-            <!-- 🔥 新增：标签专用搜索框 -->
-            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags">
-        </div>
-        <div class="drawer-body" id="drawer-list">
-            <!-- JS 动态生成列表 -->
-        </div>
-        <div class="drawer-footer">
-            <button class="btn-clear-tags">Clear All</button>
-        </div>
+  </div>
+  <!-- 🔥 新增：标签侧边栏 (Drawer) -->
+  <div id="drawer-overlay" class="drawer-overlay"></div>
+  <div id="tag-drawer" class="tag-drawer">
+    <div class="drawer-header" style="flex-direction: column; align-items: flex-start; gap: 15px">
+      <div style="
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            align-items: center;
+          ">
+        <h3>Filter by Tags</h3>
+        <button class="btn-close-drawer">×</button>
+      </div>
+      <!-- 🔥 新增：标签专用搜索框 -->
+      <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags" />
     </div>
+    <div class="drawer-body" id="drawer-list">
+      <!-- JS 动态生成列表 -->
+    </div>
+    <div class="drawer-footer">
+      <button class="btn-clear-tags">Clear All</button>
+    </div>
+  </div>
 </body>
 
 </html>

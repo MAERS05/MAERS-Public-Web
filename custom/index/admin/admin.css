@@ -1,12 +1,32 @@
+/* ==================== Layout: Header ==================== */
+.admin-header {
+    width: 100%;
+    padding: 60px 60px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.admin-header-actions {
+    position: absolute;
+    right: 60px;
+    top: 60px;
+    /* Align with top padding */
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+}
+
 h1.admin-title {
+    margin: 0;
+    /* Reset margins */
     text-align: center;
-    margin-top: -50px;
-    margin-bottom: 80px;
-    color: var(--text-sub);
+    color: var(--text-main);
     font-family: 'Consolas', monospace;
     font-size: 2.2rem;
     letter-spacing: 4px;
-    opacity: 0.85;
+    opacity: 1;
     text-transform: uppercase;
 }
 
@@ -15,6 +35,8 @@ h1.admin-title {
     grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 30px;
     padding: 0 20px;
+    margin-top: 40px;
+    width: 100%;
 }
 
 /* 基础卡片样式 */
@@ -31,6 +53,7 @@ h1.admin-title {
     align-items: center;
     justify-content: center;
     position: relative;
+    cursor: pointer;
 }
 
 .admin-card:hover {
@@ -53,75 +76,103 @@ h1.admin-title {
 
 /* 🔥 功能型卡片样式 (添加/返回) */
 .functional-card {
+    /* Inherit base .admin-card styles */
     border: 2px dashed var(--pill-border) !important;
-    background: rgba(255, 255, 255, 0.02) !important;
-    opacity: 0.6;
+    /* Use dashed border to distinguish */
+    background: var(--pill-bg) !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
 .functional-card:hover {
-    opacity: 1;
-    background: rgba(255, 255, 255, 0.05) !important;
+    background: var(--pill-hover-bg) !important;
+    border-color: var(--pill-border) !important;
+    transform: translateY(-5px);
 }
 
 .functional-card .icon {
-    font-size: 2.5rem !important;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 4rem !important;
+    font-weight: 100;
     color: var(--text-sub);
+    /* Use variable */
+    line-height: 1;
+    margin-bottom: 0;
 }
 
 .functional-card .name {
     color: var(--text-sub);
-    font-family: 'Consolas', monospace;
-    font-size: 1rem !important;
+    /* Use variable */
+    font-family: sans-serif;
+    font-size: 1.1rem !important;
+    font-weight: normal;
 }
 
-.delete-mod {
+/* 管理按钮组 */
+.admin-module-actions {
     position: absolute;
-    top: 15px;
-    right: 15px;
-    opacity: 0;
-    color: #ff4757;
-    cursor: pointer;
-    transition: 0.3s;
-    font-size: 1.5rem;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 4px;
 }
 
-.admin-card:hover .delete-mod {
-    opacity: 1;
+/* 确保卡片悬停时显示按钮 */
+.admin-card:hover .maers-admin-action-group {
+    opacity: 1 !important;
+    pointer-events: auto !important;
 }
 
 .container {
     padding-bottom: 100px;
 }
 
+
+
 /* Action Buttons */
 .btn-export {
-    padding: 8px 16px;
-    background: rgba(120, 255, 214, 0.1);
-    border: 1px solid #78ffd6;
-    color: #78ffd6;
-    border-radius: 20px;
+    padding: 10px 24px;
+    background: #7effd4;
+    border: none;
+    color: #2d3436;
+    border-radius: 50px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(126, 255, 212, 0.3);
 }
 
 .btn-export:hover {
-    background: #78ffd6;
-    color: #000;
+    filter: brightness(1.05);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(126, 255, 212, 0.4);
 }
 
 .btn-import {
-    padding: 8px 16px;
-    background: rgba(255, 107, 107, 0.1);
-    border: 1px solid #ff6b6b;
-    color: #ff6b6b;
-    border-radius: 20px;
+    padding: 10px 24px;
+    background: #ff7675;
+    border: none;
+    color: #ffffff;
+    border-radius: 50px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(255, 118, 117, 0.3);
 }
 
 .btn-import:hover {
-    background: #ff6b6b;
-    color: #fff;
+    filter: brightness(1.05);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(255, 118, 117, 0.4);
 }

@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="dynamic-style/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
@@ -19,21 +19,17 @@
     <link rel="stylesheet" href="custom/photos/admin/photos-admin.css">
     <link rel="stylesheet" href="static-style/responsive.css">
     <link rel="stylesheet" href="static-style/toast.css">
-    <script defer src="shared/utils.js"></script>
-    <script defer src="data-manage/api-client.js"></script>
-    <script defer src="data-manage/data-provider.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/photos/admin/photos-controller.js"></script>
-    <script defer src="custom/photos/viewer/photos-view.js"></script>
-    <script defer src="custom/album/admin/album-admin.js"></script>
-    <script src="shared/toast.js"></script>
+    <script type="module" src="shared/utils.module.js"></script>
+    <script type="module" src="data-manage/api-client.module.js"></script>
+    <script type="module" src="dynamic-style/layout.module.js"></script>
+    <script type="module" src="dynamic-style/script.module.js"></script>
+    <script type="module" src="shared/toast.module.js"></script>
 
-    <script src="custom/album/viewer/album-config.js"></script>
-    <script src="data-manage/data-provider.js"></script>
-    <script src="dynamic-style/style-injector.js"></script>
-    <script src="dynamic-style/layout.js"></script>
-    <script>MAERS.StyleInjector.inject('图片管理');</script>
+    <!-- 数据现在通过 ES6 模块异步加载 (data/photos-data.json) -->
+    <script type="module" src="dynamic-style/style-injector.module.js"></script>
+    <script
+        type="module">await import('./dynamic-style/style-injector.module.js').then(m => m.default.inject('图片管理'));</script>
+    <script type="module" src="custom/photos/admin-main.module.js"></script>
     <style>
         .header-actions {
             display: flex;
@@ -127,30 +123,34 @@
             touch-action: manipulation;
         }
     </style>
+
     <script>
         // 🔥 强制开启管理员模式
         window.IS_ADMIN = true;
     </script>
+    <style>
+        /* 统一 admin 布局：全屏填充 */
+        .container {
+            padding: 15px !important;
+            height: 100vh !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: none !important;
+        }
+    </style>
     <link rel="stylesheet" href="static-style/splash.css">
-    <script>
-        // Splash Screen Control
-        window.addEventListener('load', () => {
-            const splash = document.getElementById('splash-screen');
-            if (splash) {
-                setTimeout(() => {
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 500);
-                }, 200); // 200ms delay
-            }
-        });
-    </script>
+
 </head>
 
 <body>
-    <!-- 🔥 Splash Screen -->
-    <div id="splash-screen">
-        <div class="splash-logo">🛠️</div>
-    </div>
+
     <div class="container">
         <div class="main-card content-mode">
             <div class="page-header-bar">
@@ -174,18 +174,9 @@
         <button class="lb-nav lb-next">&#10095;</button>
         <img id="lightbox-img" src="" alt="Preview">
         <div class="hd-switch-wrapper" id="hd-switch"><span class="hd-text">HD</span></div>
-
     </div>
-    <!-- 必须严格按照这个顺序引用，因为它们有依赖关系 -->
-    <!-- 1. API 核心 (新增! 必须在 data-provider 之前) -->
-    <script src="data-manage/api-client.js"></script>
-    <!-- 2. 数据层 (新增! 必须在 album-core 之前) -->
-    <script src="data-manage/data-provider.js"></script>
-    <!-- 3. 静态数据源 -->
-    <script src="data/photos-data.js"></script>
-    <!-- 4. 布局与交互 -->
-    <script src="dynamic-style/script.js"></script>
-    <!-- 5. 画廊核心逻辑 (它依赖上面所有文件) -->
+
+
 
 </body>
 

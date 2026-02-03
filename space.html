@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="dynamic-style/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Me - MAERS</title>
@@ -14,8 +14,8 @@
     <link rel="stylesheet" href="static-style/theme.css">
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
-    <script defer src="data-manage/data-provider.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
+    <script type="module" src="data-manage/data-provider.module.js"></script>
+    <!-- Layout handled by module -->
     <style>
         .placeholder-content {
             flex: 1;
@@ -57,11 +57,9 @@
             </div>
         </div>
     </div>
-    <script defer src="dynamic-style/script.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            MAERS.Layout.renderPageHeader("Other Spaces", "index.html", "Back"); // 自动生成头部
-        });
+    <script type="module">
+        import { renderPageHeader } from './custom/shared/simple-main.module.js';
+        renderPageHeader("Other Spaces", "index.html", "Back");
     </script>
 </body>
 

@@ -1,94 +1,102 @@
-<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Literature Space</title>
+  <script src="dynamic-style/flash-guard.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Literature Space</title>
 
-    <!-- 🚀 Resource Preloading -->
-    <link rel="preload" href="static-style/theme.css" as="style">
-    <link rel="preload" href="static-style/components.css" as="style">
+  <!-- 🚀 Resource Preloading -->
+  <link rel="preload" href="static-style/theme.css" as="style" />
+  <link rel="preload" href="static-style/components.css" as="style" />
 
-    <link rel="stylesheet" href="static-style/theme.css">
-    <link rel="stylesheet" href="static-style/components.css">
-    <link rel="stylesheet" href="static-style/style.css">
-    <link rel="stylesheet" href="custom/cms/viewer/cms-common.css">
-    <link rel="stylesheet" href="custom/literature/viewer/literature.css" />
+  <link rel="stylesheet" href="static-style/theme.css" />
+  <link rel="stylesheet" href="static-style/components.css" />
+  <link rel="stylesheet" href="static-style/style.css" />
+  <link rel="stylesheet" href="custom/cms/viewer/cms-base.css" />
+  <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css" />
+  <link rel="stylesheet" href="custom/literature/viewer/literature.css" />
+  <link rel="stylesheet" href="custom/literature/viewer/literature-reset.css" />
 </head>
 
 <body>
-    <div class="container">
-        <div class="main-card">
-            <!-- 头部：标题与工具栏 -->
-            <div class="explorer-header">
-                <div class="header-left">
-                    <a href="index.html" class="back-btn">← Back</a>
-                    <div class="header-title">📙 Literature</div>
-                </div>
-                <div class="header-right">
-                    <div class="header-tools-row">
-                        <div class="search-box">
-                            <input type="search" class="search-input" id="search-input" placeholder="名称,Name">
-                        </div>
-                        <button class="tag-toggle-btn">
-                            🏷️ Tags
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- 面包屑 -->
-            <div class="breadcrumb-bar" id="breadcrumb"></div>
-            <!-- 网格列表 -->
-            <div id="grid-container" class="folder-grid"></div>
-            <!-- 笔记阅读器 -->
-            <div id="reader-container" class="reader-view">
-                <div class="markdown-body" id="note-content"></div>
-            </div>
+  <div class="container">
+    <div class="main-card">
+      <!-- 头部：标题与工具栏 -->
+      <div class="explorer-header">
+        <div class="header-left">
+          <a href="index.html" class="back-btn">← Back</a>
+          <div class="header-title">📙 Literature</div>
         </div>
-    </div>
-    <div id="immersive-reader" class="immersive-layer">
-        <div class="reader-toolbar">
-            <div class="reader-meta">
-                <span class="reader-icon">📝</span>
-                <span class="reader-title" id="reader-title">Untitled</span>
+        <div class="header-right">
+          <div class="header-tools-row">
+            <div class="search-box">
+              <input type="search" class="search-input" id="search-input" placeholder="名称,Name" />
             </div>
-            <div class="reader-actions">
-                <button class="close-btn">✕</button>
-            </div>
+            <button class="tag-toggle-btn">🏷️ Tags</button>
+          </div>
         </div>
-        <div class="reader-scroll-area">
-            <div class="markdown-body paper-sheet" id="reader-content"></div>
-            <div class="reader-footer">— End of Note —</div>
-        </div>
-    </div>
-    <div id="drawer-overlay" class="drawer-overlay"></div>
-    <div id="tag-drawer" class="tag-drawer">
-        <div class="drawer-header" style="flex-direction: column; align-items: flex-start; gap: 15px;">
-            <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                <h3>Filter by Tags</h3>
-                <button class="btn-close-drawer">×</button>
-            </div>
-            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags">
-        </div>
-        <div class="drawer-body" id="drawer-list"></div>
-        <div class="drawer-footer">
-            <button class="btn-clear-tags">Clear All</button>
-        </div>
-    </div>
-    <script src="data/literature-tree.js"></script>
-    <script defer src="plugins/marked.min.js"></script>
-    <!-- Shared Utilities -->
-    <script defer src="shared/utils.js"></script>
-    <script defer src="dynamic-style/module-config.js"></script>
-    <!-- Core Scripts -->
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
+      </div>
+      <!-- 面包屑 -->
+      <div class="breadcrumb-bar" id="breadcrumb"></div>
 
-    <script defer src="custom/cms/admin/cms-controller.js"></script>
-    <script defer src="custom/cms/viewer/cms-view.js"></script>
-    <script defer src="custom/cms/admin/cms-editor.js"></script>
+
+      <!-- 流动路径视口 -->
+      <div id="viewport" class="viewport gallery-mode">
+        <div id="path-container" class="path-container"></div>
+      </div>
+
+      <!-- 网格列表 -->
+      <div id="grid-container" class="folder-grid"></div>
+      <!-- 笔记阅读器 -->
+      <div id="reader-container" class="reader-view">
+        <div class="markdown-body" id="note-content"></div>
+      </div>
+    </div>
+  </div>
+  <div id="immersive-reader" class="immersive-layer">
+    <div class="reader-toolbar">
+      <div class="reader-meta">
+        <span class="reader-icon">📝</span>
+        <span class="reader-title" id="reader-title">Untitled</span>
+      </div>
+      <div class="reader-actions">
+        <button class="close-btn">✕</button>
+      </div>
+    </div>
+    <div class="reader-scroll-area">
+      <div class="markdown-body paper-sheet" id="reader-content"></div>
+      <div class="reader-footer">— End of Note —</div>
+    </div>
+  </div>
+  <div id="drawer-overlay" class="drawer-overlay"></div>
+  <div id="tag-drawer" class="tag-drawer">
+    <div class="drawer-header" style="flex-direction: column; align-items: flex-start; gap: 15px">
+      <div style="
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            align-items: center;
+          ">
+        <h3>Filter by Tags</h3>
+        <button class="btn-close-drawer">×</button>
+      </div>
+      <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags" />
+    </div>
+    <div class="drawer-body" id="drawer-list"></div>
+    <div class="drawer-footer">
+      <button class="btn-clear-tags">Clear All</button>
+    </div>
+  </div>
+
+  <!-- 数据现在通过 ES6 模块异步加载 (data/literature-tree.json) -->
+  <script defer src="plugins/marked.min.js"></script>
+  <!-- Vditor for Editor -->
+  <script src="https://unpkg.com/vditor@3.8.15/dist/index.min.js"></script>
+
+  <!-- ES6 Main Entry Point -->
+  <script type="module" src="custom/literature/main.module.js"></script>
 </body>
 
 </html>

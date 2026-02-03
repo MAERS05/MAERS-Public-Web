@@ -1,13 +1,312 @@
-/* Literature Custom Style */
-:root {
-    --accent-color: #ffa502;
-    --text-main: #f1f2f6;
+/* Literature Custom Style - Flowing Path Design */
+
+/* ==================== 1. Flow Engine Styles (Gallery Mode) ==================== */
+/* These styles are essential for the 3D flowing path gallery */
+
+.viewport {
+    position: relative;
+    width: 100%;
+    height: calc(100vh - 200px);
+    min-height: 500px;
+    overflow: visible;
+    perspective: 1000px;
+    border-radius: 8px;
 }
 
-.grid-item {
-    border-radius: 4px !important;
+.viewport.gallery-mode {
+    display: block;
 }
 
-.grid-item.type-note .item-icon {
-    filter: hue-rotate(45deg);
+.path-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+}
+
+/* Book Card in Gallery (Absolute Positioned, 3D) */
+.book-card {
+    position: absolute;
+    width: 140px;
+    height: 210px;
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
+    will-change: transform, opacity;
+}
+
+.book-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.book-cover {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0) 100%);
+    position: relative;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+.book-spine {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* ==================== 2. Mode Management ==================== */
+
+/* Toggle Buttons */
+.mode-toggle-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    /* ... (Existing styles if used) ... */
+    /* Kept simple for now as per previous version */
+}
+
+/* Interactive Title */
+.mode-text-btn {
+    cursor: pointer;
+    font-weight: 800;
+    margin-right: 4px;
+    transition: opacity 0.2s ease;
+}
+
+.mode-text-btn:hover {
+    opacity: 0.7;
+    text-decoration: underline;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Mode Switching Visibility Logic */
+
+/* In Grid Mode: Hide Viewport (Flow Engine) */
+.viewport.grid-mode {
+    display: none !important;
+}
+
+/* In Gallery Mode: Hide Grid Container */
+.viewport.gallery-mode~#grid-container {
+    display: none !important;
+}
+
+/* Ensure Grid Container is displayed when Viewport is hidden (Grid Mode) */
+.viewport.grid-mode~#grid-container {
+    display: grid !important;
+}
+
+
+/* ==================== 3. Literature Grid Theme Overrides ==================== */
+/* These styles selectively override cms-common.css for the Literature Module */
+
+/* 3.1 Book Card Shape & Aspect Ratio */
+.folder-grid .grid-item {
+    aspect-ratio: 2 / 3 !important;
+    /* Force Book Ratio */
+    height: auto !important;
+    border-radius: 8px !important;
+    padding: 0;
+    overflow: hidden;
+    /* Ensure cover image is clipped to rounded corners */
+    /* Remove default padding for immersive cover */
+
+    /* Background Override */
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+    /* Flex Layout for Bottom Content */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* Remove decorative artifacts from generic folders */
+.grid-item::before,
+.grid-item::after {
+    display: none !important;
+}
+
+/* 3.2 Full Size Cover */
+.grid-item .item-cover {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+}
+
+/* 3.3 Typography (Cinzel) & Positioning */
+/* Fixed per user request: Title above tags, tags at bottom */
+
+.folder-grid .grid-item .item-title {
+    position: absolute;
+    bottom: 45px;
+    /* Title above tags */
+    left: 0;
+    right: 0;
+    z-index: 2;
+    width: 100%;
+    background: none !important;
+    padding: 10px;
+
+    /* Font Styling */
+    font-family: 'Cinzel', serif, var(--font-primary);
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left !important;
+    color: #ffffff !important;
+    line-height: 1.4;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 0;
+}
+
+.folder-grid .grid-item .item-tags {
+    position: absolute;
+    bottom: 8px;
+    /* Tags at bottom */
+    left: 0;
+    right: 0;
+    z-index: 2;
+    padding: 0 10px;
+
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: flex-start !important;
+    background: none !important;
+}
+
+/* 3.4 Mini Tags Styling */
+.folder-grid .grid-item .mini-tag {
+    font-family: var(--font-primary);
+    font-size: 0.7rem !important;
+    color: rgba(255, 255, 255, 0.9) !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    border: none !important;
+    padding: 2px 6px !important;
+    border-radius: 6px !important;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+/* 3.5 Hover Effects */
+.folder-grid .grid-item:hover {
+    transform: translateY(-4px);
+    /* Gentle lift */
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+    z-index: 10;
+}
+
+/* 4. Action Buttons (Admin) */
+.folder-grid .grid-item .card-actions {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    z-index: 20;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.folder-grid .grid-item:hover .card-actions {
+    opacity: 1;
+}
+
+.folder-grid .grid-item .action-mini {
+    width: 24px !important;
+    height: 24px !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #333 !important;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==================== 5. RESET: Enforcement of Flat Aesthetics ==================== */
+/* Critical: Override generic CMS 3D and Clip-Path styles to fix "Cut Corner" issue */
+
+.folder-grid .grid-item,
+.folder-grid .type-note,
+.folder-grid .type-folder {
+    clip-path: none !important;
+    /* Fixes "Missing Corner" */
+    -webkit-clip-path: none !important;
+    border-radius: 8px !important;
+    transform: none !important;
+    /* Removes generic hover lift, handled specifically above */
+}
+
+/* Kill all decorative pseudo-elements from generic CMS styles */
+.folder-grid .grid-item::before,
+.folder-grid .grid-item::after,
+.folder-grid .type-note::before,
+.folder-grid .type-note::after {
+    display: none !important;
+    content: none !important;
+    clip-path: none !important;
+    box-shadow: none !important;
+}
+
+
+/* ==================== 6. Grid Sizing Override ==================== */
+/* Fixes "Books too big" issue by enforcing smaller column width */
+
+.folder-grid {
+    grid-template-columns: repeat(auto-fill, 140px) !important;
+    justify-content: center;
+    gap: 30px !important;
+    padding: 25px 40px !important;
+}
+
+
+/* ==================== 7. Light Mode Support ==================== */
+html.light-mode .folder-grid .grid-item {
+    background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* [Fix] Make theme switch visible on white card background */
+html.light-mode .theme-switch-label {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+    border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ==================== 8. Admin Button Overrides ==================== */
+/* Hide "+ File" button in Literature Admin Header */
+.cms-create-btn:nth-of-type(1) {
+    display: none !important;
 }

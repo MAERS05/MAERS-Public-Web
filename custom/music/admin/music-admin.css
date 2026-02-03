@@ -1,0 +1,87 @@
+/* ================= 管理员模式样式 ================= */
+
+/* Admin Tag Display */
+.admin-tag {
+    font-size: 0.8rem;
+    background: #ffd700;
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 4px;
+    display: none;
+}
+
+body.admin-mode .admin-tag {
+    display: inline-block;
+}
+
+/* Add Button */
+.add-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    color: var(--text-main);
+    background: rgba(128, 128, 128, 0.2);
+    border: 1px solid var(--pill-border);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.2s;
+    font-size: 1.3rem;
+    line-height: 1;
+    font-weight: 400;
+}
+
+.add-btn:hover {
+    background: var(--text-main);
+    color: var(--bg-type);
+    transform: scale(1.1);
+}
+
+body.admin-mode .add-btn {
+    display: flex !important;
+}
+
+/* Item Actions */
+.item-actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: none;
+    gap: 8px;
+}
+
+body.admin-mode:not(.is-dragging-mode) .list-item:hover .item-actions {
+    display: flex !important;
+}
+
+body.admin-mode .list-item:hover {
+    padding-right: 110px;
+}
+
+/* Track Edit Icon */
+.track-edit-icon {
+    display: none;
+    opacity: 0.6;
+    padding: 0 5px;
+}
+
+.track-edit-icon:hover {
+    opacity: 1;
+    color: #fff;
+}
+
+body.admin-mode .track-item:hover .track-edit-icon {
+    display: block;
+}
+
+/* Edit Tag (from original admin-music.css) */
+.admin-badge {
+    display: inline-block;
+}
+
+/* Add Buttons (from original admin-music.css) */
+.btn-add-entity {
+    display: flex;
+}

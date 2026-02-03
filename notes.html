@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="dynamic-style/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Study Notes</title>
@@ -15,7 +15,8 @@
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
     <link rel="stylesheet" href="plugins/vditor-assets/index.css" />
-    <link rel="stylesheet" href="custom/cms/viewer/cms-common.css?v=2.0">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-base.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css">
     <link rel="stylesheet" href="custom/notes/viewer/notes.css" /> <!-- Custom Visitor Style -->
 </head>
 
@@ -78,18 +79,14 @@
             <button class="btn-clear-tags">Clear All</button>
         </div>
     </div>
-    <script src="data/notes-tree.js"></script>
+    <!-- 数据现在通过 ES6 模块异步加载 (data/notes-tree.json) -->
     <script defer src="plugins/marked.min.js"></script>
-    <!-- Shared Utilities -->
-    <script defer src="shared/utils.js"></script>
-    <script defer src="dynamic-style/module-config.js"></script>
-    <!-- Core Scripts -->
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
 
-    <script defer src="custom/cms/admin/cms-controller.js"></script>
-    <script defer src="custom/cms/viewer/cms-view.js"></script>
-    <script defer src="custom/cms/admin/cms-editor.js"></script>
+    <!-- Vditor for Editor -->
+    <script src="https://unpkg.com/vditor@3.8.15/dist/index.min.js"></script>
+
+    <!-- CMS ES6 Module Entry Point -->
+    <script type="module" src="custom/cms/main.module.js"></script>
 
 </body>
 

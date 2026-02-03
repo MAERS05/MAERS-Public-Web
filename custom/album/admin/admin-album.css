@@ -94,12 +94,15 @@
     border-color: #2ed573;
 }
 
-.btn-move {
-    cursor: grab;
+.btn-move:hover {
+    background: #78ffd6;
+    border-color: #78ffd6;
+    color: #000;
 }
 
+.btn-move,
 .btn-move:active {
-    cursor: grabbing;
+    cursor: pointer;
 }
 
 /* Add New Category Card */

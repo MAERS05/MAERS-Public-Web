@@ -19,11 +19,12 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 DB_PATH = os.path.join(DATA_DIR, 'cms.db')
 
-# JS 同步映射
+
+# JS 同步映射 (Now generating JSON files)
 JS_SYNC_MAP = {
-    'notes': 'data/notes-tree.js',
-    'literature': 'data/literature-tree.js',
-    'record': 'data/record-tree.js'
+    'notes': 'data/notes-tree.json',
+    'literature': 'data/literature-tree.json',
+    'record': 'data/record-tree.json'
 }
 
 # ================= 数据库操作 =================
@@ -63,7 +64,7 @@ def fetch_module_tree(module):
             "title": row['title'],
             "tags": json.loads(row['tags']) if row['tags'] else [],
             "content": row['content'],
-            # "created_at": row['created_at'], # 前端不需要这个字段
+            "coverImage": row['coverImage'] if 'coverImage' in row.keys() else None,
             "children": [] if row['type'] == 'folder' else None
         }
         nodes_map[row['id']] = { "data": node, "parent_id": row['parent_id'] }
@@ -73,21 +74,26 @@ def fetch_module_tree(module):
         node = item['data']
         parent_id = item['parent_id']
 
-        if parent_id == 'root':
+    # 第二次遍历：构建树
+    for node_id, item in nodes_map.items():
+        node = item['data']
+        parent_id = item['parent_id']
+
+        # Fix: Ensure parent_id is treated as string for comparison if DB returns int
+        if str(parent_id) == 'root' or parent_id is None:
             root_nodes.append(node)
         elif parent_id in nodes_map:
             parent_node = nodes_map[parent_id]['data']
             if parent_node['children'] is not None:
                 parent_node['children'].append(node)
         else:
-            # 孤儿节点 (父节点找不到)，暂时挂在根目录或者丢弃
-            # 为了安全，挂在根目录
-            pass 
+            # 孤儿节点 (父节点找不到)，挂在根目录
+            root_nodes.append(node) 
 
     return {"root": root_nodes}
 
 def sync_js_file(module):
-    """生成静态 JS 文件"""
+    """生成静态 JSON 文件供前端读取"""
     js_rel_path = JS_SYNC_MAP.get(module)
     if not js_rel_path: return
 
@@ -95,12 +101,21 @@ def sync_js_file(module):
     js_path = os.path.join(PROJECT_ROOT, js_rel_path)
     
     try:
-        js_content = f"window.MAERS_DATA = {json.dumps(data, ensure_ascii=False, indent=2)};\n"
-        with open(js_path, 'w', encoding='utf-8') as f:
-            f.write(js_content)
-        print(f"✅ JS 同步成功: {js_rel_path}")
+        # Atomic write
+        temp_path = js_path + '.tmp'
+        with open(temp_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        if os.path.exists(js_path):
+            os.remove(js_path)
+        os.rename(temp_path, js_path)
+        
+        print(f"✅ JSON 同步成功: {js_rel_path}")
     except Exception as e:
-        print(f"❌ JS 同步失败: {e}")
+        print(f"❌ JSON 同步失败: {e}")
+        if os.path.exists(temp_path):
+            try: os.remove(temp_path)
+            except: pass
 
 # ================= 业务动作 (SQL) =================
 
@@ -137,9 +152,8 @@ def _action_delete(module, node_id):
     # 1. 找到所有子节点 ID (递归)
     ids_to_delete = [node_id]
     
-    # 简单起见，不递归查了，直接假定应用层逻辑只删除单节点或前端已清空
-    # 既然是文件夹，确实应该递归删除。
-    # 采用简单的暴力方法：反复查找 parent_id 在 ids_to_delete 中的节点
+    # 递归查找所有后代节点
+    # 采用简单的 BFS/循环查找方法：反复查找 parent_id 在 ids_to_delete 中的节点
     while True:
         placeholders = ','.join('?' for _ in ids_to_delete)
         cursor.execute(f"SELECT id FROM nodes WHERE parent_id IN ({placeholders}) AND id NOT IN ({placeholders})", ids_to_delete + ids_to_delete)
@@ -147,6 +161,23 @@ def _action_delete(module, node_id):
         if not children:
             break
         ids_to_delete.extend(children)
+
+    # 🔥 NEW: Delete cover images for all nodes before deleting the nodes
+    # Import photos module for cover deletion
+    from . import photos
+    
+    for del_id in ids_to_delete:
+        cursor.execute("SELECT coverImage FROM nodes WHERE id=?", (del_id,))
+        row = cursor.fetchone()
+        if row and row['coverImage']:
+            cover_path = row['coverImage']
+            print(f"[CMS] Deleting cover image for node {del_id}: {cover_path}")
+            try:
+                # Reuse existing logic that handles thumbs/previews/DB
+                photos.handle_delete({'path': cover_path})
+            except Exception as e:
+                print(f"[CMS] Warning: Failed to delete cover image {cover_path}: {e}")
+                # Continue with node deletion even if cover deletion fails
 
     # 2. 执行删除
     placeholders = ','.join('?' for _ in ids_to_delete)
@@ -160,13 +191,27 @@ def _action_update(module, node_id, update_data):
     conn = get_db()
     cursor = conn.cursor()
     
-    allowed_fields = {'title', 'content', 'tags'}
+    allowed_fields = {'title', 'content', 'tags', 'coverImage'}
     updates = []
     params = []
     
+    from . import photos # Lazy import to avoid potential circular dependency issues
+
     for k, v in update_data.items():
         if k in allowed_fields:
             if k == 'tags': v = json.dumps(v, ensure_ascii=False)
+            
+            # 🔥 Special Logic: Use Photos Module for Cover Deletion
+            if k == 'coverImage' and v is None:
+                # 1. Fetch old value
+                cursor.execute("SELECT coverImage FROM nodes WHERE id=?", (node_id,))
+                row = cursor.fetchone()
+                if row and row['coverImage']:
+                    old_path = row['coverImage']
+                    print(f"[CMS] Requesting Photos module to delete cover: {old_path}")
+                    # Reuse existing logic that handles thumbs/previews/DB
+                    photos.handle_delete({'path': old_path})
+
             updates.append(f"{k}=?")
             params.append(v)
             
@@ -177,6 +222,21 @@ def _action_update(module, node_id, update_data):
         conn.commit()
         
     conn.close()
+    return True
+
+def _action_reorder(module, ids):
+    if not ids: return True
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        for idx, node_id in enumerate(ids):
+            cursor.execute("UPDATE nodes SET sort_order=? WHERE id=?", (idx, node_id))
+        conn.commit()
+    except:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     return True
 
 def _action_move(module, node_id, target_parent_id):
@@ -287,6 +347,8 @@ def handle_request(path, method, query_params, body_data):
                     changed = _action_delete(module, body_data.get('id'))
                 elif action == 'update':
                     changed = _action_update(module, body_data.get('id'), body_data.get('data'))
+                elif action == 'reorder':
+                    changed = _action_reorder(module, body_data.get('ids', []))
                 else:
                     return 400, {"error": "Unknown action"}
             except ValueError as ve:

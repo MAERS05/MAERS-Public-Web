@@ -1,0 +1,229 @@
+/* Spatial Navigation Container */
+#spatial-nav-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    /* Above background, below modals/high-z-index elements */
+    perspective: 1200px;
+    /* Reduced for stronger 3D effect */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    overflow: hidden;
+}
+
+/* --- Brand Header Styles --- */
+.spatial-brand-header {
+    position: absolute;
+    top: 2vh;
+    /* Strictly close to top */
+    left: 50%;
+    transform: translateX(-50%);
+    /* Removed translateZ to fixing positioning */
+    /* Pushed back in depth */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: auto;
+    /* Enable clicking */
+    z-index: 10;
+    text-align: center;
+    transition: opacity 0.5s ease;
+}
+
+.spatial-brand-logo {
+    width: 80px;
+    height: 80px;
+    margin-bottom: 20px;
+    color: #d0d0d0;
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.5s ease;
+    cursor: pointer;
+}
+
+.spatial-brand-logo:hover {
+    transform: rotate(8deg) scale(1.1);
+    color: white;
+}
+
+.spatial-brand-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 10px;
+    color: #8a8a8a;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.spatial-interactive {
+    display: inline-block;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), color 0.3s;
+}
+
+.spatial-interactive:hover {
+    transform: scale(1.1);
+    color: #f0f0f2;
+    /* Highlight on hover */
+}
+
+.spatial-brand-subtitle {
+    color: #666;
+    font-size: 1rem;
+    letter-spacing: 0px;
+    font-weight: 500;
+    opacity: 0.8;
+}
+
+/* Hide brand header on index page to avoid duplication */
+.on-index-page .spatial-brand-header {
+    display: none;
+}
+
+/* Light Mode Overrides for Header */
+html.light-mode .spatial-brand-logo {
+    color: #333;
+    opacity: 0.9;
+}
+
+html.light-mode .spatial-brand-title {
+    color: #333;
+}
+
+html.light-mode .spatial-interactive:hover {
+    color: #000;
+}
+
+html.light-mode .spatial-brand-subtitle {
+    color: #555;
+}
+
+
+/* Common Group Styles */
+.spatial-group {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 20px;
+    /* Removed negative margin for strict centering */
+    transform-style: preserve-3d;
+}
+
+/* Left Group Specifics */
+#spatial-left-group {
+    padding-left: 1vw;
+    /* Pushed to edge */
+    transform: rotateY(35deg) translateZ(-150px);
+    /* Enhanced depth */
+    transform-origin: left center;
+}
+
+/* Right Group Specifics */
+#spatial-right-group {
+    padding-right: 1vw;
+    /* Pushed to edge */
+    transform: rotateY(-35deg) translateZ(-150px);
+    /* Enhanced depth */
+    transform-origin: right center;
+    align-items: flex-end;
+    /* Align cards to the right side */
+}
+
+/* Spatial Card Styles - Compact High-Fidelity (Revised) */
+.spatial-card {
+    width: 260px;
+    height: 160px;
+    /* Wei tiao wei 160px */
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 0 35px;
+    /* Increase side padding */
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    /* Vertically center content */
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    pointer-events: auto;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    opacity: 0.8;
+}
+
+/* Hover Effects */
+.spatial-card:hover {
+    transform: translateZ(50px) scale(1.05);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    opacity: 1;
+    z-index: 100;
+}
+
+/* Light Mode Overrides */
+html.light-mode .spatial-card {
+    background: rgba(255, 255, 255, 0.5);
+    border-color: rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+}
+
+html.light-mode .spatial-card:hover {
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Content Structure matching Index */
+.spatial-card .card-bg-text {
+    position: absolute;
+    bottom: -15px;
+    right: -5px;
+    font-size: 4rem;
+    /* Large and bold */
+    font-weight: 900;
+    color: rgba(255, 255, 255, 0.03);
+    pointer-events: none;
+    transition: 0.3s;
+    line-height: 1;
+}
+
+html.light-mode .spatial-card .card-bg-text {
+    color: rgba(0, 0, 0, 0.04);
+}
+
+.spatial-card:hover .card-bg-text {
+    transform: scale(1.1) rotate(-5deg);
+    color: rgba(255, 255, 255, 0.08);
+}
+
+html.light-mode .spatial-card:hover .card-bg-text {
+    color: rgba(0, 0, 0, 0.08);
+}
+
+.spatial-card .card-icon {
+    font-size: 2.5rem;
+    /* Restored original large size */
+    margin-bottom: 10px;
+    /* Tighter gap */
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
+}
+
+.spatial-card .card-title {
+    font-size: 1.4rem;
+    /* Restored original large size */
+    font-weight: bold;
+    margin-bottom: 0;
+    color: var(--text-main);
+    line-height: 1.2;
+}
+
+.spatial-card .card-desc {
+    display: none;
+}
+
+/* Responsive Hide */

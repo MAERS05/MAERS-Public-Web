@@ -9,7 +9,7 @@
     "title": "音视管理",
     "icon": "🎧",
     "url": "admin-music.html",
-    "style": "custom/music/admin/admin-music.css"
+    "style": "custom/music/admin/music-admin.css"
   },
   {
     "title": "笔记管理",

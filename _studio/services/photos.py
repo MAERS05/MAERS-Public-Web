@@ -20,11 +20,12 @@ THUMB_DIR      = 'photos/thumbnails'
 PREVIEW_DIR    = 'photos/previews'
 
 # 静态JS文件路径
-GALLERY_JSON_FILE = os.path.join(DATA_DIR, 'photos-data.json') # 保留引用仅用于兼容性或清理
-GALLERY_JS_FILE   = os.path.join(DATA_DIR, 'photos-data.js')
+
+# 静态JS文件路径
+GALLERY_JSON_FILE = os.path.join(DATA_DIR, 'photos-data.json')
 
 try:
-    from PIL import Image, ImageOps
+    from PIL import Image, ImageOps 
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -38,7 +39,7 @@ def get_db():
     return conn
 
 def sync_gallery_js():
-    """从数据库生成静态 JS 数据供前端极其快速地读取"""
+    """从数据库生成静态 JSON 数据供前端读取"""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -61,14 +62,13 @@ def sync_gallery_js():
         }
         data[cat].append(item)
     
-    # 写入文件
+    # 写入 JSON 文件
     try:
-        js_content = f"window.galleryData = {json.dumps(data, ensure_ascii=False, indent=2)};\n"
-        with open(GALLERY_JS_FILE, 'w', encoding='utf-8') as f:
-            f.write(js_content)
-        print(f"✅ [Photos] Gallery JS 同步成功")
+        with open(GALLERY_JSON_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"✅ [Photos] Gallery JSON 同步成功: {os.path.basename(GALLERY_JSON_FILE)}")
     except Exception as e:
-        print(f"❌ [Photos] Gallery JS 同步失败: {e}")
+        print(f"❌ [Photos] Gallery JSON 同步失败: {e}")
 
 # ================= 业务逻辑 =================
 

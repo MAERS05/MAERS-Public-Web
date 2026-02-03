@@ -1,0 +1,290 @@
+/* 
+ * Record Module Styles - Swiss Minimal Theme
+ * Design Principles: Strict Layout, Monochrome, No Ornamentation.
+ */
+
+/* ==========================================================================
+   1. Theme Variables & Configuration
+   ========================================================================== */
+:root {
+    /* Layers: Static Backgrounds */
+    --swiss-light-bg: #f4f4f4;
+    --swiss-dark-bg: #050505;
+
+    /* Patterns */
+    --swiss-pattern-dark: linear-gradient(90deg, #222 1px, transparent 1px);
+    --swiss-pattern-light: linear-gradient(90deg, #e5e5e5 1px, transparent 1px);
+
+    /* Default Theme Tokens (Dark Mode / Inverted Swiss) */
+    --swiss-bg-pattern: var(--swiss-pattern-dark);
+    --swiss-text: #ffffff;
+    --swiss-card-bg: #111111;
+
+    /* Interaction Tokens */
+    --swiss-card-hover: #ffffff;
+    --swiss-card-hover-text: #000000;
+
+    /* Component Tokens */
+    --swiss-tag-bg: #222222;
+    --swiss-tag-text: #ffffff;
+
+    --swiss-border: #2a2a2a;
+    /* Subtle dark border */
+}
+
+/* Light Mode Overrides (Standard Swiss) */
+html.light-mode {
+    --swiss-bg-pattern: var(--swiss-pattern-light);
+    --swiss-text: #000000;
+    --swiss-card-bg: #ffffff;
+
+    --swiss-card-hover: #000000;
+    --swiss-card-hover-text: #ffffff;
+
+    --swiss-tag-bg: #f0f0f0;
+    --swiss-tag-text: #000000;
+
+    --swiss-border: #e0e0e0;
+    /* Subtle grey border for light mode */
+}
+
+/* ==========================================================================
+   2. Global Layer Management
+   Make backgrounds transparent to reveal circular transition effects from style.css
+   ========================================================================== */
+
+/* IMPORTANT: Scope Swiss theme to body only, not :root or html */
+/* This prevents leaking into immersive-layer which is outside body */
+
+body {
+    background-color: transparent !important;
+    background-image: var(--swiss-bg-pattern);
+    background-size: 100px 100%;
+
+    --font-main: "Helvetica Neue", "Arial", sans-serif;
+    font-family: var(--font-main);
+    color: var(--swiss-text);
+}
+
+/* ==========================================================================
+   3. Card Component (Grid Item)
+   Strict Square Layout, Top Alignment
+   ========================================================================== */
+.folder-grid .grid-item {
+    /* Layout & Box Model */
+    aspect-ratio: 1/1;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    /* Top Align */
+
+    /* Aesthetics */
+    background: var(--swiss-card-bg);
+    border: 1px solid var(--swiss-border);
+    border-radius: 0;
+    box-shadow: none;
+
+    /* Reset & Cleanup */
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s ease;
+
+    /* Force Flat Appearance */
+    -webkit-mask-image: none !important;
+    mask-image: none !important;
+    clip-path: none !important;
+    filter: none !important;
+    opacity: 1 !important;
+}
+
+/* Reset specific padding for folders that causes deformation */
+.folder-grid .type-folder {
+    padding-top: 30px !important;
+}
+
+/* ==========================================================================
+   4. Typography
+   Bold, Uppercase, Large
+   ========================================================================== */
+.grid-item .item-title {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 0.9;
+    text-transform: uppercase;
+    color: var(--swiss-text);
+
+    margin: 0 0 20px 0;
+    padding: 0;
+
+    /* Layout safety */
+    overflow: visible;
+    display: block;
+    -webkit-line-clamp: unset;
+    line-clamp: unset;
+}
+
+/* Header Adjustments */
+.explorer-header {
+    background: transparent;
+    border-bottom: none;
+    padding-bottom: 20px;
+    margin-bottom: 40px;
+}
+
+.header-title {
+    font-family: var(--font-main);
+    font-weight: 900;
+    font-size: 3rem;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    color: var(--swiss-text);
+}
+
+/* ==========================================================================
+   5. Interactive Elements (Tags)
+   Pill shape, High-contrast active state
+   ========================================================================== */
+.grid-item .item-tags {
+    margin: 10px 0 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.grid-item .mini-tag {
+    background: var(--swiss-tag-bg);
+    color: var(--swiss-tag-text);
+
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: none;
+    box-shadow: none;
+    transition: all 0.2s;
+}
+
+.grid-item .mini-tag:hover {
+    background: #78ffd6;
+    /* Accent Hover */
+    color: #000;
+    cursor: pointer;
+}
+
+/* Selected/Active State */
+.grid-item .mini-tag.active {
+    background: #000;
+    color: #fff;
+    box-shadow: 0 0 0 2px #fff, 0 0 0 4px #000;
+    /* Double Ring Focus */
+}
+
+html.light-mode .grid-item .mini-tag.active {
+    background: #000;
+    color: #fff;
+    box-shadow: 0 0 0 2px #000, 0 0 0 4px #fff;
+}
+
+/* ==========================================================================
+   6. Cleanups & Resets (The "Kill List")
+   Remove all unwanted decorations, icons, and pseudo-shapes
+   ========================================================================== */
+.folder-grid .grid-item .item-icon,
+/* Icons */
+.grid-item .item-divider,
+/* Dividers */
+.folder-grid .grid-item::before,
+/* Glow bars */
+.folder-grid .grid-item::after,
+/* Shadows */
+.folder-grid .type-folder::before,
+/* Folder shapes */
+.folder-grid .type-folder::after,
+.folder-grid .type-note::before,
+/* Note shapes */
+.folder-grid .type-note::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* 
+ * SWISS TYPE DIFFERENTIATION: OPTION G (UNDERLINE)
+ * Distinguish Folders vs Files using Typography emphasis
+ */
+
+/* 1. Folders: Heavy Emphasis */
+.folder-grid .type-folder .item-title {
+    border-bottom: 4px solid var(--swiss-text);
+    padding-bottom: 15px;
+    width: 100%;
+}
+
+/* 2. Files (Notes): Subtle Structure or Clean */
+.folder-grid .type-note .item-title {
+    border-bottom: 2px solid var(--swiss-border);
+    /* Very subtle divider */
+    padding-bottom: 15px;
+    width: 80%;
+    /* Shorter line indicates "content" vs "container" */
+}
+
+/* ==========================================================================
+   7. Hover Interactions
+   Strict Color Inversion, No Movement
+   ========================================================================== */
+.folder-grid .grid-item:hover {
+    background: var(--swiss-card-hover) !important;
+    border-color: var(--swiss-card-hover) !important;
+    /* Merge border color */
+    z-index: 10;
+    transform: none !important;
+    /* STRICTLY NO LIFT */
+}
+
+.folder-grid .grid-item:hover .item-title {
+    color: var(--swiss-card-hover-text) !important;
+    border-bottom-color: var(--swiss-card-hover-text) !important;
+}
+
+/* Invert tags on hover to maintain legibility against inverted bg */
+.folder-grid .grid-item:hover .mini-tag {
+
+    background: var(--swiss-card-bg);
+    color: var(--swiss-text);
+}
+
+/* ==========================================================================
+   8. Admin State Support (Fixes for Delete/Select)
+   ========================================================================== */
+.folder-grid .grid-item.is-deleted {
+    opacity: 0.8 !important;
+    position: relative !important;
+
+    /* No Border (Cleaner Look) */
+    border: 1px solid var(--swiss-border) !important;
+
+    /* Red Strikethrough Line (2px) via background */
+    /* Drawn via gradient to bypass pseudo-element layout bugs */
+    background-image: linear-gradient(#ff4757, #ff4757) !important;
+    background-size: 100% 2px !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+
+    /* NO Filter: record theme is already monochrome. */
+    filter: none !important;
+}
+
+/* Ensure hover doesn't wipe out the red line */
+.folder-grid .grid-item.is-deleted:hover {
+    background-image: linear-gradient(#ff4757, #ff4757) !important;
+    background-size: 100% 2px !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border-color: var(--swiss-card-hover) !important;
+}
+
+.folder-grid .grid-item.is-deleted::after {
+    display: none !important;
+}

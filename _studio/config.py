@@ -7,5 +7,5 @@ DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 
 MODULES_JSON_FILE = os.path.join(PROJECT_ROOT, 'custom', 'index', 'admin', 'modules.json')
 ALBUM_CONFIG_JSON = os.path.join(PROJECT_ROOT, 'custom', 'album', 'admin', 'album-config.json')
-ALBUM_CONFIG_JS   = os.path.join(PROJECT_ROOT, 'custom', 'album', 'viewer', 'album-config.js')
+ALBUM_CONFIG_JS   = os.path.join(PROJECT_ROOT, 'custom', 'album', 'viewer', 'album-config.module.js')
 

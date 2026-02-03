@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="dynamic-style/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
@@ -17,14 +17,11 @@
     <link rel="stylesheet" href="static-style/style.css">
     <link rel="stylesheet" href="custom/photos/viewer/photos-viewer.css">
     <link rel="stylesheet" href="static-style/responsive.css">
-    <script defer src="data-manage/api-client.js"></script>
-    <script defer src="data-manage/data-provider.js"></script>
-    <script src="data/photos-data.js"></script>
-    <script src="custom/album/viewer/album-config.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/photos/admin/photos-controller.js"></script>
-    <script defer src="custom/photos/viewer/photos-view.js"></script>
+
+    <!-- 数据现在通过 ES6 模块异步加载 (data/photos-data.json) -->
+
+
+    <script type="module" src="custom/photos/main.module.js"></script>
 
     <style>
         /* Ensure header title is white in dark mode */
@@ -122,6 +119,30 @@
         .photo-grid {
             scrollbar-width: thin;
             scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+
+        /* [Fix] Make theme switch visible on white card background */
+        html.light-mode .theme-switch-label {
+            background-color: rgba(0, 0, 0, 0.1) !important;
+            border-color: rgba(0, 0, 0, 0.15) !important;
+        }
+
+        /* [Fix] Match album.html layout behavior */
+        .container {
+            padding: 15px !important;
+            height: 100vh !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Use higher specificity to override components.css without !important */
+        .main-card.content-mode {
+            flex: 1;
+            /* padding: 40px !important;  Already handled by content-mode or component.css, but album uses 40px */
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: none;
         }
     </style>
 </head>

@@ -1,0 +1,515 @@
+/* CMS Default Theme - Visual Styling for Folders and Notes */
+/* This file contains the default visual theme (colors, shadows, decorations) */
+/* Modules can skip loading this file to use their own custom themes */
+
+/* ==================== 1. Grid Item Default Theme ==================== */
+.grid-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.grid-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+}
+
+.grid-item.drag-over {
+  transform: scale(1.05);
+  border-color: rgba(120, 255, 214, 0.5);
+  box-shadow: 0 0 20px rgba(120, 255, 214, 0.3);
+}
+
+/* ==================== 2. Glow Bar Effect (Left Edge) ==================== */
+/* Only apply when NOT selected, to avoid conflict with admin selection counter */
+.grid-item:not(.is-selected)::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-radius: 0;
+  opacity: 0.9;
+  transition: all 0.3s ease;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(0deg, #8e9eab 0%, #eef2f3 100%);
+  box-shadow: none;
+}
+
+.type-folder:hover::before,
+.type-note:hover::before {
+  box-shadow: none;
+  opacity: 1;
+}
+
+/* ==================== 3. Folder Theme (Tab Style with SVG Mask) ==================== */
+.type-folder {
+  padding-top: 32px;
+  border-radius: 0;
+  border: none;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+}
+
+.type-folder:hover {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* SVG Mask for folder tab shape */
+.type-folder::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 H106 Q108 0 109 1 L118 10 Q119 11 120 11 H236 Q240 11 240 15 V192 H0 Z' fill='black'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 H106 Q108 0 109 1 L118 10 Q119 11 120 11 H236 Q240 11 240 15 V192 H0 Z' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-size: cover;
+  mask-size: cover;
+  -webkit-mask-position: left top;
+  mask-position: left top;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ==================== 4. Note Theme (Folded Corner Style) ==================== */
+.type-note {
+  border-radius: 0 4px 4px 0;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  clip-path: polygon(0 0,
+      100% 0,
+      100% calc(100% - 20px),
+      calc(100% - 20px) 100%,
+      0 100%);
+}
+
+/* Folded corner effect */
+.type-note::after {
+  content: "";
+  display: block;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(to top left,
+      transparent 50%,
+      rgba(255, 255, 255, 0.1) 50%,
+      rgba(255, 255, 255, 0.2));
+  box-shadow: -1px -1px 3px rgba(0, 0, 0, 0.2);
+  border-radius: 4px 0 0 0;
+}
+
+/* ==================== 5. Tag Styling ==================== */
+.mini-tag {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-sub);
+}
+
+.mini-tag:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.mini-tag.active {
+  background: #78ffd6;
+  color: #000;
+  font-weight: bold;
+  box-shadow: 0 0 10px rgba(120, 255, 214, 0.6);
+  transform: scale(1.1);
+}
+
+/* ==================== 6. Search Input Theme ==================== */
+.search-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.search-input:focus {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+}
+
+/* ==================== 7. Breadcrumb Theme ==================== */
+.crumb-item:hover {
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+于屏幕中央而不是偏上方 .reader-toolbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.close-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.close-btn:hover {
+  background: #ff4757;
+  color: white;
+  border-color: #ff4757;
+}
+
+/* ==================== 9. Tag Drawer Theme ==================== */
+.tag-drawer {
+  background: #1e1e24;
+  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.drawer-overlay {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.drawer-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drawer-header h3 {
+  color: #fff;
+}
+
+.btn-close-drawer {
+  color: #888;
+}
+
+.btn-close-drawer:hover {
+  color: #fff;
+}
+
+.drawer-item {
+  color: #a0a0a5;
+}
+
+.drawer-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.drawer-item.active {
+  background: rgba(120, 255, 214, 0.1);
+  color: #78ffd6;
+  font-weight: bold;
+}
+
+.tag-count-badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: #888;
+}
+
+.drawer-item.active .tag-count-badge {
+  background: #78ffd6;
+  color: #000;
+}
+
+.drawer-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.drawer-search-input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+}
+
+.drawer-search-input:focus {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.btn-clear-tags {
+  border: 1px solid #ff4757;
+  color: #ff4757;
+}
+
+.btn-clear-tags:hover {
+  background: #ff4757;
+  color: white;
+}
+
+.tag-toggle-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-main);
+}
+
+.tag-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ==================== 10. Lightbox Theme ==================== */
+.lightbox-overlay {
+  background: rgba(0, 0, 0, 0.9);
+}
+
+.lightbox-img {
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.lightbox-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ==================== 11. Markdown Body Theme ==================== */
+.markdown-body p {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ==================== 12. Light Mode Overrides ==================== */
+.light-mode .grid-item {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.light-mode .grid-item:hover {
+  background: #fff;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+.light-mode .grid-item:not(.is-selected)::before {
+  opacity: 1;
+  background: linear-gradient(0deg, #8e9eab 0%, #eef2f3 100%);
+  box-shadow: none;
+}
+
+.light-mode .type-folder {
+  background: transparent;
+  box-shadow: none;
+  color: #333;
+  filter:
+    drop-shadow(1px 0 0 rgba(0, 0, 0, 0.1)) drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1)) drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.03));
+}
+
+.light-mode .type-folder:hover {
+  background: transparent;
+  box-shadow: none;
+}
+
+.light-mode .type-folder::after {
+  background: #fff;
+}
+
+.light-mode .type-note {
+  background: #fff;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #333;
+}
+
+.light-mode .type-note::after {
+  background: linear-gradient(to top left,
+      transparent 50%,
+      rgba(0, 0, 0, 0.1) 50%,
+      #fff 51%,
+      #f4f4f4);
+  box-shadow: -1.5px -1.5px 3px rgba(0, 0, 0, 0.15);
+}
+
+.light-mode .mini-tag {
+  background: rgba(0, 0, 0, 0.06);
+  color: #666;
+}
+
+.light-mode .search-input {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.light-mode .crumb-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+
+
+.light-mode .reader-toolbar {
+  border-bottom-color: rgba(0, 0, 0, 0.06);
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.light-mode .close-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: transparent;
+  color: #333;
+}
+
+.light-mode .close-btn:hover {
+  background: #ff4757;
+  color: white;
+}
+
+.light-mode .tag-drawer {
+  background: #f5f5f7;
+  border-left-color: rgba(0, 0, 0, 0.1);
+}
+
+.light-mode .drawer-header {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.light-mode .drawer-header h3 {
+  color: #333;
+}
+
+.light-mode .drawer-item {
+  color: #666;
+}
+
+.light-mode .drawer-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #000;
+}
+
+.light-mode .tag-count-badge {
+  background: rgba(0, 0, 0, 0.1);
+  color: #666;
+}
+
+.light-mode .drawer-footer {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.light-mode .drawer-search-input {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.light-mode .tag-toggle-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.light-mode .markdown-body p {
+  color: #444;
+}
+
+.light-mode .explorer-header {
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
+/* ==================== 13. Tag Category Theme ==================== */
+.tag-category-group {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.tag-category-group:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.category-header {
+  font-size: 0.9em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+}
+
+.cat-delete-btn:hover {
+  opacity: 1 !important;
+  transform: scale(1.1);
+}
+
+.add-cat-btn:hover {
+  color: #fff !important;
+}
+
+.light-mode .add-cat-btn:hover {
+  color: #000 !important;
+}
+
+/* Admin action buttons */
+.cat-action-btn {
+  color: #a0a0a5;
+}
+
+.cat-action-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.light-mode .cat-action-btn {
+  color: #666;
+}
+
+.light-mode .cat-action-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #000;
+}
+
+.ready-to-drag {
+  cursor: grab;
+  animation: pulse-drag 1.5s infinite;
+}
+
+.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+@keyframes pulse-drag {
+  0% {
+    box-shadow: 0 0 0 0 rgba(120, 255, 214, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(120, 255, 214, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(120, 255, 214, 0);
+  }
+}
+
+.light-mode .tag-category-group {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.light-mode .category-header {
+  color: #444;
+}
+
+.category-header:hover {
+  color: #fff;
+}
+
+/* 确保折叠图标和分类名称在hover时变色 */
+.category-header:hover .cat-toggle-icon,
+.category-header:hover .category-name {
+  color: inherit;
+}
+
+.light-mode .category-header:hover {
+  color: #000;
+}
+
+/* [Fix] Make theme switch visible on white card background */
+html.light-mode .theme-switch-label {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}

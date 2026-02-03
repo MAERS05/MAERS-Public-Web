@@ -1,22 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 
 <head>
 
     <link rel="stylesheet" href="static-style/splash.css">
-    <script>
-        // Splash Screen Control
-        window.addEventListener('load', () => {
-            const splash = document.getElementById('splash-screen');
-            if (splash) {
-                setTimeout(() => {
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 500); // 0.5s transition
-                }, 200); // 200ms delay
-            }
-        });
-    </script>
-    <script src="dynamic-style/theme-init.js"></script>
+
+    <script src="dynamic-style/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
@@ -30,21 +19,36 @@
     <link rel="stylesheet" href="static-style/theme.css">
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/toast.css">
     <link rel="stylesheet" href="custom/music/viewer/music.css">
-    <link rel="stylesheet" href="custom/music/admin/admin-music.css">
+    <link rel="stylesheet" href="custom/music/admin/music-admin.css">
+    <style>
+        /* 统一 admin 布局：全屏填充 */
+        .container {
+            padding: 15px !important;
+            height: 100vh !important;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-card {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            max-height: none !important;
+        }
+    </style>
+
 </head>
 
 <body class="admin-mode">
-    <!-- 🔥 Splash Screen: 掩盖初始加载闪烁 -->
-    <div id="splash-screen">
-        <div class="splash-logo">🛠️</div>
-    </div>
-    <script src="data-manage/data-provider.js"></script>
-    <script src="dynamic-style/style-injector.js"></script>
-    <script src="dynamic-style/layout.js"></script>
-    <script>MAERS.StyleInjector.inject();</script>
-    <!-- 数据 (本地模式可写，线上模式只读) -->
-    <script src="data/music-data.js"></script>
+
+    <script type="module" src="dynamic-style/style-injector.module.js"></script>
+    <script type="module" src="dynamic-style/layout.module.js"></script>
+    <script
+        type="module">await import('./dynamic-style/style-injector.module.js').then(m => m.default.inject());</script>
+    <!-- 数据现在通过 ES6 模块异步加载 (data/music-data.json) -->
     <script>
         // 🔥 强制开启管理员模式
         window.IS_ADMIN = true;
@@ -86,9 +90,8 @@
                     <div class="custom-control-bar">
                         <div class="control-btns">
                             <button class="ctrl-btn" id="play-prev-btn">◀◀</button>
-                            <button class="ctrl-btn" id="master-play-btn"
-                                class="master-play-btn-large"><span class="play-icon-layer">▶</span><span
-                                    class="pause-icon-layer">||</span></button>
+                            <button class="ctrl-btn" id="master-play-btn" class="master-play-btn-large"><span
+                                    class="play-icon-layer">▶</span><span class="pause-icon-layer">||</span></button>
                             <button class="ctrl-btn" id="play-next-btn">▶▶</button>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
@@ -155,30 +158,14 @@
         </div>
     </div>
     <!-- 脚本引入顺序至关重要 -->
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/music/viewer/music-player.js"></script> <!-- 核心播放器 -->
-    <script defer src="custom/music/viewer/music-render.js"></script> <!-- 渲染逻辑 -->
-    <script defer src="custom/music/viewer/music-control.js"></script> <!-- 播放控制 -->
-    <script defer src="custom/music/admin/music-drag.js"></script> <!-- 拖拽排序 -->
-    <script defer src="custom/music/admin/music-admin.js"></script> <!-- 管理逻辑 -->
-    <script defer src="custom/music/viewer/music-ui.js"></script> <!-- 列表UI逻辑 -->
-    <script defer src="custom/music/viewer/music-state.js"></script> <!-- 状态记忆 -->
-    <script src="shared/toast.js"></script>
+    <script type="module" src="shared/utils.module.js"></script>
+    <script type="module" src="data-manage/api-client.module.js"></script>
+    <script type="module" src="dynamic-style/script.module.js"></script>
+    <!-- ES6 模块入口 (整合所有 Music Admin 模块) -->
+    <script type="module" src="custom/music/admin-main.module.js"></script>
+    <script type="module" src="shared/toast.module.js"></script>
     <script>
-        // 消息监听 (来自 iframe 或其他窗口)
-        window.addEventListener('message', function (event) {
-            if (event.data === 'toggle') MAERS.Music.Player && MAERS.Music.Player.togglePlay();
-            else if (event.data === 'next') MAERS.Music.Control && MAERS.Music.Control.playNext();
-            else if (event.data === 'prev') MAERS.Music.Control && MAERS.Music.Control.playPrev();
-        });
-        
-        // Header Zoom Trigger
-        document.addEventListener('DOMContentLoaded', () => {
-            const zoomTrigger = document.querySelector('.zoom-trigger-whole');
-            if(zoomTrigger && typeof toggleGlobalShrink === 'function') {
-               zoomTrigger.addEventListener('click', (e) => toggleGlobalShrink(e));
-            }
-        });
+        // 事件监听已移至 custom/music/admin-main.module.js
     </script>
 </body>
 

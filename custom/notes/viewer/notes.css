@@ -1,2 +1,44 @@
 /* Notes Module Custom Styles */
 /* 此文件用于 notes.html 的自定义样式 */
+
+/* ==========================================================================
+   强制不透明设置 (Opaque Overrides)
+   使用 var(--pill-bg) 自动适配黑夜/白昼模式，同时保留文件夹形状
+   ========================================================================== */
+
+/* 1. 文件夹 (Folders) - 针对 ::after 伪元素以保持标签形状 */
+.type-folder::after {
+    background: var(--pill-bg) !important;
+    backdrop-filter: none !important;
+    transition: background 0.2s ease;
+}
+
+.type-folder:hover::after {
+    background: var(--pill-hover-bg) !important;
+}
+
+/* 2. 笔记 (Notes) - 直接针对元素，因为它是通过 clip-path 裁剪的 */
+.type-note {
+    background: var(--pill-bg) !important;
+    backdrop-filter: none !important;
+    transition: background 0.2s ease;
+}
+
+.type-note:hover {
+    background: var(--pill-hover-bg) !important;
+}
+
+/* ==========================================================================
+   Admin State Fixes
+   ========================================================================== */
+.type-folder.is-selected,
+.type-folder.is-deleted,
+.type-note.is-selected,
+.type-note.is-deleted {
+    background: var(--pill-bg) !important;
+    opacity: 1 !important;
+}
+
+.is-deleted {
+    filter: grayscale(100%) !important;
+}
