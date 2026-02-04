@@ -207,7 +207,7 @@ export function refreshDrawerList() {
         const isExpanded = query ? matches : expandedCategories.has(cat.name);
 
         const iconRotation = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        const listStyle = isExpanded ? 'max-height:1000px;opacity:1;min-height:30px;' : 'max-height:0px;opacity:0;min-height:0;margin-top:0;';
+        const gridStyle = isExpanded ? 'grid-template-rows:1fr;opacity:1;margin-top:0;' : 'grid-template-rows:0fr;opacity:0;margin-top:-5px;';
 
         // Category Wrapper
         const catId = `cat-group-${catIndex}`;
@@ -228,8 +228,10 @@ export function refreshDrawerList() {
                       <span class="category-name" style="flex:1;">${State.escapeHtml(cat.name)}</span>
                       ${adminButtonsPlaceholder}
                   </div>
-                  <div class="category-tags-list" style="display:flex;flex-wrap:wrap;gap:5px;overflow:hidden;transition:all 0.3s ease;${listStyle}">
-                      ${tagsHtml || '<span style="font-size:12px;color:#555;">Empty</span>'}
+                  <div class="list-anim-wrapper" style="display:grid;transition:all 0.3s ease;${gridStyle}">
+                      <div class="category-tags-list" style="display:flex;flex-wrap:wrap;gap:5px;overflow:hidden;min-height:0;">
+                          ${tagsHtml || '<span style="font-size:12px;color:#555;">Empty</span>'}
+                      </div>
                   </div>
                </div>`;
     });
@@ -239,15 +241,17 @@ export function refreshDrawerList() {
         // [Logic Change] If searching, expand if has matches. Else use manual state.
         const isExpanded = query ? true : expandedCategories.has('_UNCATEGORIZED_');
         const iconRotation = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
-        const listStyle = isExpanded ? 'max-height:1000px;opacity:1;' : 'max-height:0px;opacity:0;';
+        const gridStyle = isExpanded ? 'grid-template-rows:1fr;opacity:1;' : 'grid-template-rows:0fr;opacity:0;';
 
         html += `<div class="tag-category-group" data-category="_UNCATEGORIZED_" style="padding:10px;">
                   <div class="category-header" style="font-weight:bold;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;">
                       <span class="cat-toggle-icon" style="transform:${iconRotation};margin-right:8px;">▼</span>
                       <span class="category-name" style="flex:1;">其他</span>
                   </div>
-                  <div class="category-tags-list" style="display:flex;flex-wrap:wrap;gap:5px;overflow:hidden;transition:all 0.3s ease;${listStyle}">
-                      ${uncategorized.map(renderTag).join('')}
+                  <div class="list-anim-wrapper" style="display:grid;transition:all 0.3s ease;${gridStyle}">
+                      <div class="category-tags-list" style="display:flex;flex-wrap:wrap;gap:5px;overflow:hidden;min-height:0;">
+                          ${uncategorized.map(renderTag).join('')}
+                      </div>
                   </div>
               </div>`;
     }
