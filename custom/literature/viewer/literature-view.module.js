@@ -407,27 +407,61 @@ class FlowEngine {
 
         const mode = this.isGridMode ? 'GRID' : 'FLOW';
 
-        // Clear existing content
-        titleEl.innerHTML = '';
+        // 1. Check for existing button to prevent full rebuild (Update Only)
+        let modeBtn = titleEl.querySelector('.mode-text-btn');
+        if (modeBtn) {
+            modeBtn.textContent = mode;
+            modeBtn.title = this.isGridMode ? '展示最近36本' : '展示所有书籍';
+            return;
+        }
 
-        // Create emoji text node
-        titleEl.appendChild(document.createTextNode('📙 '));
-
-        // Create mode toggle button
-        const modeBtn = document.createElement('span');
+        // 2. Button doesn't exist (First run on static HTML). Create it.
+        modeBtn = document.createElement('span');
         modeBtn.className = 'mode-text-btn';
         modeBtn.textContent = mode;
-        // Tooltip logic: Flow mode (currently showing) -> Click to go to Grid (Show All)
         modeBtn.title = this.isGridMode ? '展示最近36本' : '展示所有书籍';
         modeBtn.addEventListener('click', () => this.toggleMode());
-        titleEl.appendChild(modeBtn);
 
-        // Add trailing text
-        titleEl.appendChild(document.createTextNode(' Literature'));
+        // 3. Try to preserve existing image in static HTML
+        const existingImg = titleEl.querySelector('img');
 
-        // Apply zoom trigger using global function (will wrap the emoji automatically)
-        if (window.MAERS?.Theme?.setupZoomTrigger) {
-            window.MAERS.Theme.setupZoomTrigger(titleEl, 'icon_only', true);
+        if (existingImg) {
+            // Static structure is likely: [Img] [Text: Literature]
+            // We want to transform to: [Img] [Space] [Btn] [Text: Literature]
+
+            const space = document.createTextNode(' ');
+
+            // Insert after image: Image -> Space -> Btn
+            // Note: The text "Literature" is likely already there as a text node following the image
+            if (existingImg.nextSibling) {
+                titleEl.insertBefore(space, existingImg.nextSibling);
+                titleEl.insertBefore(modeBtn, space.nextSibling);
+            } else {
+                titleEl.appendChild(space);
+                titleEl.appendChild(modeBtn);
+            }
+
+            // Bind zoom trigger to the EXISTING image
+            if (window.MAERS?.Theme?.setupZoomTrigger) {
+                window.MAERS.Theme.setupZoomTrigger(existingImg, 'icon_only', true);
+            }
+        } else {
+            // Fallback: Full rebuild if structure is unexpected (no image found)
+            console.warn('[LiteratureView] Standard header structure not found, rebuilding...');
+            titleEl.innerHTML = '';
+
+            const iconWrapper = document.createElement('span');
+            iconWrapper.innerHTML = '<img src="ui/literature-icon.svg" alt="Literature" style="height: 1.25em; width: auto; vertical-align: middle;">';
+            titleEl.appendChild(iconWrapper);
+
+            titleEl.appendChild(document.createTextNode(' '));
+            titleEl.appendChild(modeBtn);
+            titleEl.appendChild(document.createTextNode(' Literature'));
+
+            if (window.MAERS?.Theme?.setupZoomTrigger) {
+                const imgEl = iconWrapper.querySelector('img');
+                if (imgEl) window.MAERS.Theme.setupZoomTrigger(imgEl, 'icon_only', true);
+            }
         }
     }
 

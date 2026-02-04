@@ -1,3 +1,5 @@
+@import "../custom/zmobile adaptation/mobile-spatial-nav.css";
+
 /* Spatial Navigation Container */
 #spatial-nav-container {
     position: fixed;
@@ -225,5 +227,3 @@ html.light-mode .spatial-card:hover .card-bg-text {
 .spatial-card .card-desc {
     display: none;
 }
-
-/* Responsive Hide */

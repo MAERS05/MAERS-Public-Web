@@ -1,0 +1,81 @@
+/* ==========================================================================
+   📱 Mobile Admin Panel Styles
+   ========================================================================== */
+
+@media (max-width: 768px) {
+
+    /* 1. Header Layout Adjustment */
+    .admin-header {
+        flex-direction: column;
+        padding: 30px 20px 20px !important;
+        gap: 20px;
+    }
+
+    h1.admin-title {
+        font-size: 1.5rem !important;
+        /* Smaller Title */
+        margin-bottom: 0 !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    /* Actions moved below title, centered */
+    .admin-header-actions {
+        position: static !important;
+        /* Remove absolute positioning */
+        width: 100%;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-top: 10px;
+    }
+
+    /* Action Buttons Mobile Size */
+    .btn-export,
+    .btn-import {
+        padding: 8px 16px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* 2. Grid Adjustment */
+    .admin-grid {
+        padding: 0 15px !important;
+        gap: 15px !important;
+        margin-top: 20px !important;
+        /* Force single column or two columns based on needs, admin-grid matches auto-fill 220px which is fine for 360px+ as single column */
+    }
+
+    /* 3. Card Adjustments */
+    .admin-card {
+        padding: 30px 20px !important;
+        min-height: 160px;
+    }
+
+    .admin-card .icon,
+    .functional-card .icon {
+        font-size: 2.5rem !important;
+        /* Smaller Icons */
+    }
+
+    /* Support for SVG icons in admin */
+    .admin-icon-img {
+        width: 1em;
+        height: 1em;
+        vertical-align: middle;
+        object-fit: contain;
+    }
+
+    .admin-card .name {
+        font-size: 1rem !important;
+    }
+}
+
+/* Global SVG Icon class for Admin (Desktop + Mobile) */
+.admin-icon-img {
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    object-fit: contain;
+    display: inline-block;
+}

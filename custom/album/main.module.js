@@ -26,7 +26,7 @@ initTheme();
 // C. Render Logic
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Render Header
-    renderPageHeader("📷 My Gallery");
+    renderPageHeader('<img src="ui/album-icon.svg" alt="Album" style="height: 1.25em; width: auto; vertical-align: middle;"> My Gallery');
 
     // 2. Render Grid
     const grid = document.getElementById('category-grid');

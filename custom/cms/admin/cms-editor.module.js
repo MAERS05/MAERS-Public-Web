@@ -88,7 +88,6 @@ function _renderAdminEditor(layer, node) {
     layer.innerHTML = `
       <div class="editor-header">
           <div class="editor-left">
-              <span style="font-size:1.5rem;">📝</span>
               <input type="text" value="${_escapeHtml(node.title)}" id="edit-title-input">
           </div>
           <div class="editor-right">
@@ -163,7 +162,7 @@ function _renderVisitorReader(layer, node) {
 
     layer.innerHTML = `
   <div class="reader-toolbar">
-      <div class="reader-meta"><span class="reader-icon">📝</span><span class="reader-title">${safeTitle}</span></div>
+      <div class="reader-meta"><span class="reader-title">${safeTitle}</span></div>
       <div class="reader-actions"><button class="close-btn">✕</button></div>
   </div>
   <div class="reader-scroll-area">

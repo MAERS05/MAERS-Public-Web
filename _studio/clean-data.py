@@ -69,7 +69,8 @@ class MaersJanitor:
             for row in cursor.fetchall():
                 content = row[0]
                 # 匹配 markdown 图片引用 ![](/photos/...) 或 HTML 引用 src="/photos/..."
-                matches = re.findall(r'photos/[\w\-_/.]+\.[\w]+', content)
+                # 支持中文文件名: [^"'\s)]+ 匹配直到遇到引号、空格或括号
+                matches = re.findall(r'photos/[^"\'\s)]+\.[\w]+', content)
                 for m in matches:
                     path = normalize_path(m)
                     self.used_files.add(path)
@@ -114,7 +115,7 @@ class MaersJanitor:
             with open(MUSIC_DATA, 'r', encoding='utf-8') as f:
                 content = f.read()
                 # 匹配任何看起来像本地路径引用的字符串 (photos/...)
-                matches = re.findall(r'photos/[\w\-_/.]+\.[\w]+', content)
+                matches = re.findall(r'photos/[^"\'\s)]+\.[\w]+', content)
                 for m in matches:
                     path = normalize_path(m)
                     self.used_files.add(path)

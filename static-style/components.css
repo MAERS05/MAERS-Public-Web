@@ -123,7 +123,9 @@ body {
 }
 
 #mode-icon {
-    display: inline-block;
+    display: block;
+    width: 14px;
+    height: 14px;
     transition: transform 0.4s ease;
     user-select: none;
 }

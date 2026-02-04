@@ -48,7 +48,12 @@
     <script type="module" src="dynamic-style/layout.module.js"></script>
     <script
         type="module">await import('./dynamic-style/style-injector.module.js').then(m => m.default.inject());</script>
-    <!-- 数据现在通过 ES6 模块异步加载 (data/music-data.json) -->
+    <!-- [MIGRATED] 统一使用 theme.module.js -->
+    <script type="module">
+        import { initTheme } from './custom/shared/ui/theme.module.js';
+        // 确保 DOM 加载后初始化，或直接调用（initTheme内部有检查）
+        initTheme();
+    </script>
     <script>
         // 🔥 强制开启管理员模式
         window.IS_ADMIN = true;
@@ -59,8 +64,7 @@
             <!-- 头部 -->
             <div class="music-header-bar">
                 <a href="admin.html" class="back-btn">← Back</a>
-                <div class="center-title">Music & Video Space <span class="admin-tag admin-badge">EDIT</span>
-                </div>
+                <div class="center-title">Music & Video Space</div>
                 <div class="right-icon zoom-trigger-whole">🎧</div>
             </div>
             <!-- 主内容区 -->
@@ -112,7 +116,9 @@
                             <!-- Level 0: 分类 -->
                             <div class="level-view">
                                 <div class="view-header">
-                                    <div class="header-left-group"><span>🍸 音乐分类</span></div>
+                                    <div class="header-left-group"><span><img src="ui/music-class.svg"
+                                                style="width: 1.25em; vertical-align: middle; margin-right: 4px;">
+                                            音乐分类</span></div>
                                     <span class="header-playing-info"></span>
                                     <div class="add-btn btn-add-entity" title="新建分类">＋
                                     </div>
@@ -124,9 +130,7 @@
                                 <div class="view-header">
                                     <div class="header-left-group">
                                         <span class="nav-back" id="nav-back-L1-text">← 返回</span>
-                                        <svg class="home-icon-svg" viewBox="0 0 24 24" id="nav-home-L1">
-                                            <path d="M4 21 L4 9 L12 3 L20 9 L20 21 H15 V13 H9 V21 H4"></path>
-                                        </svg>
+                                        <img src="ui/music-home.svg" class="home-icon-svg" id="nav-home-L1">
                                         <span id="title-level-1" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>
@@ -140,9 +144,7 @@
                                 <div class="view-header">
                                     <div class="header-left-group">
                                         <span class="nav-back" id="nav-back-L2-text">← 返回</span>
-                                        <svg class="home-icon-svg" viewBox="0 0 24 24" id="nav-home-L2">
-                                            <path d="M4 21 L4 9 L12 3 L20 9 L20 21 H15 V13 H9 V21 H4"></path>
-                                        </svg>
+                                        <img src="ui/music-home.svg" class="home-icon-svg" id="nav-home-L2">
                                         <span id="title-level-2" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>
@@ -160,7 +162,6 @@
     <!-- 脚本引入顺序至关重要 -->
     <script type="module" src="shared/utils.module.js"></script>
     <script type="module" src="data-manage/api-client.module.js"></script>
-    <script type="module" src="dynamic-style/script.module.js"></script>
     <!-- ES6 模块入口 (整合所有 Music Admin 模块) -->
     <script type="module" src="custom/music/admin-main.module.js"></script>
     <script type="module" src="shared/toast.module.js"></script>

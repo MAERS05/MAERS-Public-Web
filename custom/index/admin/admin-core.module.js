@@ -72,7 +72,12 @@ export const Admin = {
             // 图标和名称
             const icon = document.createElement('span');
             icon.className = 'icon';
-            icon.textContent = mod.icon;
+
+            if (mod.icon && (mod.icon.includes('/') || mod.icon.endsWith('.svg') || mod.icon.endsWith('.png'))) {
+                icon.innerHTML = `<img src="${mod.icon}" class="admin-icon-img" alt="${mod.title}" />`;
+            } else {
+                icon.innerHTML = mod.icon;
+            }
 
             const name = document.createElement('span');
             name.className = 'name';
@@ -128,35 +133,28 @@ export const Admin = {
 
         const mod = this.modules[index];
 
-        // 编辑名称
+        // 1. 修改模块名称
         const newTitle = prompt("修改模块名称:", mod.title);
-        if (!newTitle || newTitle === mod.title) {
-            // 用户取消或未修改，直接返回
-            return;
-        }
+        if (newTitle === null) return;
 
-        // 编辑图标
-        const newIcon = prompt("修改图标 (Emoji):", mod.icon);
-        if (!newIcon) return; // 用户取消
+        // 2. 修改图标路径或 Emoji
+        const newIcon = prompt("修改图标路径 (ui/xxx.svg) 或 Emoji:", mod.icon);
+        if (newIcon === null) return;
 
-        // 编辑链接
+        // 3. 修改目标链接
         const newUrl = prompt("修改目标链接:", mod.url);
-        if (!newUrl) return; // 用户取消
+        if (newUrl === null) return;
 
-        // 应用修改
+        // 4. 修改样式路径
+        const newStyle = prompt("样式路径 (CSS, 可选):", mod.style || "");
+        if (newStyle === null) return;
+
+        // 执行更新
         let hasChanges = false;
-        if (newTitle !== mod.title) {
-            mod.title = newTitle;
-            hasChanges = true;
-        }
-        if (newIcon !== mod.icon) {
-            mod.icon = newIcon;
-            hasChanges = true;
-        }
-        if (newUrl !== mod.url) {
-            mod.url = newUrl;
-            hasChanges = true;
-        }
+        if (newTitle && newTitle !== mod.title) { mod.title = newTitle; hasChanges = true; }
+        if (newIcon !== mod.icon) { mod.icon = newIcon; hasChanges = true; }
+        if (newUrl && newUrl !== mod.url) { mod.url = newUrl; hasChanges = true; }
+        if (newStyle !== (mod.style || "")) { mod.style = newStyle; hasChanges = true; }
 
         if (hasChanges) {
             this.manager.updateSaveState();
@@ -172,11 +170,19 @@ export const Admin = {
 
     async addNewModule() {
         const title = prompt("模块名称:");
-        if (!title) return;
-        const icon = prompt("图标 (Emoji):", "📦");
-        const url = prompt("目标链接:", "index.html");
+        if (title === null) return;
 
-        this.modules.push({ title, icon, url });
+        const iconInput = prompt("图标路径 (ui/xxx.svg) 或 Emoji:", "ui/icon.svg");
+        if (iconInput === null) return;
+
+        const url = prompt("目标链接:", "index.html");
+        if (url === null) return;
+
+        const styleInput = prompt("样式路径 (CSS, 可选):", "");
+        if (styleInput === null) return;
+
+        // 直接保存输入内容（路径或Emoji），由 render 函数决定如何渲染
+        this.modules.push({ title, icon: iconInput, url, style: styleInput });
 
         // 直接保存
         try {
@@ -191,6 +197,7 @@ export const Admin = {
                 await this.loadModules();
                 this.manager.setList(this.modules);
                 this.render();
+                SaveButton.hide();
             } else {
                 Feedback.notifyAddFail();
             }

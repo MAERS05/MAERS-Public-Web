@@ -38,7 +38,7 @@ function injectUI() {
             const btn = document.createElement('button');
             btn.className = 'recent-toggle-btn';
             btn.style.cssText = 'align-self: flex-end; margin-top: 5px; background: transparent; border: none; padding: 5px; cursor: pointer; opacity: 0.7; transition: 0.2s; color: var(--text-sub);';
-            btn.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="0.6" xmlns="http://www.w3.org/2000/svg" clip-rule="evenodd" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2"><path d="m3.503 6.726c1.765-2.836 4.911-4.726 8.495-4.726 5.518 0 9.997 4.48 9.997 9.997 0 5.519-4.479 9.999-9.997 9.999-5.245 0-9.553-4.048-9.966-9.188-.024-.302.189-.811.749-.811.391 0 .715.3.747.69.351 4.369 4.012 7.809 8.47 7.809 4.69 0 8.497-3.808 8.497-8.499 0-4.689-3.807-8.497-8.497-8.497-3.037 0-5.704 1.597-7.206 3.995l1.991.005c.414 0 .75.336.75.75s-.336.75-.75.75h-4.033c-.414 0-.75-.336-.75-.75v-4.049c0-.414.336-.75.75-.75s.75.335.75.75zm7.487.021.007 5.563c0 .288.165.55.424.675l3.978 1.928c.373.18.821.024 1.001-.349s.024-.821-.349-1.001l-3.555-1.725s-.006-5.093-.006-5.093c0-.414-.337-.749-.75-.749-.414 0-.75.337-.75.751z" fill-rule="nonzero"/></svg>`;
+            btn.innerHTML = `<img src="ui/cms-history.svg" style="width:24px; height:24px; display:block; color:inherit;">`;
             btn.title = '快速访问';
             headerRight.appendChild(btn);
         }
@@ -256,11 +256,8 @@ function renderItems(list, isPinned) {
                     <span class="item-time" style="font-size:0.7em;color:var(--text-sub);opacity:0.6;">${new Date(item.timestamp).toLocaleDateString()}</span>
                 </div>
             </div>
-            <button class="pin-btn" title="${isPinned ? 'Unpin' : 'Pin'}" style="background:none; border:none; color:var(--text-sub); cursor:pointer; padding:8px; opacity:0.6; transition:all 0.2s; display:flex; transform: rotate(45deg);">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M16 5V3H8V5H9V12H7V14H11.5V21L12 22L12.5 21V14H17V12H15V5H16Z" stroke-linejoin="round"/>
-                    ${isPinned ? '<line x1="3" y1="9" x2="21" y2="9" class="unpin-line" style="opacity:0; transition:opacity 0.2s" />' : ''}
-                </svg>
+            <button class="pin-btn" title="${isPinned ? 'Unpin' : 'Pin'}" style="background:none; border:none; color:var(--text-sub); cursor:pointer; padding:8px; opacity:0.6; transition:all 0.2s; display:flex;">
+                <img src="ui/${isPinned ? 'cms-pin-slash.svg' : 'cms-pin.svg'}" style="width:18px; height:18px; display:block;">
             </button>
         </div>
     `).join('');

@@ -15,7 +15,7 @@ function injectThemeSwitch() {
     <div class="theme-switch-wrapper">
         <label class="theme-switch-label" for="checkbox">
             <input type="checkbox" id="checkbox" class="theme-switch-checkbox" />
-            <div class="ball"><span id="mode-icon">🌙</span></div>
+            <div class="ball"><img id="mode-icon" src="ui/moon.svg" alt="mode" /></div>
         </label>
     </div>`;
 

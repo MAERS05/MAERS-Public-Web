@@ -21,7 +21,11 @@
     <script type="module" src="shared/utils.module.js"></script>
     <script type="module" src="dynamic-style/style-injector.module.js"></script>
     <script type="module" src="dynamic-style/layout.module.js"></script>
-    <script type="module" src="dynamic-style/script.module.js"></script>
+    <!-- [MIGRATED] 统一使用 theme.module.js -->
+    <script type="module">
+        import { initTheme } from './custom/shared/ui/theme.module.js';
+        initTheme();
+    </script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
             MAERS.StyleInjector.inject();

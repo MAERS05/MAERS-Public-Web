@@ -42,7 +42,12 @@ export function renderCategories() {
         // Label span
         const labelSpan = document.createElement('span');
         labelSpan.style.flex = '1';
-        labelSpan.textContent = `🗻 ${cat.name}`;
+
+        const icon = document.createElement('img');
+        icon.src = 'ui/music-collection.svg';
+        icon.style.cssText = 'width: 1.25em; vertical-align: middle; margin-right: 4px;';
+        labelSpan.appendChild(icon);
+        labelSpan.appendChild(document.createTextNode(cat.name));
 
         // Arrow span
         const arrowSpan = document.createElement('span');
@@ -114,7 +119,12 @@ export function renderCollections(catIndex) {
         // Label
         const labelSpan = document.createElement('span');
         labelSpan.style.flex = '1';
-        labelSpan.textContent = `💿 ${col.name}`;
+
+        const icon = document.createElement('img');
+        icon.src = 'ui/music-singer.svg';
+        icon.style.cssText = 'width: 1.25em; vertical-align: middle; margin-right: 4px;';
+        labelSpan.appendChild(icon);
+        labelSpan.appendChild(document.createTextNode(col.name));
 
         // Arrow
         const arrowSpan = document.createElement('span');

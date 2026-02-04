@@ -370,25 +370,70 @@ export function renderPageTitle() {
     const titleEl = document.querySelector(".header-title");
     if (!titleEl) return;
 
-    if (State.CONFIG.CURRENT_MODULE === 'literature') {
-        if (LiteratureView?.engine) {
-            LiteratureView.engine.updateHeaderTitle();
-        }
-        return;
-    }
-
+    let desiredHTML = '';
     if (window.MAERS?.ModuleConfig) {
-        titleEl.textContent = window.MAERS.ModuleConfig.getTitle(State.CONFIG.CURRENT_MODULE);
+        desiredHTML = window.MAERS.ModuleConfig.getTitle(State.CONFIG.CURRENT_MODULE);
     } else {
-        const iconMap = { notes: "✒️", literature: "📙", record: "📝" };
+        const iconMap = {
+            notes: '<img src="ui/notes-icon.svg" style="height: 1.25em; vertical-align: middle;">',
+            literature: '<img src="ui/literature-icon.svg" style="height: 1.25em; vertical-align: middle;">',
+            record: '<img src="ui/record-icon.svg" style="height: 1.25em; vertical-align: middle;">',
+            album: '<img src="ui/album-icon.svg" style="height: 1.25em; vertical-align: middle;">'
+        };
         const titleMap = { notes: "Study Notes", literature: "Literature", record: "Records" };
         const icon = iconMap[State.CONFIG.CURRENT_MODULE] || "📂";
         const text = titleMap[State.CONFIG.CURRENT_MODULE] || State.CONFIG.CURRENT_MODULE.toUpperCase();
-        titleEl.textContent = `${icon} ${text}`;
+        desiredHTML = `${icon} ${text}`;
     }
 
+    // Smart Update Strategy
+    // Check if the content really needs to change to avoid image reload flickering
+
+    // 1. Check if current HTML matches desired structure approximately
+    // If desiredHTML starts with <img src="...">, we check if titleEl starts with compatible img
+
+    const imgMatch = desiredHTML.match(/^<img src="([^"]+)"[^>]*>\s*(.*)$/);
+
+    if (imgMatch) {
+        // It is an Image-based title
+        const targetSrc = imgMatch[1];
+        const targetText = imgMatch[2];
+
+        const existingImg = titleEl.querySelector('img');
+        if (existingImg && existingImg.getAttribute('src') === targetSrc) {
+            // Image matches! Preserve it.
+            // Just ensure the text after it is correct.
+
+            // Remove all text nodes after the image
+            let node = existingImg.nextSibling;
+            while (node) {
+                const next = node.nextSibling;
+                node.remove();
+                node = next;
+            }
+
+            // Append new text
+            titleEl.appendChild(document.createTextNode(' ' + targetText.trim()));
+
+            // Ensure zoom trigger on existing image
+            if (window.MAERS?.Theme?.setupZoomTrigger) {
+                window.MAERS.Theme.setupZoomTrigger(existingImg, 'icon_only', true);
+            }
+            return; // Done without full rebuild
+        }
+    }
+
+    // Fallback: Full rebuild if structure mismatch
+    titleEl.innerHTML = desiredHTML;
+
+    // Post-setup for zoom trigger
     if (window.MAERS?.Theme?.setupZoomTrigger) {
-        window.MAERS.Theme.setupZoomTrigger(titleEl, 'icon_only', true);
+        const img = titleEl.querySelector('img');
+        if (img) {
+            window.MAERS.Theme.setupZoomTrigger(img, 'icon_only', true);
+        } else {
+            window.MAERS.Theme.setupZoomTrigger(titleEl, 'icon_only', true);
+        }
     }
 }
 

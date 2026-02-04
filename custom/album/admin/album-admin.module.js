@@ -171,7 +171,7 @@ function render() {
         // Icon
         const iconDiv = document.createElement('div');
         iconDiv.className = 'card-icon';
-        iconDiv.textContent = cat.icon;
+        iconDiv.innerHTML = cat.icon;
         card.appendChild(iconDiv);
 
         // Text Group
@@ -218,14 +218,32 @@ export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
     if (manager.isDeleted(index)) return;
 
     const item = currentData[index];
-    const title = prompt("修改标题:", oldTitle); if (title === null) return;
+
+    // 1. Title
+    const title = prompt("修改标题:", oldTitle);
+    if (title === null) return;
+
+    // 2. Subtitle
     const subtitle = prompt("修改副标题:", oldSub);
-    const icon = prompt("修改图标:", oldIcon);
+    if (subtitle === null) return;
+
+    // 3. Icon
+    const icon = prompt("修改图标 (输入 SVG 路径，例如 ui/album-nature.svg) 或 Emoji:", oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon);
+    if (icon === null) return;
 
     let changed = false;
     if (title !== oldTitle) { item.title = title; changed = true; }
-    if (subtitle !== null && subtitle !== oldSub) { item.subtitle = subtitle; changed = true; }
-    if (icon !== null && icon !== oldIcon) { item.icon = icon; changed = true; }
+    if (subtitle !== oldSub) { item.subtitle = subtitle; changed = true; }
+
+    // Icon logic
+    if (icon !== (oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon)) {
+        if ((icon.includes('/') || icon.includes('.')) && !icon.trim().startsWith('<')) {
+            item.icon = `<img src="${icon}" style="width: 1em; height: 1em;">`;
+        } else {
+            item.icon = icon;
+        }
+        changed = true;
+    }
 
     if (changed) {
         render();
@@ -233,18 +251,35 @@ export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
     }
 }
 
+function _extractSrc(html) {
+    const match = html.match(/src=['"]([^'"]+)['"]/);
+    return match ? match[1] : html;
+}
+
 export async function addNewCategory() {
-    const title = prompt("分类标题 (中文):"); if (!title) return;
+    const title = prompt("分类标题 (中文):");
+    if (title === null) return;
+
     const subtitle = prompt("副标题 (英文):");
-    const icon = prompt("图标 (Emoji):");
+    if (subtitle === null) return;
+
+    const iconInput = prompt("图标 (输入 SVG 路径，例如 ui/album-new.svg) 或 Emoji:");
+    if (iconInput === null) return;
+
     const id = prompt("分类ID (英文小写,不可修改):");
+    if (id === null) return;
+
+    let finalIcon = iconInput;
+    if (finalIcon && (finalIcon.includes('/') || finalIcon.includes('.')) && !finalIcon.trim().startsWith('<')) {
+        finalIcon = `<img src="${finalIcon}" style="width: 1em; height: 1em;">`;
+    }
 
     if (title && id) {
         try {
             const res = await fetch('/api/add_category', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, subtitle, icon, id })
+                body: JSON.stringify({ title, subtitle, icon: finalIcon, id })
             });
             if (res.ok) {
                 await loadData();

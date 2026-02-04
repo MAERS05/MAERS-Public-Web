@@ -48,7 +48,7 @@ async function init() {
     if (titleEl) {
         const cfg = (window.CATEGORY_CONFIG || []).find(c => c.id === Controller.State.category);
         if (cfg) {
-            titleEl.textContent = `${cfg.icon} ${cfg.subtitle || cfg.title}`;
+            titleEl.innerHTML = `${cfg.icon} ${cfg.subtitle || cfg.title}`;
 
             // Apply zoom trigger using global function
             if (window.MAERS?.Theme?.setupZoomTrigger) {

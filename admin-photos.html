@@ -23,7 +23,11 @@
     <script type="module" src="shared/utils.module.js"></script>
     <script type="module" src="data-manage/api-client.module.js"></script>
     <script type="module" src="dynamic-style/layout.module.js"></script>
-    <script type="module" src="dynamic-style/script.module.js"></script>
+    <!-- [MIGRATED] 统一使用 theme.module.js -->
+    <script type="module">
+        import { initTheme } from './custom/shared/ui/theme.module.js';
+        initTheme();
+    </script>
     <script type="module" src="shared/toast.module.js"></script>
 
     <!-- 数据现在通过 ES6 模块异步加载 (data/photos-data.json) -->

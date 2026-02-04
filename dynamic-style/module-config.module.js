@@ -7,45 +7,45 @@
 
 const MODULE_CONFIG = {
     notes: {
-        icon: '📝',
+        icon: 'ui/notes-icon.svg',
         title: 'Study Notes',
-        displayTitle: '✒️ Study Notes',
+        displayTitle: '<img src="ui/notes-icon.svg" alt="Notes" style="height: 1.25em; width: auto; vertical-align: middle;"> Study Notes',
         allowTags: true,
         allowMove: true,
         allowContent: true,
         dataFile: 'data/notes-tree.json'
     },
     literature: {
-        icon: '📙',
+        icon: 'ui/literature-icon.svg',
         title: 'Literature',
-        displayTitle: '📙 Literature',
+        displayTitle: '<img src="ui/literature-icon.svg" alt="Literature" style="height: 1.25em; width: auto; vertical-align: middle;"> Literature',
         allowTags: true,
         allowMove: true,
         allowContent: true,
         dataFile: 'data/literature-tree.json'
     },
     record: {
-        icon: '📝',
+        icon: 'ui/record-icon.svg',
         title: 'Records',
-        displayTitle: '📝 Records',
+        displayTitle: '<img src="ui/record-icon.svg" alt="Records" style="height: 1.25em; width: auto; vertical-align: middle;"> Records',
         allowTags: true,
         allowMove: true,
         allowContent: true,
         dataFile: 'data/record-tree.json'
     },
     album: {
-        icon: '🖼️',
+        icon: 'ui/album-icon.svg',
         title: 'Album',
-        displayTitle: '🖼️ Album',
+        displayTitle: '<img src="ui/album-icon.svg" alt="Album" style="height: 1.25em; width: auto; vertical-align: middle;"> Album',
         allowTags: false,
         allowMove: true,
         allowContent: false,
         dataFile: 'custom/album/admin/album-config.json'
     },
     music: {
-        icon: '🎵',
+        icon: 'ui/music-icon.svg',
         title: 'Music',
-        displayTitle: '🎵 Music',
+        displayTitle: '<img src="ui/music-icon.svg" alt="Music" style="height: 1.25em; width: auto; vertical-align: middle;"> Music',
         allowTags: false,
         allowMove: false,
         allowContent: false,

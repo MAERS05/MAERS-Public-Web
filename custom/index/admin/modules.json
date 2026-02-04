@@ -1,31 +1,31 @@
 [
   {
     "title": "图片管理",
-    "icon": "🖼️",
+    "icon": "ui/album-icon.svg",
     "url": "admin-album.html?type=photos",
     "style": "custom/album/admin/admin-album.css"
   },
   {
     "title": "音视管理",
-    "icon": "🎧",
+    "icon": "ui/music-icon.svg",
     "url": "admin-music.html",
     "style": "custom/music/admin/music-admin.css"
   },
   {
     "title": "笔记管理",
-    "icon": "✒️",
+    "icon": "ui/notes-icon.svg",
     "url": "admin-cms.html?module=notes",
     "style": "custom/notes/viewer/notes.css"
   },
   {
     "title": "文学管理",
-    "icon": "📙",
+    "icon": "ui/literature-icon.svg",
     "url": "admin-cms.html?module=literature",
     "style": "custom/literature/viewer/literature.css"
   },
   {
     "title": "记录管理",
-    "icon": "📝",
+    "icon": "ui/record-icon.svg",
     "url": "admin-cms.html?module=record",
     "style": "custom/record/viewer/record.css"
   }

@@ -1,4 +1,69 @@
 /* Mobile Literature Adaptation */
 @media (max-width: 768px) {
-    /* Add mobile styles here */
+
+    /* 1. 布局容器调整 - 增加密度 */
+    body .folder-grid {
+        /* 强制两列布局 */
+        grid-template-columns: repeat(2, 1fr) !important;
+        /* 减小内边距，利用屏幕边缘 */
+        padding: 50px 10px 20px 10px !important;
+        /* 减小卡片间距 */
+        gap: 12px 12px !important;
+        justify-content: stretch !important;
+    }
+
+    /* 2. 卡片调整 */
+    .folder-grid .grid-item {
+        /* 让卡片占满网格单元 */
+        width: 100% !important;
+        /* 保持 2:3 书籍封面比例 */
+        aspect-ratio: 2 / 3 !important;
+        border-radius: 6px !important;
+    }
+
+    /* 3. 字体与内容微调 */
+    .folder-grid .grid-item .item-title {
+        /* 标题字号调小，防止换行过多 */
+        font-size: 0.9rem !important;
+        bottom: 35px !important;
+        padding: 8px !important;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9) !important;
+    }
+
+    .folder-grid .grid-item .item-tags {
+        bottom: 6px !important;
+        padding: 0 8px !important;
+        gap: 3px !important;
+    }
+
+    /* 迷你标签调整 */
+    .folder-grid .grid-item .mini-tag {
+        font-size: 0.6rem !important;
+        padding: 1px 5px !important;
+        background: rgba(0, 0, 0, 0.7) !important;
+    }
+
+    /* 4. 头部工具栏适配 */
+    .explorer-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .header-right {
+        width: 100%;
+    }
+
+    .header-tools-row {
+        width: 100%;
+        display: flex;
+        gap: 10px;
+    }
+
+    .search-box {
+        flex: 1;
+    }
+
+    /* 隐藏 Back 按钮若无需占用空间 (视情况而定) */
+    /* .back-btn { padding: 4px 10px; font-size: 0.8rem; } */
 }

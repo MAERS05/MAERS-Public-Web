@@ -23,42 +23,42 @@ const DEFAULT_NAV_DATA = [
     {
         id: "nav-notes",
         bgText: "KNOW",
-        icon: "✒️",
+        icon: "ui/notes-icon.svg",
         title: "Notes",
         desc: "Building a mental framework for learning."
     },
     {
         id: "nav-record",
         bgText: "IDEA",
-        icon: "💡",
+        icon: "ui/record-icon.svg",
         title: "Record",
         desc: "Recording resonance sentence and insights."
     },
     {
         id: "nav-literature",
         bgText: "BOOK",
-        icon: "📚",
+        icon: "ui/literature-icon.svg",
         title: "Literature",
         desc: "Private bookshelf for golden lines and thoughts."
     },
     {
         id: "nav-album",
         bgText: "PHOT",
-        icon: "📸",
+        icon: "ui/album-icon.svg",
         title: "Lens",
         desc: "Personal visual photography archive album."
     },
     {
         id: "nav-music",
         bgText: "FLOW",
-        icon: "🎵",
+        icon: "ui/music-icon.svg",
         title: "Music",
         desc: "Personal playlist and rhythm. Listen to the vibe."
     },
     {
         id: "nav-games",
         bgText: "GAME",
-        icon: "🎮",
+        icon: "ui/games-icon.svg",
         title: "Games",
         desc: "Digital playground and interactive experiences.",
         style: "border-color: rgba(0, 255, 255, 0.2)"
@@ -81,7 +81,7 @@ function parseNavData(doc) {
     return cards.map(card => ({
         id: card.id,
         bgText: card.querySelector('.card-bg-text')?.innerText || '',
-        icon: card.querySelector('.card-icon')?.innerText || '',
+        icon: card.querySelector('.card-icon')?.innerHTML || '',
         title: card.querySelector('.card-title')?.innerText || '',
         desc: card.querySelector('.card-desc')?.innerText || '',
         style: card.getAttribute('style') || ''
@@ -119,9 +119,17 @@ function createCardElement(data) {
         card.setAttribute('style', data.style);
     }
 
+    let iconContent = data.icon;
+    if (data.icon && (data.icon.includes('/') || data.icon.endsWith('.svg'))) {
+        // If it looks like a path and NOT an HTML tag (check for <)
+        if (!data.icon.trim().startsWith('<')) {
+            iconContent = `<img src="${data.icon}" class="nav-icon-img"/>`;
+        }
+    }
+
     card.innerHTML = `
         <div class="card-bg-text">${data.bgText}</div>
-        <div class="card-icon">${data.icon}</div>
+        <div class="card-icon">${iconContent}</div>
         <div class="card-title">${data.title}</div>
         <div class="card-desc">${data.desc}</div>
     `;

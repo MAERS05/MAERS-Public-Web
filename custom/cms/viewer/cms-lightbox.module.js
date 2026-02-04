@@ -44,6 +44,16 @@ export function initLightbox() {
         const target = e.target;
         if (target.tagName === "IMG") {
             if (
+                target.classList.contains("zoom-trigger-icon") ||
+                target.closest(".header-title") ||
+                target.closest(".brand-logo") ||
+                target.closest("button") ||  // [Fix] Ignore images inside buttons (e.g. History/Quick Access)
+                target.closest(".tag-toggle-btn") // Specific explicit check just in case
+            ) {
+                return;
+            }
+
+            if (
                 target.closest(".markdown-body") ||
                 target.closest(".immersive-layer") ||
                 target.closest(".main-card") ||

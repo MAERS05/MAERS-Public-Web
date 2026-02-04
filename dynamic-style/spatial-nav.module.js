@@ -3,7 +3,7 @@
  * ES6 Module Version
  * Adds 3D floating navigation cards to the sides of the screen.
  * Dynamically fetches content from index.html to ensure synchronization.
- * @version 3.0.0 - ES6 Module
+ * @version 3.0.1 - ES6 Module (Fix: InnerHTML for icons)
  */
 
 const NAV_CONFIG = {
@@ -81,7 +81,7 @@ function parseNavData(doc) {
     return cards.map(card => ({
         id: card.id,
         bgText: card.querySelector('.card-bg-text')?.innerText || '',
-        icon: card.querySelector('.card-icon')?.innerText || '',
+        icon: card.querySelector('.card-icon')?.innerHTML || '',
         title: card.querySelector('.card-title')?.innerText || '',
         desc: card.querySelector('.card-desc')?.innerText || '',
         style: card.getAttribute('style') || ''
@@ -122,9 +122,17 @@ function createCardElement(data) {
         card.setAttribute('style', data.style);
     }
 
+    let iconContent = data.icon;
+    if (data.icon && (data.icon.includes('/') || data.icon.endsWith('.svg'))) {
+        // If it looks like a path and NOT an HTML tag (check for <)
+        if (!data.icon.trim().startsWith('<')) {
+            iconContent = `<img src="${data.icon}" class="nav-icon-img"/>`;
+        }
+    }
+
     card.innerHTML = `
         <div class="card-bg-text">${data.bgText}</div>
-        <div class="card-icon">${data.icon}</div>
+        <div class="card-icon">${iconContent}</div>
         <div class="card-title">${data.title}</div>
         <div class="card-desc">${data.desc}</div>
     `;

@@ -1,0 +1,98 @@
+/* ==========================================================================
+   📱 Mobile Spatial Navigation Styles
+   ========================================================================== */
+
+@media (max-width: 768px) {
+
+    /* 1. 容器调整 - 确保不点击失效 */
+    #spatial-nav-container {
+        pointer-events: none;
+        /* 必须穿透，否则会挡住整层 */
+        z-index: 0 !important;
+        /* [关键修复] 降级层级：放在主内容(z-index:1或20)之下 */
+        width: 100% !important;
+        overflow: visible !important;
+        /* 防止容器本身影响布局 */
+        position: fixed;
+    }
+
+    /* 2. 重置分组位置 - 绝对定位到两侧 */
+    .spatial-group {
+        padding: 0 !important;
+        gap: 15px !important;
+        transform: none !important;
+        /* 移除 3D 旋转 */
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%) !important;
+        width: 49px !important;
+        /* 关键：宽度要窄，只包住图标 */
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        pointer-events: none;
+        /* 分组本身不接客 */
+    }
+
+    #spatial-left-group {
+        left: 2px !important;
+        /* 贴紧左侧 */
+        padding-left: 0 !important;
+        align-items: flex-start !important;
+        /* 图标靠左 */
+    }
+
+    #spatial-right-group {
+        right: 2px !important;
+        /* 贴紧右侧 */
+        padding-right: 0 !important;
+        align-items: flex-end !important;
+        /* 图标靠右 */
+    }
+
+    /* 3. 卡片微型化 -> 图标模式 */
+    .spatial-card {
+        width: 45px !important;
+        /* 调整为 45px */
+        height: 45px !important;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        /* 半透明背景，减少视觉干扰 */
+        background: rgba(20, 20, 20, 0.4) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        backdrop-filter: blur(4px) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        pointer-events: auto !important;
+        /* 只有图标可点击 */
+        margin: 5px 0 !important;
+        /* 增加垂直间距 */
+    }
+
+    html.light-mode .spatial-card {
+        background: rgba(255, 255, 255, 0.6) !important;
+        border-color: rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* 4. 隐藏文字内容 */
+    .spatial-card .card-title,
+    .spatial-card .card-desc,
+    .spatial-card .card-bg-text {
+        display: none !important;
+    }
+
+    .spatial-card .card-icon {
+        font-size: 1.5rem !important;
+        margin: 0 !important;
+        filter: none !important;
+        line-height: 0 !important;
+    }
+
+    /* 5. 交互微调 */
+    .spatial-card:active {
+        transform: scale(0.9) !important;
+        background: rgba(255, 255, 255, 0.2) !important;
+    }
+}
