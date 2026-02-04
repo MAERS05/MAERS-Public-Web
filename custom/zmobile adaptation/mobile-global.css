@@ -89,7 +89,16 @@ html {
 
         /* [极致响应] 禁用所有过渡动画，点击即变色 */
         html,
-        body {
+        body,
+        .main-card,
+        .category-card,
+        .icon-btn,
+        .back-btn,
+        .theme-switch-label,
+        .tech-pill,
+        .photo-item,
+        .playlist-window,
+        .search-results {
             transition: none !important;
         }
     }

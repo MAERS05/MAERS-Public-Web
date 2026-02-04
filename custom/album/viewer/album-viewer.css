@@ -1,4 +1,5 @@
 /* Album Viewer Styles - Category Card Gallery */
+@import "../../zmobile adaptation/mobile-album.css";
 
 /* ==========================================================================
    Gallery Content Container
@@ -178,31 +179,7 @@ html.light-mode .gallery-content {
    Responsive Design
    ========================================================================== */
 
-@media (max-width: 768px) {
-  .grid-layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
-    display: block;
-  }
 
-  .category-card {
-    margin-bottom: 15px;
-    height: 140px;
-    flex-direction: row;
-    gap: 20px;
-    padding: 0 30px;
-    justify-content: flex-start;
-  }
-
-  .card-icon {
-    font-size: 2.5rem;
-    margin-bottom: 0;
-  }
-
-  .text-group {
-    text-align: left;
-  }
-}
 
 /* ==========================================================================
    Touch Optimization

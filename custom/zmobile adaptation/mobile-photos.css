@@ -38,12 +38,7 @@
         height: 100%;
     }
 
-    /* 针对超小屏幕 (iPhone SE 等) 使用单列，保证图片细节可见 */
-    @media (max-width: 380px) {
-        body .photo-grid {
-            grid-template-columns: 1fr !important;
-        }
-    }
+
 
     /* 3. Photo Item Optimization */
     body .photo-item {
@@ -71,24 +66,43 @@
         display: none !important;
     }
 
-    /* 4. Header Compact Mode */
+    /* 4. Header Compact Mode - Remove transparency to fix logo overlap */
     body .page-header-bar {
         padding: 10px 15px;
         height: 60px;
-        background: rgba(var(--bg-card-rgb), 0.95);
-        backdrop-filter: blur(10px);
-        -webkit-backdrop-filter: blur(10px);
+        /* 强制使用纯色背景，遮挡后面内容 */
+        background: var(--bg-card) !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
         position: sticky;
         top: 0;
         z-index: 50;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        /* 稍微加个底边框区分 */
     }
 
     body .header-title {
-        font-size: 1.1rem;
-        max-width: 60%;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        font-size: 0 !important;
+        /* Hide text */
+        margin-left: auto !important;
+        /* Push to right */
+        margin-right: 0 !important;
+        text-align: right !important;
+        width: auto !important;
+        flex: 1;
+        /* Allow to take available space */
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    body .header-title svg,
+    body .header-title img {
+        font-size: 1.5rem !important;
+        /* Restore icon size */
+        width: 30px;
+        height: 30px;
+        display: inline-block;
+        vertical-align: middle;
     }
 
     /* 5. Lightbox Touch Optimization (Critical) */

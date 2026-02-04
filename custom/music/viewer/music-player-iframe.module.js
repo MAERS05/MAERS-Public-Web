@@ -37,7 +37,7 @@ export function ensurePlayerFrame() {
         Player.frame.setAttribute('border', '0');
         Player.frame.setAttribute('frameborder', 'no');
         Player.frame.setAttribute('framespacing', '0');
-        Player.frame.setAttribute('allowfullscreen', 'true');
+        // Player.frame.setAttribute('allowfullscreen', 'true'); // [Fix] Removed deprecated attribute, handled by 'allow' below
         Player.frame.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture; clipboard-write');
     }
 

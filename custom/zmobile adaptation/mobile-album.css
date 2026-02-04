@@ -1,0 +1,42 @@
+/* ==========================================================================
+   📱 Mobile Album Categories Styles
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    body .gallery-content {
+        padding: 20px !important;
+    }
+
+    body .grid-layout {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 15px !important;
+        display: grid !important;
+        align-content: start;
+    }
+
+    body .category-card {
+        margin-bottom: 0 !important;
+        height: 160px !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        padding: 15px !important;
+        justify-content: center !important;
+    }
+
+    body .card-icon {
+        font-size: 2.8rem !important;
+        margin-bottom: 5px !important;
+    }
+
+    body .text-group {
+        text-align: center !important;
+    }
+
+    body .card-title {
+        font-size: 1.1rem !important;
+    }
+
+    body .card-subtitle {
+        font-size: 0.75rem !important;
+    }
+}

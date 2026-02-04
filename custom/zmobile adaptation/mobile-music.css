@@ -63,3 +63,63 @@ body .playlist-container {
         flex: none;
     }
 }
+
+/* 移动端音乐面包屑与跑马灯适配 */
+@media (max-width: 768px) {
+
+    /* 允许头部高度自适应，支持换行 */
+    body .view-header {
+        height: auto !important;
+        min-height: 50px;
+        padding: 8px 12px !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    /* 左侧面包屑：允许压缩，但尽量保持在一行 */
+    body .header-left-group {
+        gap: 8px !important;
+        /* 减小间距 */
+        flex: 1 1 auto;
+        /* 允许伸缩 */
+        min-width: 0;
+        /* 允许内容被压缩（显示省略号） */
+        overflow: hidden;
+    }
+
+    body .nav-back {
+        white-space: nowrap;
+        font-size: 0.9rem !important;
+    }
+
+    body .title-level {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.9rem !important;
+    }
+
+    /* 跑马灯：在窄屏下可能换行显示，或者缩短宽度 */
+    body .header-playing-info {
+        margin-left: 0 !important;
+        /* 取消自动左边距 */
+        margin-right: 0 !important;
+        width: 100% !important;
+        /* 独占一行 */
+        order: 2;
+        /* 强制排到下面 */
+        margin-top: 4px;
+        height: 18px !important;
+    }
+
+    /* 如果屏幕稍微宽一点（比如在大屏手机横屏），可以尝试并排 */
+    @media (min-width: 400px) {
+        body .header-playing-info {
+            width: 120px !important;
+            order: unset;
+            /* 恢复默认顺序 */
+            margin-left: auto !important;
+            margin-top: 0;
+        }
+    }
+}

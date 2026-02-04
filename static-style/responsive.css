@@ -12,7 +12,7 @@
 /* --- Mobile Responsive (768px) --- */
 @media (max-width: 768px) {
     .photo-item {
-        width: 100%;
+        width: calc(50% - 6px);
         height: 140px;
     }
 

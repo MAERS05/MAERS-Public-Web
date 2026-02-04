@@ -43,27 +43,76 @@
         background: rgba(0, 0, 0, 0.7) !important;
     }
 
-    /* 4. 头部工具栏适配 */
-    .explorer-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 15px;
+    /* 4. 头部工具栏适配 - 修复截断 */
+    .explorer-header,
+    .page-header-bar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 15px !important;
+        height: auto !important;
+        min-height: auto !important;
+        padding-right: 15px !important;
+        /* 确保右侧不贴边 */
+        overflow-x: hidden !important;
+        /* 防止横向溢出 */
+        width: 100% !important;
+        flex-wrap: wrap !important;
     }
 
-    .header-right {
-        width: 100%;
+    .header-right,
+    .header-actions {
+        width: 100% !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+        gap: 10px !important;
     }
 
+    /* 修复 Clear All 等按钮被截断 */
     .header-tools-row {
         width: 100%;
         display: flex;
-        gap: 10px;
+        flex-wrap: wrap !important;
+        /* 允许换行 */
+        gap: 8px !important;
+    }
+
+    .icon-btn,
+    .back-btn {
+        flex-shrink: 0 !important;
+        /* 防止按钮被挤压 */
+        white-space: nowrap !important;
+        /* 防止文字换行 */
+        max-width: 100%;
     }
 
     .search-box {
         flex: 1;
+        min-width: 200px;
+        /* 给搜索框保留最小宽度 */
     }
 
-    /* 隐藏 Back 按钮若无需占用空间 (视情况而定) */
-    /* .back-btn { padding: 4px 10px; font-size: 0.8rem; } */
+    /* 5. 快速访问栏 (Quick Access) 适配 */
+    .quick-access-bar {
+        width: 100% !important;
+        overflow-x: auto !important;
+        /* 允许横向滚动 */
+        white-space: nowrap !important;
+        -webkit-overflow-scrolling: touch;
+        /* 顺滑滚动 */
+        padding-bottom: 5px !important;
+        /* 滚动条预留 */
+
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        /* 强制不换行，变成滑动条 */
+        justify-content: flex-start !important;
+        gap: 8px !important;
+    }
+
+    .quick-access-item {
+        flex-shrink: 0 !important;
+        /* 防止被挤压 */
+        font-size: 0.85rem !important;
+        padding: 6px 14px !important;
+    }
 }

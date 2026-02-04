@@ -2,4 +2,46 @@
    📱 Mobile Index Styles
    ========================================================================== */
 
-/* Currently empty or minimal, can be populated if needed */
+@media (max-width: 768px) {
+
+   /* 核心修复：移动端缩放时，强制以顶部为基准，防止顶部Logo被裁剪 */
+   html.shrink-view body .home-container {
+      transform-origin: top center !important;
+      transform: scale(0.7) !important;
+      /* 调整为 0.8 */
+      /* 稍微放大一点 */
+      margin-top: 50px !important;
+      margin-bottom: 0 !important;
+      height: auto !important;
+      min-height: 100vh !important;
+
+      /* 关键修复：取消垂直居中，强制内容从顶部开始排列 */
+      justify-content: flex-start !important;
+      padding-top: 40px !important;
+
+      /* 保持卡片化外观，但确保内容可见 */
+      background: var(--bg-card, rgba(20, 20, 20, 0.95));
+      border-radius: 24px !important;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+   }
+
+   html.light-mode.shrink-view body .home-container {
+      background: var(--bg-card, rgba(255, 255, 255, 0.95));
+      /* 兜底浅色 */
+   }
+
+   /* 允许 Body 滚动，这样如果卡片很长，用户可以滑到底 */
+   html.shrink-view body {
+      overflow-y: auto !important;
+      background-color: var(--bg-base) !important;
+      /* 确保背景色存在，防穿帮 */
+   }
+
+   /* 强制显示 Brand Area，防止被 JS 或其他样式隐藏 */
+   html.shrink-view body .brand-area {
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      margin-top: 20px;
+   }
+}
