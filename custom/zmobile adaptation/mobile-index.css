@@ -11,6 +11,8 @@
 
       /* [Fix Drag] 必须包含 translate 变量，否则 JS 的拖拽计算无法生效 */
       transform: scale(0.7) translate(var(--zoom-pan-x, 0px), var(--zoom-pan-y, 0px)) !important;
+      will-change: transform;
+      /* Fix Mobile Ghosting */
 
       margin-top: 50px !important;
       margin-bottom: 0 !important;
