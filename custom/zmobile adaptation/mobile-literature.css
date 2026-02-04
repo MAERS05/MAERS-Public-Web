@@ -73,4 +73,11 @@
         font-size: 0.85rem !important;
         padding: 6px 14px !important;
     }
+
+    /* 6. Flow/Gallery Mode 适配 */
+    /* 缩小书本尺寸以适应更小的垂直空间 */
+    .book-card {
+        width: 90px !important;
+        height: 135px !important;
+    }
 }

@@ -163,6 +163,7 @@ class FlowEngine {
     updateMetrics() {
         const viewportW = window.innerWidth;
         const viewportH = window.innerHeight;
+        const isMobile = viewportW < 768;
 
         this.boundaryMargin = 180;
         this.segmentLen = viewportW + this.boundaryMargin * 2;
@@ -173,9 +174,16 @@ class FlowEngine {
         this.trackLength = this.rowCount * this.segmentLen;
         this.visualWidth = viewportW;
 
-        // 大幅减少顶部间距和行高，确保3行完全可见
-        this.config.paddingY = 0; // 顶部只留20px
-        this.config.rowHeight = 270; // 减少行高，让3行能完全显示
+        if (isMobile) {
+            // 移动端：更紧凑的布局 (适配 90x135 的卡片)
+            // 3行 * 160 = 480px，这应该能放入大多数手机的视口中
+            this.config.paddingY = 50; // 稍微留点头部呼吸空间
+            this.config.rowHeight = 160;
+        } else {
+            // 大幅减少顶部间距和行高，确保3行完全可见
+            this.config.paddingY = 0; // 顶部只留20px
+            this.config.rowHeight = 270; // 减少行高，让3行能完全显示
+        }
     }
 
     generateBooks() {

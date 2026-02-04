@@ -31,6 +31,9 @@ import { DataProvider } from '../../data-manage/data-provider.module.js';
 // 5. Literature Specific View
 import { LiteratureView, initLiteratureView } from './viewer/literature-view.module.js';
 
+// 6. Mobile Adaptation
+import '../zmobile adaptation/mobile-literature.js';
+
 // --- Initialization Sequence ---
 
 // B. Initialize Core UI
