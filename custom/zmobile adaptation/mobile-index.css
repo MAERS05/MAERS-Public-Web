@@ -6,10 +6,12 @@
 
    /* 核心修复：移动端缩放时，强制以顶部为基准，防止顶部Logo被裁剪 */
    html.shrink-view body .home-container {
+      /* 核心修复：移动端缩放时，强制以顶部为基准 */
       transform-origin: top center !important;
-      transform: scale(0.7) !important;
-      /* 调整为 0.8 */
-      /* 稍微放大一点 */
+
+      /* [Fix Drag] 必须包含 translate 变量，否则 JS 的拖拽计算无法生效 */
+      transform: scale(0.7) translate(var(--zoom-pan-x, 0px), var(--zoom-pan-y, 0px)) !important;
+
       margin-top: 50px !important;
       margin-bottom: 0 !important;
       height: auto !important;
