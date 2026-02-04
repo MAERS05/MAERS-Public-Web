@@ -519,6 +519,14 @@ html.light-mode .theme-switch-label {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.recent-toggle-btn img {
+  filter: invert(0.9);
+}
+
+.light-mode .recent-toggle-btn img {
+  filter: none;
+}
+
 .recent-toggle-btn:hover {
   opacity: 1 !important;
   color: #fff !important;
@@ -558,6 +566,14 @@ html.light-mode .theme-switch-label {
 .pin-btn {
   /* Layout handled inline */
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pin-btn img {
+  filter: invert(0.9);
+}
+
+.light-mode .pin-btn img {
+  filter: none;
 }
 
 .pin-btn:hover {
