@@ -13,6 +13,9 @@ let Controller, Admin, AdminCore;
 import '../../album/viewer/album-config.module.js';
 import { Utils } from '../../../shared/utils.module.js';
 
+// Mobile Adaptation
+import '../../zmobile adaptation/mobile-photos.js';
+
 const WHEEL_DELAY = 250;
 
 // 依赖注入
