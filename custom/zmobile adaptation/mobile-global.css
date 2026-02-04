@@ -39,39 +39,19 @@
     }
 }
 
-/* 2. Mobile Performance Optimization: Simple Fade Transition */
+/* 2. Mobile Performance Optimization: Instant Switch (No Animation) */
 @media (max-width: 1024px) {
 
-    /* 重写遮罩层动画逻辑 */
-    #theme-mask {
-        /* 强制取消几何裁剪过渡，改为透明度过渡 */
-        transition: opacity 0.5s ease-in-out !important;
-
-        /* 默认状态（黑夜）是显示的，且铺满全屏 */
-        opacity: 1;
-        clip-path: none !important;
-        /* 移除圆形裁剪，改为普通图层 */
-
-        /* [可选] 禁用背景的微光呼吸动画，进一步省电 */
-        animation: none !important;
-    }
-
-    /* 禁用星星闪烁动画 (性能杀手) */
-    #theme-mask::after {
+    /* [极致性能] 运行时彻底隐藏遮罩层 */
+    /* 只保留初始 Loading 阶段 (由 flash-guard.js 控制)，切换主题时不再显示任何遮罩 */
+    html:not(.js-loading) #theme-mask {
         display: none !important;
-        /* 移动端太小看不清星星，直接隐藏以大幅提升性能 */
     }
 
-    /* 定义白昼模式下的状态 */
-    html.light-mode #theme-mask {
-        /* 白昼模式下，遮罩层简单地变透明 */
-        opacity: 0 !important;
-    }
-
-    /* 加快底层的背景色切换速度 */
+    /* [极致响应] 禁用所有过渡动画，点击即变色 */
     html,
     body {
-        transition: background-color 0.5s ease, color 0.5s ease !important;
+        transition: none !important;
     }
 }
 

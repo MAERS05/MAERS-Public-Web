@@ -160,10 +160,8 @@ export function refreshDrawerList() {
             }
         });
 
-        // [Auto-Expand]: If searching and category has matching tags, expand it
-        if (query && hasMatch) {
-            expandedCategories.add(cat.name);
-        }
+        // [Modified]: Auto-Expand logic is now handled during render based on query existence
+        // We do NOT modify expandedCategories permanently during search
     });
 
     const uncategorized = visibleTags.filter(t => !categorizedTags.has(t));
@@ -204,7 +202,10 @@ export function refreshDrawerList() {
             adminButtonsPlaceholder = `<span class="admin-buttons-placeholder" data-cat-index="${catIndex}"></span>`;
         }
 
-        const isExpanded = expandedCategories.has(cat.name);
+        // [Logic Change] If searching, expand ONLY if has matches. Else use manual state.
+        const matches = categoriesMap[cat.name].length > 0;
+        const isExpanded = query ? matches : expandedCategories.has(cat.name);
+
         const iconRotation = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
         const listStyle = isExpanded ? 'max-height:1000px;opacity:1;min-height:30px;' : 'max-height:0px;opacity:0;min-height:0;margin-top:0;';
 
@@ -235,7 +236,8 @@ export function refreshDrawerList() {
 
     // Uncategorized
     if (uncategorized.length > 0) {
-        const isExpanded = expandedCategories.has('_UNCATEGORIZED_');
+        // [Logic Change] If searching, expand if has matches. Else use manual state.
+        const isExpanded = query ? true : expandedCategories.has('_UNCATEGORIZED_');
         const iconRotation = isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)';
         const listStyle = isExpanded ? 'max-height:1000px;opacity:1;' : 'max-height:0px;opacity:0;';
 
