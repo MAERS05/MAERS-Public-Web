@@ -460,6 +460,7 @@ function initZoomSystem() {
         // Use local variable for ZOOM_CONFIG as it's not on Window/MAERS anymore inside module
         const ZOOM_CONFIG = [
             { path: "index.html", selector: "#brand-logo", mode: "whole" },
+            { path: "admin-index.html", selector: "#brand-logo", mode: "whole" },
             { path: "", selector: "#brand-logo", mode: "whole" },
             { path: "music.html", selector: ".right-icon", mode: "whole" },
             { path: "admin-music.html", selector: ".right-icon", mode: "whole" },
@@ -510,7 +511,7 @@ export function initTheme() {
 
 function _runInitTheme() {
     const path = window.location.pathname;
-    const isHome = path.endsWith("index.html") || path.endsWith("/") || path === "";
+    const isHome = path.endsWith("index.html") || path.endsWith("admin-index.html") || path.endsWith("/") || path === "";
 
     // 0. Auto-Inject Drag Styles (零配置样式注入)
     // 自动检测当前目录层级并加载 drag.css，解决手动引入问题

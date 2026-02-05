@@ -1,37 +1,52 @@
 ﻿import { initLayout } from '../../shared/ui/layout.module.js';
 import { initTheme, toggleGlobalShrink } from '../../shared/ui/theme.module.js';
 
-// 初始化核�?UI (Layout, Theme, Spatial Nav)
+// Initialize core UI immediately (safe for layout/theme)
 initLayout();
 initTheme();
 
 document.addEventListener("DOMContentLoaded", () => {
-    // Navigation Cards
-    const navMap = {
-        "nav-notes": "notes.html",
-        "nav-record": "record.html",
-        "nav-literature": "literature.html",
-        "nav-album": "album.html",
-        "nav-music": "music.html",
-        "nav-games": "games.html",
-    };
+    // Dynamic Card Rendering
+    const navGrid = document.querySelector(".nav-grid");
 
-    Object.keys(navMap).forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.style.cursor = "pointer";
-            el.addEventListener("click", () => {
-                window.location.href = navMap[id];
+    if (navGrid) {
+        fetch('custom/index/index-cards.json')
+            .then(response => response.json())
+            .then(data => {
+                navGrid.innerHTML = '';
+                let delay = 0.1;
+
+                data.forEach(item => {
+                    const card = document.createElement("div");
+                    card.className = "nav-card";
+                    card.id = item.id;
+                    card.style.animationDelay = `${delay}s`;
+                    delay += 0.05;
+
+                    card.innerHTML = `
+                        <div class="card-bg-text">${item.bgText}</div>
+                        <div class="card-icon"><img src="${item.icon}" class="nav-icon-img" alt="${item.title}" /></div>
+                        <div class="card-title">${item.title}</div>
+                        <div class="card-desc">${item.description}</div>
+                    `;
+
+                    card.style.cursor = "pointer";
+                    card.addEventListener("click", () => {
+                        window.location.href = item.url;
+                    });
+
+                    navGrid.appendChild(card);
+                });
+            })
+            .catch(err => {
+                console.error("Failed to load navigation cards:", err);
+                if (navGrid.children.length === 0) {
+                    navGrid.innerHTML = `<p style="color:var(--text-sub); text-align:center; width:100%;">无法加载导航数据</p>`;
+                }
             });
-        }
-    });
+    }
 
     // Brand Interactions
-    // Brand Interactions
-    // Note: brand-logo Zoom trigger is handled by theme.module.js (Zoom System)
-    // Duplicate binding here would cause the toggle to cancel itself (On -> Off instantly)
-
-
     const brandMaers = document.getElementById("brand-maers");
     if (brandMaers) {
         brandMaers.addEventListener(

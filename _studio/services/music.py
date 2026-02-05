@@ -23,9 +23,10 @@ def delete_track(body):
             if t < len(alb['custom_parts']): alb['custom_parts'].pop(t)
             alb['total'] = len(alb['page_mapping'])
             cms.save_json(MUSIC_JSON_FILE, m, MUSIC_JS_FILE, 'musicData')
+            print(f"  [ MUSIC ] 🗑️  音轨 {t+1} 已剔除 | Track {t+1} popped from: {alb.get('title', 'Unknown Album')}")
         return {}
     except (IndexError, KeyError) as e:
-        print(f"❌ [Music] Delete track error: {e}")
+        print(f"  [ MUSIC ] ❌ 删除音轨出错 | Delete track error: {e}")
         raise e
 
 def reset_tracks(body):
@@ -40,7 +41,8 @@ def reset_tracks(body):
         alb['total'] = orig
         alb['custom_parts'] = []
         cms.save_json(MUSIC_JSON_FILE, m, MUSIC_JS_FILE, 'musicData')
+        print(f"  [ MUSIC ] ♻️  音轨已重置 ({orig}) | Tracks reset to original ({orig}) for: {alb.get('title', 'Album')}")
         return {}
     except (IndexError, KeyError) as e:
-        print(f"❌ [Music] Reset tracks error: {e}")
+        print(f"  [ MUSIC ] ❌ 重置音轨出错 | Reset tracks error: {e}")
         raise e

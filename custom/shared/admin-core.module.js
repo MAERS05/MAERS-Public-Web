@@ -389,17 +389,17 @@ export const Feedback = {
     notifySuccess(msg) { this.toast(msg || "操作成功", 'success'); },
     notifyError(msg) { this.toast(msg || "操作失败", 'error'); },
 
-    notifySaveSuccess() { this.toast("保存成功", 'success'); },
+    notifySaveSuccess(msg) { this.toast(msg || "保存成功", 'success'); },
     notifySaveFail(msg) { this.toast(msg || "保存失败", 'error'); },
 
-    notifyAddSuccess() { this.toast("添加成功", 'success'); },
+    notifyAddSuccess(msg) { this.toast(msg || "添加成功", 'success'); },
     notifyAddFail(msg) { this.toast(msg || "添加失败", 'error'); },
 
-    notifyDeleteSuccess() { this.toast("删除成功", 'success'); },
+    notifyDeleteSuccess(msg) { this.toast(msg || "删除成功", 'success'); },
 
-    notifyEditSuccess() { this.toast("修改成功", 'success'); },
+    notifyEditSuccess(msg) { this.toast(msg || "修改成功", 'success'); },
 
-    notifyCancel() { this.toast("修改已取消", 'info'); }
+    notifyCancel(msg) { this.toast(msg || "修改已取消", 'info'); }
 };
 
 

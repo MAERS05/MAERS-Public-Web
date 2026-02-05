@@ -110,9 +110,9 @@ def sync_js_file(module):
             os.remove(js_path)
         os.rename(temp_path, js_path)
         
-        print(f"✅ JSON 同步成功: {js_rel_path}")
+        print(f"  [ CMS ] 📂 同步完成 | Sync complete: {js_rel_path}")
     except Exception as e:
-        print(f"❌ JSON 同步失败: {e}")
+        print(f"  [ CMS ] ❌ 同步失败 | Sync failed: {e}")
         if os.path.exists(temp_path):
             try: os.remove(temp_path)
             except: pass
@@ -139,6 +139,7 @@ def _action_add(module, parent_id, node_type, title):
     
     conn.commit()
     conn.close()
+    print(f"  [ CMS ] 🆕 节点已添加 | Node added: {title} ({module})")
     return True
 
 def _action_delete(module, node_id):
@@ -171,12 +172,12 @@ def _action_delete(module, node_id):
         row = cursor.fetchone()
         if row and row['coverImage']:
             cover_path = row['coverImage']
-            print(f"[CMS] Deleting cover image for node {del_id}: {cover_path}")
+            print(f"  [ CMS ] 🗑️  正在删除封面图 | Deleting cover image for node {del_id}: {cover_path}")
             try:
                 # Reuse existing logic that handles thumbs/previews/DB
                 photos.handle_delete({'path': cover_path})
             except Exception as e:
-                print(f"[CMS] Warning: Failed to delete cover image {cover_path}: {e}")
+                print(f"  [ CMS ] ⚠️  封面图删除失败 | Failed to delete cover {cover_path}: {e}")
                 # Continue with node deletion even if cover deletion fails
 
     # 2. 执行删除
@@ -185,6 +186,7 @@ def _action_delete(module, node_id):
     
     conn.commit()
     conn.close()
+    print(f"  [ CMS ] 🗑️  节点及子树已删除 | Node & sub-tree deleted: {node_id}")
     return True
 
 def _action_update(module, node_id, update_data):
@@ -208,7 +210,7 @@ def _action_update(module, node_id, update_data):
                 row = cursor.fetchone()
                 if row and row['coverImage']:
                     old_path = row['coverImage']
-                    print(f"[CMS] Requesting Photos module to delete cover: {old_path}")
+                    print(f"  [ CMS ] 🗑️  正在清理旧封面 | Purging old cover: {old_path}")
                     # Reuse existing logic that handles thumbs/previews/DB
                     photos.handle_delete({'path': old_path})
 
@@ -220,6 +222,7 @@ def _action_update(module, node_id, update_data):
         sql = f"UPDATE nodes SET {', '.join(updates)} WHERE id=?"
         cursor.execute(sql, params)
         conn.commit()
+        print(f"  [ CMS ] ✎  节点已更新 | Node updated: {node_id}")
         
     conn.close()
     return True
@@ -237,6 +240,7 @@ def _action_reorder(module, ids):
         raise
     finally:
         conn.close()
+    print(f"  [ CMS ] ↕️  节点重排序完成 | Nodes reordered ({module})")
     return True
 
 def _action_move(module, node_id, target_parent_id):
@@ -271,6 +275,7 @@ def _action_move(module, node_id, target_parent_id):
     
     conn.commit()
     conn.close()
+    print(f"  [ CMS ] 🚚 节点已跨级移动 | Node moved: {node_id} -> {target_parent_id}")
     return True
 
 # ================= 总入口 =================
@@ -318,11 +323,12 @@ def save_json(filepath, data, js_path=None, var_name=None):
             js_content = f"window.{var_name} = {json.dumps(data, ensure_ascii=False, indent=2)};\n"
             with open(js_full_path, 'w', encoding='utf-8') as f:
                 f.write(js_content)
-            print(f"✅ JS 同步成功: {js_path}")
+            print(f"  [ CMS ] ✅ 静态 JS 已同步 | Static JS synced: {js_path}")
         
+        print(f"  [ CMS ] 💾 配置已保存 | Config saved: {os.path.basename(filepath)}")
         return True
     except Exception as e:
-        print(f"❌ save_json 失败: {e}")
+        print(f"  [ CMS ] ❌ 保存失败 | Save failed: {e}")
         return False
 
 def handle_request(path, method, query_params, body_data):

@@ -41,6 +41,12 @@ h1.admin-title {
     width: 100%;
 }
 
+/* 强制卡片使用相对定位，确保操作按钮能正确定位在右上角 */
+.admin-card,
+.nav-card {
+    position: relative !important;
+}
+
 /* 基础卡片样式 */
 .admin-card {
     background: var(--pill-bg);
@@ -56,6 +62,17 @@ h1.admin-title {
     justify-content: center;
     position: relative;
     cursor: pointer;
+    /* Size constraint */
+    min-height: 220px;
+    aspect-ratio: 1 / 1;
+}
+
+/* Ensure images within icons don't break layout */
+.admin-card .icon img,
+.admin-icon-img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
 }
 
 .admin-card:hover {
@@ -113,17 +130,23 @@ h1.admin-title {
     font-weight: normal;
 }
 
-/* 管理按钮组 */
+/* 管理按钮组 - 回退到稳定版本 */
+.maers-admin-action-group,
+.admin-actions,
 .admin-module-actions {
     position: absolute;
     top: 12px;
     right: 12px;
     display: flex;
     gap: 4px;
+    opacity: 0;
+    transition: 0.3s;
+    z-index: 10;
 }
 
-/* 确保卡片悬停时显示按钮 */
-.admin-card:hover .maers-admin-action-group {
+/* 确保卡片悬停时显示按钮 (保留对 .nav-card 的支持) */
+.admin-card:hover .maers-admin-action-group,
+.nav-card:hover .maers-admin-action-group {
     opacity: 1 !important;
     pointer-events: auto !important;
 }

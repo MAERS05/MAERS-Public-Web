@@ -7,63 +7,10 @@
  */
 
 const NAV_CONFIG = {
-    leftIds: ['nav-notes', 'nav-record', 'nav-literature'],
-    rightIds: ['nav-album', 'nav-music', 'nav-games'],
-    navMap: {
-        "nav-notes": "notes.html",
-        "nav-record": "record.html",
-        "nav-literature": "literature.html",
-        "nav-album": "album.html",
-        "nav-music": "music.html",
-        "nav-games": "games.html",
-    }
+    // Keep legacy ID mapping if needed for specific logic,
+    // otherwise we rely on dynamic data order.
+    // If IDs are found in JSON, we can respect them.
 };
-
-const DEFAULT_NAV_DATA = [
-    {
-        id: "nav-notes",
-        bgText: "KNOW",
-        icon: "ui/notes-icon.svg",
-        title: "Notes",
-        desc: "Building a mental framework for learning."
-    },
-    {
-        id: "nav-record",
-        bgText: "IDEA",
-        icon: "ui/record-icon.svg",
-        title: "Record",
-        desc: "Recording resonance sentence and insights."
-    },
-    {
-        id: "nav-literature",
-        bgText: "BOOK",
-        icon: "ui/literature-icon.svg",
-        title: "Literature",
-        desc: "Private bookshelf for golden lines and thoughts."
-    },
-    {
-        id: "nav-album",
-        bgText: "PHOT",
-        icon: "ui/album-icon.svg",
-        title: "Lens",
-        desc: "Personal visual photography archive album."
-    },
-    {
-        id: "nav-music",
-        bgText: "FLOW",
-        icon: "ui/music-icon.svg",
-        title: "Music",
-        desc: "Personal playlist and rhythm. Listen to the vibe."
-    },
-    {
-        id: "nav-games",
-        bgText: "GAME",
-        icon: "ui/games-icon.svg",
-        title: "Games",
-        desc: "Digital playground and interactive experiences.",
-        style: "border-color: rgba(0, 255, 255, 0.2)"
-    }
-];
 
 // Helper to create element
 function u(tag, className, html) {
@@ -73,44 +20,20 @@ function u(tag, className, html) {
     return el;
 }
 
-// Parse nav data from a document object (modal or current)
-function parseNavData(doc) {
-    const cards = Array.from(doc.querySelectorAll('.nav-card'));
-    if (cards.length === 0) return null;
-
-    return cards.map(card => ({
-        id: card.id,
-        bgText: card.querySelector('.card-bg-text')?.innerText || '',
-        icon: card.querySelector('.card-icon')?.innerHTML || '',
-        title: card.querySelector('.card-title')?.innerText || '',
-        desc: card.querySelector('.card-desc')?.innerText || '',
-        style: card.getAttribute('style') || ''
-    }));
-}
-
 async function getNavData() {
-    const localCards = parseNavData(document);
-    if (localCards && localCards.length >= 6) {
-        return localCards;
-    }
-
     try {
-        const response = await fetch('index.html');
+        // Fetch source of truth JSON
+        const response = await fetch('custom/index/index-cards.json?v=' + Date.now());
         if (response.ok) {
-            const text = await response.text();
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, 'text/html');
-            const data = parseNavData(doc);
-
-            if (data && data.length > 0) {
+            const data = await response.json();
+            if (Array.isArray(data) && data.length > 0) {
                 return data;
             }
         }
     } catch (e) {
-        console.warn('Spatial Nav: Fetch failed, using fallback.');
+        console.warn('Spatial Nav: JSON fetch failed', e);
     }
-
-    return DEFAULT_NAV_DATA;
+    return [];
 }
 
 function createCardElement(data) {
@@ -136,7 +59,7 @@ function createCardElement(data) {
 
     card.addEventListener('click', (e) => {
         e.stopPropagation();
-        const target = NAV_CONFIG.navMap[data.id];
+        const target = data.url;
         if (target) window.location.href = target;
     });
 
@@ -205,23 +128,18 @@ export async function initSpatialNav() {
     const rightGroup = u('div', 'spatial-group');
     rightGroup.id = 'spatial-right-group';
 
-    navData.forEach(item => {
+    // Automatic Split Logic:
+    // Distribute cards evenly between left and right groups
+    const half = Math.ceil(navData.length / 2);
+
+    navData.forEach((item, index) => {
         const cardEl = createCardElement(item);
-        if (NAV_CONFIG.leftIds.includes(item.id)) {
+        if (index < half) {
             leftGroup.appendChild(cardEl);
-        } else if (NAV_CONFIG.rightIds.includes(item.id)) {
+        } else {
             rightGroup.appendChild(cardEl);
         }
     });
-
-    if (leftGroup.children.length === 0 && rightGroup.children.length === 0 && navData.length > 0) {
-        const half = Math.ceil(navData.length / 2);
-        navData.forEach((item, index) => {
-            const cardEl = createCardElement(item);
-            if (index < half) leftGroup.appendChild(cardEl);
-            else rightGroup.appendChild(cardEl);
-        });
-    }
 
     container.appendChild(leftGroup);
     container.appendChild(rightGroup);

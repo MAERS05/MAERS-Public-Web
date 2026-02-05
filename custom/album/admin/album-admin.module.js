@@ -84,15 +84,41 @@ async function handleSave() {
         // 1. Delete Items marked as _deleted
         const toDelete = currentData.filter(c => c._deleted);
         for (let item of toDelete) {
+            const confirmId = prompt(
+                `⚠️ 危险操作：是否一并删除物理文件夹？\n\n您删除了分类 "${item.title}"。\n若要同时彻底删除服务器上的图片目录 (photos/*/ ${item.id})，请在下方输入 ID 确认：\n\n(否则请直接点击“取消”或关闭窗口)`,
+                ""
+            );
+
+            const deletePhysical = (confirmId === item.id);
+            if (confirmId !== null && confirmId !== "" && confirmId !== item.id) {
+                if (AdminCore.Feedback) AdminCore.Feedback.notifyError("ID不匹配，物理目录已保留。");
+            }
+
             await fetch('/api/delete_category', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: item.id })
+                body: JSON.stringify({
+                    id: item.id,
+                    delete_physical: deletePhysical
+                })
+            });
+
+            if (deletePhysical && AdminCore.Feedback) {
+                AdminCore.Feedback.notifySuccess(`已删除物理目录: ${item.id}`);
+            }
+        }
+
+        // 2. Sync Metadata (Fix: ensure title/icon etc. are saved)
+        const remaining = currentData.filter(c => !c._deleted);
+        for (let item of remaining) {
+            await fetch('/api/update_category', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item) // Send full item data to update
             });
         }
 
-        // 2. Reorder remaining
-        const remaining = currentData.filter(c => !c._deleted);
+        // 3. Reorder 
         const idList = remaining.map(c => c.id);
         await fetch('/api/reorder_category', {
             method: 'POST',
@@ -100,7 +126,7 @@ async function handleSave() {
             body: JSON.stringify(idList)
         });
 
-        // 3. Reload
+        // 4. Reload
         await loadData();
         render(); // Trigger view update
 
@@ -154,15 +180,16 @@ function render() {
         bg.className = 'card-bg-glow';
         card.appendChild(bg);
 
-        // Admin Buttons
+        // Admin Buttons (Unified Style)
         if (AdminCore?.AdminButtonHelper) {
+            // 注意: 这里生成的按钮容器会使用 .maers-admin-action-group 类
+            // 我们额外添加 'admin-actions' 类以兼容可能的定位样式
             const adminEl = AdminCore.AdminButtonHelper.render({
                 index: index,
                 isDeleted: cat._deleted,
                 onSort: (e) => uiToggleSelect(e, index),
                 onEdit: (e) => uiEdit(e, index, cat.title, cat.subtitle, cat.icon),
                 onDelete: (e) => uiToggleDelete(e, index),
-                extraClass: '',
                 containerClass: 'admin-actions'
             });
             card.appendChild(adminEl);
@@ -228,7 +255,7 @@ export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
     if (subtitle === null) return;
 
     // 3. Icon
-    const icon = prompt("修改图标 (输入 SVG 路径，例如 ui/album-nature.svg) 或 Emoji:", oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon);
+    const icon = prompt("修改图标 (输入SVG路径或Emoji):", oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon);
     if (icon === null) return;
 
     let changed = false;
@@ -263,10 +290,10 @@ export async function addNewCategory() {
     const subtitle = prompt("副标题 (英文):");
     if (subtitle === null) return;
 
-    const iconInput = prompt("图标 (输入 SVG 路径，例如 ui/album-new.svg) 或 Emoji:");
+    const iconInput = prompt("图标 (输入SVG路径或Emoji):");
     if (iconInput === null) return;
 
-    const id = prompt("分类ID (英文小写,不可修改):");
+    const id = prompt("分类ID (物理目录，英文小写，不可修改):");
     if (id === null) return;
 
     let finalIcon = iconInput;
@@ -282,13 +309,20 @@ export async function addNewCategory() {
                 body: JSON.stringify({ title, subtitle, icon: finalIcon, id })
             });
             if (res.ok) {
+                const data = await res.json();
                 await loadData();
                 render(); // Trigger view update
 
                 // Hide SaveBar (just in case)
                 if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
 
-                if (AdminCore.Feedback) AdminCore.Feedback.notifyAddSuccess();
+                if (AdminCore.Feedback) {
+                    if (data.dirs_created) {
+                        AdminCore.Feedback.notifyAddSuccess(`已自动创建物理目录: ${id}`);
+                    } else {
+                        AdminCore.Feedback.notifyAddSuccess();
+                    }
+                }
             } else {
                 if (AdminCore.Feedback) AdminCore.Feedback.notifyAddFail();
                 else alert("添加失败");

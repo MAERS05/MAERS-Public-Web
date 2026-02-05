@@ -4,23 +4,13 @@ import re
 import json
 import shutil
 from typing import Set
+import config
 
-# ================= 1. 配置与初始化 =================
-STUDIO_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(STUDIO_DIR)
-DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
-
-CMS_DB = os.path.join(DATA_DIR, 'cms.db')
-GALLERY_DB = os.path.join(DATA_DIR, 'gallery.db')
-MUSIC_DATA = os.path.join(DATA_DIR, 'music-data.json')
-
-# 所有的图片相关根目录
-PHOTOS_ROOT = os.path.join(PROJECT_ROOT, 'photos')
-IMAGE_DIRS = ['images', 'thumbnails', 'previews']
+# ================= 1. 助手函数 =================
 
 def to_rel_path(full_path: str) -> str:
     """转换为相对于项目根目录的路径，并统一样式使用 /"""
-    rel = os.path.relpath(full_path, PROJECT_ROOT)
+    rel = os.path.relpath(full_path, config.PROJECT_ROOT)
     return rel.replace('\\', '/')
 
 def normalize_path(path: str) -> str:
@@ -45,13 +35,13 @@ class MaersJanitor:
 
     def collect_from_cms(self):
         """从 cms.db 收集所有被引用的图片"""
-        if not os.path.exists(CMS_DB):
+        if not os.path.exists(config.CMS_DB):
             self.warn("cms.db 不存在，跳过 CMS 扫描")
             return
 
         self.log("正在扫描 cms.db...")
         try:
-            conn = sqlite3.connect(CMS_DB)
+            conn = sqlite3.connect(config.CMS_DB)
             cursor = conn.cursor()
             
             # 1. 扫描封面图
@@ -68,15 +58,11 @@ class MaersJanitor:
             cursor.execute("SELECT content FROM nodes WHERE content IS NOT NULL AND content != ''")
             for row in cursor.fetchall():
                 content = row[0]
-                # 匹配 markdown 图片引用 ![](/photos/...) 或 HTML 引用 src="/photos/..."
-                # 支持中文文件名: [^"'\s)]+ 匹配直到遇到引号、空格或括号
                 matches = re.findall(r'photos/[^"\'\s)]+\.[\w]+', content)
                 for m in matches:
                     path = normalize_path(m)
                     self.used_files.add(path)
-                    # 附件图可能也有缩略图/预览图
                     if path.startswith('photos/images/'):
-                        # 有些文件名里会有后缀，正则匹配到的可能是原始路径
                         self.used_files.add(path.replace('photos/images/', 'photos/thumbnails/'))
                         self.used_files.add(path.replace('photos/images/', 'photos/previews/'))
             
@@ -86,13 +72,13 @@ class MaersJanitor:
 
     def collect_from_gallery(self):
         """从 gallery.db 收集所有相册图片"""
-        if not os.path.exists(GALLERY_DB):
+        if not os.path.exists(config.GALLERY_DB):
             self.warn("gallery.db 不存在，跳过相册扫描")
             return
 
         self.log("正在扫描 gallery.db...")
         try:
-            conn = sqlite3.connect(GALLERY_DB)
+            conn = sqlite3.connect(config.GALLERY_DB)
             cursor = conn.cursor()
             
             cursor.execute("SELECT path, thumb, preview FROM photos")
@@ -107,14 +93,13 @@ class MaersJanitor:
 
     def collect_from_music(self):
         """扫描音乐配置文件中的潜在图片引用"""
-        if not os.path.exists(MUSIC_DATA):
+        if not os.path.exists(config.MUSIC_DATA):
             return
         
         self.log("正在扫描 music-data.json...")
         try:
-            with open(MUSIC_DATA, 'r', encoding='utf-8') as f:
+            with open(config.MUSIC_DATA, 'r', encoding='utf-8') as f:
                 content = f.read()
-                # 匹配任何看起来像本地路径引用的字符串 (photos/...)
                 matches = re.findall(r'photos/[^"\'\s)]+\.[\w]+', content)
                 for m in matches:
                     path = normalize_path(m)
@@ -125,20 +110,18 @@ class MaersJanitor:
     def clean_physical_files(self):
         """遍历 photos 目录及其子目录，删除未被引用的文件"""
         self.log("正在清理物理文件 (photos/)...")
-        if not os.path.exists(PHOTOS_ROOT): return
+        if not os.path.exists(config.PHOTOS_ROOT): return
 
-        for root, dirs, files in os.walk(PHOTOS_ROOT):
+        image_dirs = ['images', 'thumbnails', 'previews']
+        for root, dirs, files in os.walk(config.PHOTOS_ROOT):
             for file in files:
                 if file.startswith('.'): continue
                 
                 full_path = os.path.join(root, file)
                 rel_path = to_rel_path(full_path)
                 
-                # 白名单检查
                 if rel_path not in self.used_files:
-                    # 额外检查：有些文件可能是系统必须的 (比如 icon.svg) 但不在数据库
-                    # 我们只清理 images/thumbnails/previews 这三个核心目录下的文件，其他的保留
-                    is_core_asset = any(sub in rel_path for sub in IMAGE_DIRS)
+                    is_core_asset = any(sub in rel_path for sub in image_dirs)
                     
                     if is_core_asset:
                         try:
@@ -148,19 +131,19 @@ class MaersJanitor:
                             self.warn(f"删除失败: {rel_path} ({e})")
 
     def sanitize_databases(self):
-        """清理数据库中的幽灵记录（文件不在但记录在）"""
+        """清理数据库中的幽灵记录"""
         self.log("正在清理数据库无效记录...")
         
         # 1. Gallery DB
-        if os.path.exists(GALLERY_DB):
+        if os.path.exists(config.GALLERY_DB):
             try:
-                conn = sqlite3.connect(GALLERY_DB)
+                conn = sqlite3.connect(config.GALLERY_DB)
                 cursor = conn.cursor()
                 cursor.execute("SELECT id, path FROM photos")
                 ghosts = []
                 for row in cursor.fetchall():
                     pid, path = row[0], row[1]
-                    if not os.path.exists(os.path.join(PROJECT_ROOT, path.replace('/', os.sep))):
+                    if not os.path.exists(os.path.join(config.PROJECT_ROOT, path.replace('/', os.sep))):
                         ghosts.append(pid)
                 
                 for gid in ghosts:
@@ -173,15 +156,15 @@ class MaersJanitor:
                 self.warn(f"修复 gallery.db 出错: {e}")
 
         # 2. CMS DB
-        if os.path.exists(CMS_DB):
+        if os.path.exists(config.CMS_DB):
             try:
-                conn = sqlite3.connect(CMS_DB)
+                conn = sqlite3.connect(config.CMS_DB)
                 cursor = conn.cursor()
                 cursor.execute("SELECT id, coverImage FROM nodes WHERE coverImage IS NOT NULL AND coverImage != ''")
                 ghosts = []
                 for row in cursor.fetchall():
                     nid, cover = row[0], row[1]
-                    if not os.path.exists(os.path.join(PROJECT_ROOT, cover.replace('/', os.sep))):
+                    if not os.path.exists(os.path.join(config.PROJECT_ROOT, cover.replace('/', os.sep))):
                         ghosts.append(nid)
                 
                 for nid in ghosts:
@@ -195,15 +178,15 @@ class MaersJanitor:
 
     def remove_empty_dirs(self):
         """删除空的分类目录"""
-        for sub in IMAGE_DIRS:
-            base = os.path.join(PHOTOS_ROOT, sub)
+        image_dirs = ['images', 'thumbnails', 'previews']
+        for sub in image_dirs:
+            base = os.path.join(config.PHOTOS_ROOT, sub)
             if not os.path.exists(base): continue
             
             for folder in os.listdir(base):
                 folder_path = os.path.join(base, folder)
                 if not os.path.isdir(folder_path): continue
                 
-                # 如果是 _notes 目录，且没有文件了，也可以杀
                 if not os.listdir(folder_path):
                     try:
                         os.rmdir(folder_path)

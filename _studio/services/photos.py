@@ -100,7 +100,7 @@ def handle_upload(query, file_data):
         full_existing_path = os.path.join(PROJECT_ROOT, existing_row['path'])
         
         if os.path.exists(full_existing_path):
-            print(f"♻️ [Photos] 检测到重复图片 ({file_hash})，跳过上传，提升排序")
+            print(f"  [ PHOTOS ] ♻️  检测到重复图片 ({file_hash}) | Duplicate found, skipping upload.")
             # 移到第一位 (更新 sort_order)
             # 获取当前最小 order
             cursor.execute("SELECT MIN(sort_order) FROM photos WHERE category=?", (category,))
@@ -114,12 +114,13 @@ def handle_upload(query, file_data):
             sync_gallery_js()
             return {"status": "success", "msg": "duplicate_found", "path": existing_row['path']}
         else:
-            print(f"⚠️ [Photos] 数据库存在记录但文件丢失，执行修复: {existing_row['path']}")
+            print(f"  [ PHOTOS ] ⚠️  数据库记录存在但物理文件丢失 | DB record exists but file missing, repairing: {existing_row['path']}")
             safe_name = existing_row['name']
             is_restore = True
 
     # 2. 生成新文件 (如果不是修复模式)
     if not is_restore:
+        print(f"  [ PHOTOS ] 📤 上传图片中 | Uploading to category: {category}")
         t_struct = time.localtime()
         base_time_str = time.strftime('%Y%m%d_%H%M%S', t_struct)
         
@@ -219,6 +220,7 @@ def handle_upload(query, file_data):
     conn.close()
     
     sync_gallery_js()
+    print(f"  [ PHOTOS ] ✅ 处理完成 | Processed: {safe_name}")
 
     return {
         "status": "success",
@@ -231,7 +233,7 @@ def handle_upload(query, file_data):
 def handle_delete(body):
     """处理删除请求"""
     target_path = body.get('path')
-    print(f"🗑️ [Photos] 请求删除: {target_path}")
+    print(f"  [ PHOTOS ] 🗑️  请求删除文件 | Request delete: {target_path}")
     
     conn = get_db()
     cursor = conn.cursor()
@@ -241,7 +243,7 @@ def handle_delete(body):
     row = cursor.fetchone()
     
     if not row:
-        print("   ❌ 数据库中未找到该记录")
+        print(f"  [ PHOTOS ] ❌ 数据库未找到记录 | Record not found in DB")
         conn.close()
         return {}
 
@@ -253,7 +255,6 @@ def handle_delete(body):
         # 删除原图
         if os.path.exists(full_path):
             os.remove(full_path)
-            print(f"   ✅ 原图已删: {full_path}")
             
         # 删除关联图
         # 这里逻辑稍微优化下，直接从 DB 拿 thumb/preview 路径更稳
@@ -263,10 +264,10 @@ def handle_delete(body):
                 derived_full = os.path.abspath(os.path.join(PROJECT_ROOT, derived_sys))
                 if os.path.exists(derived_full):
                     os.remove(derived_full)
-                    print(f"   ✅ 关联已删: {derived_full}")
+        print(f"  [ PHOTOS ] 🔥 物理文件已粉碎 | Physical files purged: {target_path}")
                     
     except Exception as e:
-        print(f"   ❌ 删除文件出错: {e}")
+        print(f"  [ PHOTOS ] ❌ 删除出错 | Delete Error: {e}")
         
     # 3. 数据库删除
     cursor.execute("DELETE FROM photos WHERE id=?", (row['id'],))
@@ -280,6 +281,8 @@ def handle_reorder(query, body):
     """处理排序请求"""
     cat_id = query.get('category', [None])[0]
     if not cat_id: return {}
+    
+    print(f"  [ PHOTOS ] ↕️  图库重排序 | Reordering gallery: {cat_id}")
     
     # body: [ {path: '...'}, ... ]
     # 这意味着前端给的是一个新的顺序列表
@@ -297,10 +300,10 @@ def handle_reorder(query, body):
             cursor.execute("UPDATE photos SET sort_order=? WHERE path=? AND category=?", (index, path, cat_id))
         
         conn.commit()
-        print(f"✅ [Photos] 重排序完成 ({len(body)} items)")
+        print(f"  [ PHOTOS ] ✅ 排序完成 | Reorder complete ({len(body)} items)")
         
     except Exception as e:
-        print(f"❌ [Photos] 重排序失败: {e}")
+        print(f"  [ PHOTOS ] ❌ 排序错误 | Reorder Error: {e}")
         conn.rollback()
         
     conn.close()

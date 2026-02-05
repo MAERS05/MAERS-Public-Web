@@ -28,6 +28,7 @@
 -   **必须**使用 ES6 Modules (`import/export`)。
 -   **必须**检查文件后缀，确认为 `.module.js`。
 -   **必须**在修改 HTML 时检查是否破坏了关键渲染路径 (Flash Guard)。
+-   **必须**在修改后端 Python 服务时，使用标准化的**双语日志格式**进行回显：`print(f"  [ MODULE ] 图标 描述 | Description")`。
 -   **必须**使用 `fetch` 替代 XHR。
 -   **必须**使用 `querySelector` 和 `addEventListener`。
 

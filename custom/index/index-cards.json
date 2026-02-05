@@ -1,0 +1,50 @@
+[
+  {
+    "id": "nav-album",
+    "bgText": "PHOT",
+    "icon": "ui/album-icon.svg",
+    "title": "Lens",
+    "description": "Personal visual photography archive album.",
+    "url": "album.html"
+  },
+  {
+    "id": "nav-music",
+    "bgText": "FLOW",
+    "icon": "ui/music-icon.svg",
+    "title": "Music",
+    "description": "Personal playlist and rhythm. Listen to the vibe.",
+    "url": "music.html"
+  },
+  {
+    "id": "nav-games",
+    "bgText": "GAME",
+    "icon": "ui/games-icon.svg",
+    "title": "Games",
+    "description": "Digital playground and interactive experiences.",
+    "url": "games.html"
+  },
+  {
+    "id": "nav-notes",
+    "bgText": "KNOW",
+    "icon": "ui/notes-icon.svg",
+    "title": "Notes",
+    "description": "Building a mental framework for learning.",
+    "url": "notes.html"
+  },
+  {
+    "id": "nav-record",
+    "bgText": "IDEA",
+    "icon": "ui/record-icon.svg",
+    "title": "Record",
+    "description": "Recording resonance sentence and insights.",
+    "url": "record.html"
+  },
+  {
+    "id": "nav-literature",
+    "bgText": "BOOK",
+    "icon": "ui/literature-icon.svg",
+    "title": "Literature",
+    "description": "Private bookshelf for golden lines and thoughts.",
+    "url": "literature.html"
+  }
+]
