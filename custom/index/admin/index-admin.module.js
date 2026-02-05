@@ -28,7 +28,7 @@ export const IndexAdmin = {
 
     loadData() {
         // 加载数据 (并加上时间戳防缓存)
-        fetch('custom/index/index-cards.json?t=' + Date.now())
+        fetch('data/index-cards.json?t=' + Date.now())
             .then(res => res.json())
             .then(data => {
                 this.items = data;

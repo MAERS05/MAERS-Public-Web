@@ -125,6 +125,16 @@
     filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
 }
 
+/* Minimal Inversion for Record Icon (Home Card) */
+.card-icon img[src*="record-icon"] {
+    filter: invert(1);
+    transition: filter 0.3s ease;
+}
+
+html.light-mode .card-icon img[src*="record-icon"] {
+    filter: none;
+}
+
 .card-title {
     font-size: 1.4rem;
     font-weight: bold;

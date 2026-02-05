@@ -75,6 +75,16 @@ h1.admin-title {
     object-fit: contain;
 }
 
+/* 后端管理页 Record 图标变色适配 */
+.admin-card img[src*="record-icon"] {
+    filter: invert(1);
+    transition: filter 0.3s ease;
+}
+
+html.light-mode .admin-card img[src*="record-icon"] {
+    filter: none;
+}
+
 .admin-card:hover {
     background: var(--pill-hover-bg);
     transform: translateY(-8px);

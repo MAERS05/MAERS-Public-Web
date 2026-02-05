@@ -23,7 +23,7 @@ function u(tag, className, html) {
 async function getNavData() {
     try {
         // Fetch source of truth JSON
-        const response = await fetch('custom/index/index-cards.json?v=' + Date.now());
+        const response = await fetch('data/index-cards.json?v=' + Date.now());
         if (response.ok) {
             const data = await response.json();
             if (Array.isArray(data) && data.length > 0) {

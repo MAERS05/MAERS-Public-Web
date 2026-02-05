@@ -83,6 +83,7 @@ export function setupGridEventDelegation() {
         }
 
         if (card) {
+            e.stopPropagation();
             const nodeId = card.dataset.id;
             const node = State.AppState.allNodes.find((n) => n.id === nodeId);
             if (!node) return;

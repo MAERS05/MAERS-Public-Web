@@ -5,7 +5,12 @@
 
 // 导入所有模�?
 import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
+import { initLayout } from '../../shared/layout.module.js';
+import { initTheme } from '../../shared/theme.module.js';
 import { AlbumAdmin, initAlbumAdmin, uiToggleSelect, uiToggleDelete, uiEdit, addNewCategory } from './admin/album-admin.module.js';
+
+initLayout();
+initTheme();
 
 const AdminCore = {
     BatchItemManager,

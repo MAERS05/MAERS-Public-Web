@@ -4,10 +4,12 @@
  * @version 1.0.0 - ES6 Module Entry
  */
 
-// 导入所有模�?
+// 导入所有模块
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
 import { DataProvider } from '../../data-manage/data-provider.module.js';
 import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
+import { initLayout } from '../../shared/layout.module.js';
+import { initTheme } from '../../shared/theme.module.js';
 import { Player, playTrack, togglePlay, showTip, initPlayer } from './viewer/music-player-core.module.js';
 import { ensurePlayerFrame, initIFrame } from './viewer/music-player-iframe.module.js';
 import { enableBackgroundPlayback, disableBackgroundPlayback, togglePictureInPicture, initPIP } from './viewer/music-player-pip.module.js';
@@ -31,8 +33,10 @@ import {
     initAdmin
 } from './admin/music-admin.module.js';
 
-// 初始化模块间的依赖关�?
+// 初始化模块间的依赖关系
 initIFrame(Player);
+initLayout();
+initTheme();
 initPIP(Player, { playNext, playPrev });
 initPlayer(UI, { ensurePlayerFrame }, { enableBackgroundPlayback, disableBackgroundPlayback });
 initControl(Player, UI);

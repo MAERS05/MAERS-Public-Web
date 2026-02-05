@@ -40,6 +40,12 @@ export function close() {
     if (layer) {
         layer.classList.remove('active');
     }
+
+    if (vditorInstance) {
+        vditorInstance.destroy();
+        vditorInstance = null;
+    }
+
     document.body.style.overflow = '';
 }
 
@@ -77,12 +83,13 @@ function _renderAdminEditor(layer, node) {
     const themeMode = isLight ? 'classic' : 'dark';
     const contentTheme = isLight ? 'light' : 'dark';
 
-    // 样式初始化
-    layer.className = 'immersive-layer active main-card admin-editor-mode';
-    layer.style.padding = '0';
-    layer.style.setProperty('height', '100vh', 'important');
-    layer.style.setProperty('min-height', '100vh', 'important');
-    layer.style.borderRadius = '0';
+    // 样式初始化 - 移除 main-card 以免触发全局缩放
+    layer.className = 'immersive-layer active admin-editor-mode';
+
+    // 阻止编辑界面内的点击向上冒泡，防止触发“缩放视图”下的“点击外部复原”逻辑
+    // 使用 addEventListener 以确保稳健性
+    layer.onclick = null; // 清除可能存在的旧 handler
+    layer.addEventListener('click', (e) => e.stopPropagation());
 
     // 构建 HTML
     layer.innerHTML = `
@@ -103,11 +110,17 @@ function _renderAdminEditor(layer, node) {
     const closeBtn = layer.querySelector('.close-btn');
 
     if (saveBtn) {
-        saveBtn.addEventListener('click', save);
+        saveBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            save();
+        });
     }
 
     if (closeBtn) {
-        closeBtn.addEventListener('click', close);
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            close();
+        });
     }
 
     // 初始化 Vditor

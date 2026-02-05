@@ -5,6 +5,7 @@
 
 // Import all CMS modules
 import { initTheme } from '../../shared/theme.module.js';
+import { initLayout } from '../../shared/layout.module.js';
 import { State, SELECTORS, initState as initStateModule } from './viewer/cms-state.module.js';
 import { Lightbox, initLightbox } from './viewer/cms-lightbox.module.js';
 import { Search, initSearch } from './viewer/cms-search.module.js';
@@ -28,6 +29,7 @@ import { injectModuleStyle } from '../../shared/style-injector.module.js';
 // Inject Module Specific Styles (Notes/Literature/Record)
 injectModuleStyle(Controller.CONFIG.CURRENT_MODULE);
 
+initLayout();
 initTheme();
 initStateModule(Controller);
 initSearch(State, Render, Tags, LiteratureView);

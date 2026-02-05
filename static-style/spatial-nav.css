@@ -215,6 +215,22 @@ html.light-mode .spatial-card:hover .card-bg-text {
     filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
 }
 
+.spatial-card .card-icon img {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+}
+
+/* Spatial Nav Record 图标变色适配 */
+.spatial-card img[src*="record-icon"] {
+    filter: invert(1);
+    transition: filter 0.3s ease;
+}
+
+html.light-mode .spatial-card img[src*="record-icon"] {
+    filter: none;
+}
+
 .spatial-card .card-title {
     font-size: 1.4rem;
     /* Restored original large size */

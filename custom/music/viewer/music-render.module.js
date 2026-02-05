@@ -56,6 +56,7 @@ export function renderCategories() {
 
         // Click handler
         const handleClick = (event) => {
+            event.stopPropagation();
             if (IsAdmin()) {
                 if (!Admin.uiMoveTo(event, 0, index)) {
                     UI.enterLevel1(index);
@@ -133,6 +134,7 @@ export function renderCollections(catIndex) {
 
         // Click handler
         const handleClick = (event) => {
+            event.stopPropagation();
             if (IsAdmin()) {
                 if (!Admin.uiMoveTo(event, 1, index)) {
                     UI.enterLevel2(catIndex, index);
@@ -242,6 +244,7 @@ export function renderAlbums(catIndex, colIndex) {
 
         // Click handler
         const handleClick = (event) => {
+            event.stopPropagation();
             if (IsAdmin()) {
                 if (!Admin.uiMoveTo(event, 2, albIndex)) {
                     UI.handleAlbumClick(catIndex, colIndex, albIndex, isMultiPart);

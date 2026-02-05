@@ -4,6 +4,8 @@
  */
 
 // 导入所有模�?
+import { initLayout } from '../../shared/layout.module.js';
+import { initTheme } from '../../shared/theme.module.js';
 import { DataProvider } from '../../data-manage/data-provider.module.js';
 import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
 import { Controller, initController, State, reloadData, checkIsDirty, saveChanges, uploadFiles, fixPath } from './admin/photos-controller.module.js';
@@ -22,6 +24,8 @@ const AdminCore = {
 initController(DataProvider);
 initAdmin(Controller, View, AdminCore);
 initView(Controller, Admin, AdminCore);
+initLayout();
+initTheme();
 
 
 

@@ -281,7 +281,7 @@ function restoreGlobalView(e) {
     const t = e.target;
 
     // A. 点击的是卡片 -> 不复原 (无论是点击还是拖拽完)
-    if (t.closest(".main-card, .home-container")) return;
+    if (t.closest(".main-card, .home-container, .immersive-layer")) return;
 
     // B. 点击无关元素
     if (t.closest(".zoom-trigger-icon") || t.closest(".zoom-trigger-whole")) return;

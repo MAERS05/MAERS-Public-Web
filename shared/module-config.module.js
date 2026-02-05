@@ -40,7 +40,7 @@ const MODULE_CONFIG = {
         allowTags: false,
         allowMove: true,
         allowContent: false,
-        dataFile: 'custom/album/admin/album-config.json'
+        dataFile: 'data/album-config.json'
     },
     music: {
         icon: 'ui/music-icon.svg',

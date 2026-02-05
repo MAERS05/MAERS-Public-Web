@@ -229,6 +229,16 @@ iframe {
     justify-content: space-between;
 }
 
+/* 音乐分类图标适配：黑夜模式变灰（不使用纯白） */
+.view-header img[src*="music-class"] {
+    filter: invert(0.6);
+    transition: filter 0.3s ease;
+}
+
+html.light-mode .view-header img[src*="music-class"] {
+    filter: none;
+}
+
 .header-left-group {
     display: flex;
     align-items: center;

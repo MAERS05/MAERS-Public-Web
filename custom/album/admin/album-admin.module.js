@@ -59,7 +59,7 @@ async function init() {
 async function loadData() {
     if (!grid) return;
     try {
-        const res = await fetch(`custom/album/admin/album-config.json?v=${Date.now()}`);
+        const res = await fetch(`data/album-config.json?v=${Date.now()}`);
         let initialData = [];
         if (res.ok) initialData = await res.json();
         else initialData = (window.CATEGORY_CONFIG) ? JSON.parse(JSON.stringify(window.CATEGORY_CONFIG)) : [];
@@ -160,6 +160,7 @@ function render() {
         }
 
         card.onclick = (e) => {
+            e.stopPropagation();
             if (e.target.closest('.action-btn')) return;
 
             if (manager && manager.selectedIndices.length > 0) {

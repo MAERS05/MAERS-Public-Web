@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const navGrid = document.querySelector(".nav-grid");
 
     if (navGrid) {
-        fetch('custom/index/index-cards.json')
+        fetch('data/index-cards.json')
             .then(response => response.json())
             .then(data => {
                 navGrid.innerHTML = '';

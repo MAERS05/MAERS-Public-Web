@@ -141,6 +141,16 @@ body {
     color: var(--swiss-text);
 }
 
+/* Minimal Inversion for Record Icon (Header Icon) */
+.header-title img[src*="record-icon"] {
+    filter: invert(1);
+    transition: filter 0.3s ease;
+}
+
+html.light-mode .header-title img[src*="record-icon"] {
+    filter: none;
+}
+
 /* ==========================================================================
    5. Interactive Elements (Tags)
    Pill shape, High-contrast active state
