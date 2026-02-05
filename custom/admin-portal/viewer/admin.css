@@ -1,0 +1,213 @@
+@import "../../zmobile adaptation/mobile-admin.css";
+
+/* ==================== Layout: Header ==================== */
+.admin-header {
+    width: 100%;
+    padding: 60px 60px 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.admin-header-actions {
+    position: absolute;
+    right: 60px;
+    top: 60px;
+    /* Align with top padding */
+    display: flex;
+    gap: 10px;
+    z-index: 10;
+}
+
+h1.admin-title {
+    margin: 0;
+    /* Reset margins */
+    text-align: center;
+    color: var(--text-main);
+    font-family: 'Consolas', monospace;
+    font-size: 2.2rem;
+    letter-spacing: 4px;
+    opacity: 1;
+    text-transform: uppercase;
+}
+
+.admin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 30px;
+    padding: 0 20px;
+    margin-top: 40px;
+    width: 100%;
+}
+
+/* 强制卡片使用相对定位，确保操作按钮能正确定位在右上角 */
+.admin-card,
+.nav-card {
+    position: relative !important;
+}
+
+/* 基础卡片样式 */
+.admin-card {
+    background: var(--pill-bg);
+    border: 1px solid var(--pill-border);
+    padding: 50px 30px;
+    border-radius: 24px;
+    text-align: center;
+    text-decoration: none;
+    transition: 0.3s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+    /* Size constraint */
+    min-height: 220px;
+    aspect-ratio: 1 / 1;
+}
+
+/* Ensure images within icons don't break layout */
+.admin-card .icon img,
+.admin-icon-img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+}
+
+/* 后端管理页图标变色适配 (Record & Index) */
+.admin-card img[src*="record-icon"],
+.admin-card img[src*="index.svg"] {
+    filter: invert(0.9);
+    transition: filter 0.3s ease;
+}
+
+html.light-mode .admin-card img[src*="record-icon"],
+html.light-mode .admin-card img[src*="index.svg"] {
+    filter: none;
+}
+
+.admin-card:hover {
+    background: var(--pill-hover-bg);
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.admin-card .icon {
+    font-size: 3.5rem;
+    margin-bottom: 15px;
+}
+
+.admin-card .name {
+    font-weight: bold;
+    color: var(--text-main);
+    font-size: 1.2rem;
+}
+
+/* 🔥 功能型卡片样式 (添加/返回) */
+.functional-card {
+    /* Inherit base .admin-card styles */
+    border: 2px dashed var(--pill-border) !important;
+    /* Use dashed border to distinguish */
+    background: var(--pill-bg) !important;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.functional-card:hover {
+    background: var(--pill-hover-bg) !important;
+    border-color: var(--pill-border) !important;
+    transform: translateY(-5px);
+}
+
+.functional-card .icon {
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-size: 4rem !important;
+    font-weight: 100;
+    color: var(--text-sub);
+    /* Use variable */
+    line-height: 1;
+    margin-bottom: 0;
+}
+
+.functional-card .name {
+    color: var(--text-sub);
+    /* Use variable */
+    font-family: sans-serif;
+    font-size: 1.1rem !important;
+    font-weight: normal;
+}
+
+/* 管理按钮组 - 回退到稳定版本 */
+.maers-admin-action-group,
+.admin-actions,
+.admin-module-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: 0.3s;
+    z-index: 10;
+}
+
+/* 确保卡片悬停时显示按钮 (保留对 .nav-card 的支持) */
+.admin-card:hover .maers-admin-action-group,
+.nav-card:hover .maers-admin-action-group {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+
+.container {
+    padding-bottom: 100px;
+}
+
+/* Action Buttons */
+.btn-export {
+    padding: 10px 24px;
+    background: #7effd4;
+    border: none;
+    color: #2d3436;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(126, 255, 212, 0.3);
+}
+
+.btn-export:hover {
+    filter: brightness(1.05);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(126, 255, 212, 0.4);
+}
+
+.btn-import {
+    padding: 10px 24px;
+    background: #ff7675;
+    border: none;
+    color: #ffffff;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+    box-shadow: 0 4px 10px rgba(255, 118, 117, 0.3);
+}
+
+.btn-import:hover {
+    filter: brightness(1.05);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(255, 118, 117, 0.4);
+}

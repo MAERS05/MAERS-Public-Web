@@ -77,7 +77,7 @@ h1.admin-title {
 
 /* 后端管理页 Record 图标变色适配 */
 .admin-card img[src*="record-icon"] {
-    filter: invert(1);
+    filter: invert(0.9);
     transition: filter 0.3s ease;
 }
 

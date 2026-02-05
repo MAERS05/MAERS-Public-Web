@@ -6,7 +6,7 @@ PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
 
 # 业务配置文件 (Business Config Files)
-MODULES_JSON_FILE = os.path.join(PROJECT_ROOT, 'custom', 'index', 'admin', 'modules.json')
+MODULES_JSON_FILE = os.path.join(DATA_DIR, 'admin-portal.json')
 ALBUM_CONFIG_JSON = os.path.join(DATA_DIR, 'album-config.json')
 ALBUM_CONFIG_JS   = os.path.join(PROJECT_ROOT, 'custom', 'album', 'viewer', 'album-config.module.js')
 INDEX_CARDS_JSON  = os.path.join(DATA_DIR, 'index-cards.json')

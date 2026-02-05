@@ -13,7 +13,7 @@ echo [2/2] 等待服务器就绪...
 timeout /t 2 >nul
 
 echo [完成] 正在打开浏览器...
-start http://localhost:8000/admin.html
+start http://localhost:8000/admin-portal.html
 
 echo.
 echo ✅ 系统已运行！

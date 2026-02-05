@@ -11,7 +11,7 @@ import { initLayout } from '../../../shared/layout.module.js';
 import { initTheme } from '../../../shared/theme.module.js';
 
 // 2. Admin Core
-import { Admin } from '../../../data-manage/admin-core.module.js';
+import { Admin } from './admin-portal.module.js';
 
 // --- Initialization ---
 

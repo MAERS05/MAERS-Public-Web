@@ -10,7 +10,7 @@ let _modulesConfigCache = null;
 async function getModulesConfig() {
     if (_modulesConfigCache) return _modulesConfigCache;
     try {
-        const res = await fetch(`custom/index/admin/modules.json?v=${Date.now()}`);
+        const res = await fetch(`data/admin-portal.json?v=${Date.now()}`);
         if (!res.ok) throw new Error('Failed to load modules config');
         _modulesConfigCache = await res.json();
         return _modulesConfigCache;

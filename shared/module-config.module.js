@@ -86,14 +86,6 @@ const ModuleConfig = {
         return config.displayTitle;
     },
 
-    /**
-     * 获取节点类型图标
-     * @param {string} type - 节点类型 (folder 或 note)
-     * @returns {string} 图标
-     */
-    getNodeIcon(type) {
-        return type === 'folder' ? '📁' : '📝';
-    }
 };
 
 // 挂载到全局命名空间（向后兼容）

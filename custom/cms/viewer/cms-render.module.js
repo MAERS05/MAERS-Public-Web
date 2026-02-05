@@ -63,9 +63,6 @@ function createGridItem(node, State, index) {
     el.className = className;
     el.dataset.id = node.id;
 
-    const icon = window.MAERS?.ModuleConfig
-        ? window.MAERS.ModuleConfig.getNodeIcon(node.type)
-        : node.type === "folder" ? "📁" : "📝";
 
     // Admin Actions - Build using DOM API
     if (State.IS_ADMIN && Admin && AdminButtonHelper) {
@@ -122,11 +119,6 @@ function createGridItem(node, State, index) {
         coverDiv.className = coverUrl ? 'item-cover' : 'item-cover placeholder';
         if (coverUrl) coverDiv.style.backgroundImage = `url('${coverUrl}')`;
         el.appendChild(coverDiv);
-    } else {
-        const iconDiv = document.createElement('div');
-        iconDiv.className = 'item-icon';
-        iconDiv.textContent = icon;
-        el.appendChild(iconDiv);
     }
 
     // Title

@@ -117,7 +117,6 @@ const Templates = {
                     <div class="action-mini act-del action-delete">×</div>
                     <div class="action-mini action-add-tag">＋</div>
                 </div>
-                <div class="item-icon" data-text="icon"></div>
                 <div class="item-title" data-text="title"></div>
                 <div class="item-tags"></div>
             </div>

@@ -1,12 +1,12 @@
 /**
- * MAERS Admin Core (admin-core.module.js)
+ * MAERS Admin Portal (admin-portal.module.js)
  * 首页总管理面板核心逻辑 - ES6 Module
  * 集成 BatchItemManager 实现统一的排序、编辑、删除功能
  * @version 4.0.0
  */
 
 import { Toast } from '../../../shared/toast.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from './admin-base.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin-base.module.js';
 
 export const Admin = {
     grid: null,
@@ -221,7 +221,7 @@ export const Admin = {
         this.modules.push(newModule);
 
         // 2. 立即保存 (原子操作)
-        // 注意：admin.html 使用的接口是 /api/save_modules
+        // 注意：admin-portal.html 使用的接口是 /api/save_modules
         try {
             const res = await fetch('/api/save_modules', {
                 method: 'POST',
