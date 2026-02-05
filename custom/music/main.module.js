@@ -8,8 +8,8 @@
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
 
 // 1. UI Modules
-import { initLayout } from '../shared/ui/layout.module.js';
-import { initTheme } from '../shared/ui/theme.module.js';
+import { initLayout } from '../../shared/layout.module.js';
+import { initTheme } from '../../shared/theme.module.js';
 
 // 2. Music Modules
 import { DataProvider } from '../../data-manage/data-provider.module.js';

@@ -7,7 +7,7 @@
 // 导入所有模�?
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
 import { DataProvider } from '../../data-manage/data-provider.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../custom/shared/admin-core.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
 import { Player, playTrack, togglePlay, showTip, initPlayer } from './viewer/music-player-core.module.js';
 import { ensurePlayerFrame, initIFrame } from './viewer/music-player-iframe.module.js';
 import { enableBackgroundPlayback, disableBackgroundPlayback, togglePictureInPicture, initPIP } from './viewer/music-player-pip.module.js';

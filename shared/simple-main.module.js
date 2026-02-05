@@ -8,8 +8,8 @@
 // import { Utils, Search as UrlSearch } from '../../shared/utils.module.js'; // Utils no longer passed globally
 
 // 1. UI Infrastructure
-import { initLayout, renderPageHeader } from './ui/layout.module.js';
-import { initTheme } from './ui/theme.module.js';
+import { initLayout, renderPageHeader } from './layout.module.js';
+import { initTheme } from './theme.module.js';
 
 // A. Mount Utilities
 // window.MAERS removal

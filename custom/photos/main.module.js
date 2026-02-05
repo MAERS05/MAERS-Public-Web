@@ -4,8 +4,8 @@
  */
 
 // 导入所有模块
-import { initLayout } from '../shared/ui/layout.module.js';
-import { initTheme } from '../shared/ui/theme.module.js';
+import { initLayout } from '../../shared/layout.module.js';
+import { initTheme } from '../../shared/theme.module.js';
 import { DataProvider } from '../../data-manage/data-provider.module.js';
 import { Controller, initController, State, reloadData, checkIsDirty, saveChanges, uploadFiles, fixPath } from './admin/photos-controller.module.js';
 import { View, initView, render, openLightbox } from './viewer/photos-view.module.js';

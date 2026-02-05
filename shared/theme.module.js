@@ -5,7 +5,7 @@
  * @version 2.0.0 - ES6 Module
  */
 
-import { Utils } from '../../../shared/utils.module.js';
+import { Utils } from './utils.module.js';
 
 // 共享主题状态
 const themeState = {

@@ -6,7 +6,7 @@
  */
 
 import { Toast } from '../../../shared/toast.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../shared/admin-core.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from './admin-base.module.js';
 
 export const Admin = {
     grid: null,

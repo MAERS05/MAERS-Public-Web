@@ -7,8 +7,8 @@
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
 
 // 1. UI Modules
-import { initLayout } from '../shared/ui/layout.module.js';
-import { initTheme } from '../shared/ui/theme.module.js';
+import { initLayout } from '../../shared/layout.module.js';
+import { initTheme } from '../../shared/theme.module.js';
 
 // 2. CMS Core Modules
 import { State, SELECTORS, initState as initStateModule } from './viewer/cms-state.module.js';

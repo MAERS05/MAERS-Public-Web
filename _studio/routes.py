@@ -9,7 +9,7 @@ import config
 PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <script src="dynamic-style/flash-guard.js"></script>
+    <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{title} - MAERS</title>
@@ -35,7 +35,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
         </div>
     </div>
     <script type="module">
-        import {{ renderPageHeader }} from './custom/shared/simple-main.module.js';
+        import {{ renderPageHeader }} from './shared/simple-main.module.js';
         renderPageHeader("{title}", "index.html", "Back");
     </script>
 </body>

@@ -4,7 +4,7 @@
  */
 
 // Import all CMS modules
-import { initTheme } from '../shared/ui/theme.module.js';
+import { initTheme } from '../../shared/theme.module.js';
 import { State, SELECTORS, initState as initStateModule } from './viewer/cms-state.module.js';
 import { Lightbox, initLightbox } from './viewer/cms-lightbox.module.js';
 import { Search, initSearch } from './viewer/cms-search.module.js';
@@ -18,12 +18,12 @@ import { LiteratureView } from '../literature/viewer/literature-view.module.js';
 import { Controller, AppState, CONFIG, bootstrap } from './admin/cms-controller.module.js';
 import { Drag, initDrag } from './admin/cms-drag.module.js';
 import { Editor, initEditor } from './admin/cms-editor.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../shared/admin-core.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
 
 
 // Initialize dependency injection
 
-import { injectModuleStyle } from '../../dynamic-style/style-injector.module.js';
+import { injectModuleStyle } from '../../shared/style-injector.module.js';
 
 // Inject Module Specific Styles (Notes/Literature/Record)
 injectModuleStyle(Controller.CONFIG.CURRENT_MODULE);

@@ -1,5 +1,5 @@
-﻿import { initLayout } from '../../shared/ui/layout.module.js';
-import { initTheme, toggleGlobalShrink } from '../../shared/ui/theme.module.js';
+﻿import { initLayout } from '../../../shared/layout.module.js';
+import { initTheme, toggleGlobalShrink } from '../../../shared/theme.module.js';
 
 // Initialize core UI immediately (safe for layout/theme)
 initLayout();

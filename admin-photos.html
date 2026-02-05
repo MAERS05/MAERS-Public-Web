@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 
 <head>
-    <script src="dynamic-style/flash-guard.js"></script>
+    <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
@@ -22,18 +22,18 @@
     <link rel="stylesheet" href="static-style/toast.css">
     <script type="module" src="shared/utils.module.js"></script>
     <script type="module" src="data-manage/api-client.module.js"></script>
-    <script type="module" src="dynamic-style/layout.module.js"></script>
+    <script type="module" src="shared/layout.module.js"></script>
     <!-- [MIGRATED] 统一使用 theme.module.js -->
     <script type="module">
-        import { initTheme } from './custom/shared/ui/theme.module.js';
+        import { initTheme } from './shared/theme.module.js';
         initTheme();
     </script>
     <script type="module" src="shared/toast.module.js"></script>
 
     <!-- 数据现在通过 ES6 模块异步加载 (data/photos-data.json) -->
-    <script type="module" src="dynamic-style/style-injector.module.js"></script>
+    <script type="module" src="shared/style-injector.module.js"></script>
     <script
-        type="module">await import('./dynamic-style/style-injector.module.js').then(m => m.default.inject('图片管理'));</script>
+        type="module">await import('./shared/style-injector.module.js').then(m => m.default.inject('图片管理'));</script>
     <script type="module" src="custom/photos/admin-main.module.js"></script>
     <style>
         .header-actions {

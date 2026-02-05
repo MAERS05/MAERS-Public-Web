@@ -5,7 +5,7 @@
  * @version 3.0.0 - ES6 Module
  */
 
-import { BatchItemManager, SaveButton, Feedback } from '../../shared/admin-core.module.js';
+import { BatchItemManager, SaveButton, Feedback } from '../../../data-manage/admin-base.module.js';
 
 // Dependency injection
 let State = null;

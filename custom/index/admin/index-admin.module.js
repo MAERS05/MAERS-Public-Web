@@ -4,10 +4,10 @@
  * 集成通用 AdminCore 实现排序、编辑、删除、添加 (原子化添加，批量保存)
  */
 
-import { initLayout } from '../../shared/ui/layout.module.js';
-import { initTheme } from '../../shared/ui/theme.module.js';
+import { initLayout } from '../../../shared/layout.module.js';
+import { initTheme } from '../../../shared/theme.module.js';
 import { Toast } from '../../../shared/toast.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../shared/admin-core.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin-base.module.js';
 
 // 初始化基础 UI
 initLayout();

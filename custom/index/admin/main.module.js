@@ -7,11 +7,11 @@
 import { Utils, Search as UrlSearch } from '../../../shared/utils.module.js';
 
 // 1. UI Infrastructure
-import { initLayout } from '../../shared/ui/layout.module.js';
-import { initTheme } from '../../shared/ui/theme.module.js';
+import { initLayout } from '../../../shared/layout.module.js';
+import { initTheme } from '../../../shared/theme.module.js';
 
 // 2. Admin Core
-import { Admin } from './admin-core.module.js';
+import { Admin } from '../../../data-manage/admin-core.module.js';
 
 // --- Initialization ---
 

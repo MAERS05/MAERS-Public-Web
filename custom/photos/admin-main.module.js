@@ -5,7 +5,7 @@
 
 // 导入所有模�?
 import { DataProvider } from '../../data-manage/data-provider.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../shared/admin-core.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
 import { Controller, initController, State, reloadData, checkIsDirty, saveChanges, uploadFiles, fixPath } from './admin/photos-controller.module.js';
 import { View, initView, render, openLightbox } from './viewer/photos-view.module.js';
 import { Admin, initAdmin, initManager, togglePick, stageDelete, executeMove } from './admin/photos-admin.module.js';
