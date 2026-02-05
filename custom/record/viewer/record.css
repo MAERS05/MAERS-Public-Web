@@ -144,7 +144,7 @@ body {
 /* Minimal Inversion for Record Icon (Header Icon) */
 .header-title img[src*="record-icon"] {
     filter: invert(1);
-    transition: filter 0.3s ease;
+    transition: filter 0.3s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 html.light-mode .header-title img[src*="record-icon"] {
