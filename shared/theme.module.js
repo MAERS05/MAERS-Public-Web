@@ -18,6 +18,7 @@ const themeState = {
 const AUTO_HIDE_DELAY = 5000;
 
 const CONFIG_VERSION = 2;
+const ZOOM_TIP = "点击缩放，长按卡片空白处拖拽";
 const DEFAULT_CONFIG = {
     version: CONFIG_VERSION,
     mode: "system", // 'system', 'auto', 'manual'
@@ -381,6 +382,7 @@ function setupZoomTriggerGlobal(targetEl, mode, force = false) {
         // [Fix] If the target itself is an image/svg, treat it as the icon immediately
         if (targetEl.tagName === 'IMG' || targetEl.tagName === 'SVG') {
             targetEl.classList.add('zoom-trigger-icon');
+            targetEl.title = ZOOM_TIP;
             targetEl.addEventListener("click", toggleGlobalShrink);
             return;
         }
@@ -388,10 +390,12 @@ function setupZoomTriggerGlobal(targetEl, mode, force = false) {
         const existingIcon = targetEl.querySelector(".title-icon");
         if (existingIcon) {
             existingIcon.classList.add("zoom-trigger-icon");
+            existingIcon.title = ZOOM_TIP;
             existingIcon.addEventListener("click", toggleGlobalShrink);
         } else {
             const existingZoomIcon = targetEl.querySelector(".zoom-trigger-icon");
             if (existingZoomIcon) {
+                existingZoomIcon.title = ZOOM_TIP;
                 existingZoomIcon.addEventListener("click", toggleGlobalShrink);
             } else {
                 const firstChild = targetEl.firstElementChild || targetEl.firstChild;
@@ -399,6 +403,7 @@ function setupZoomTriggerGlobal(targetEl, mode, force = false) {
                 // [Fix] 优先检测图片/SVG作为图标
                 if (firstChild && firstChild.nodeType === Node.ELEMENT_NODE && (firstChild.tagName === 'IMG' || firstChild.tagName === 'SVG')) {
                     firstChild.classList.add('zoom-trigger-icon');
+                    firstChild.title = ZOOM_TIP;
                     firstChild.addEventListener("click", toggleGlobalShrink);
                 }
                 // 原有文本检测逻辑
@@ -409,26 +414,30 @@ function setupZoomTriggerGlobal(targetEl, mode, force = false) {
                     if (match) {
                         const span = document.createElement('span');
                         span.className = 'zoom-trigger-icon';
+                        span.title = ZOOM_TIP;
                         span.textContent = match[1];
                         span.addEventListener("click", toggleGlobalShrink);
                         targetEl.insertBefore(span, firstNode);
                         firstNode.textContent = match[2];
                     } else {
+                        targetEl.title = ZOOM_TIP;
                         targetEl.addEventListener("click", toggleGlobalShrink);
                     }
                 } else {
                     const text = targetEl.innerText.trim();
                     const match = text.match(/^([\p{Emoji}\S]+)(.*)/u);
                     if (match) {
-                        targetEl.innerHTML = `<span class="zoom-trigger-icon">${Utils.escapeHtml(match[1])}</span>${Utils.escapeHtml(match[2])}`;
+                        targetEl.innerHTML = `<span class="zoom-trigger-icon" title="${ZOOM_TIP}">${Utils.escapeHtml(match[1])}</span>${Utils.escapeHtml(match[2])}`;
                         targetEl.querySelector(".zoom-trigger-icon").addEventListener("click", toggleGlobalShrink);
                     } else {
+                        targetEl.title = ZOOM_TIP;
                         targetEl.addEventListener("click", toggleGlobalShrink);
                     }
                 }
             }
         }
     } else {
+        targetEl.title = ZOOM_TIP;
         targetEl.addEventListener("click", toggleGlobalShrink);
         targetEl.classList.add("zoom-trigger-whole");
     }

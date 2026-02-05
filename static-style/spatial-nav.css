@@ -41,7 +41,7 @@
     height: 80px;
     margin-bottom: 20px;
     color: #d0d0d0;
-    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
+    filter: invert(0.8) drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.5s ease;
     cursor: pointer;
 }
@@ -88,6 +88,7 @@
 /* Light Mode Overrides for Header */
 html.light-mode .spatial-brand-logo {
     color: #333;
+    filter: none;
     opacity: 0.9;
 }
 

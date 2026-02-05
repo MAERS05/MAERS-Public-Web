@@ -39,7 +39,7 @@
     height: 100px;
     margin-bottom: 25px;
     color: #d0d0d0;
-    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
+    filter: invert(0.8) drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.5s ease;
     will-change: transform;
     /* Fix ghosting */
@@ -127,7 +127,7 @@
 
 /* Minimal Inversion for Record Icon (Home Card) */
 .card-icon img[src*="record-icon"] {
-    filter: invert(1);
+    filter: invert(0.9);
     transition: filter 0.3s ease;
 }
 

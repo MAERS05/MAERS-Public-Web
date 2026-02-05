@@ -84,10 +84,19 @@
     }
 
     .spatial-card .card-icon {
-        font-size: 1.5rem !important;
+        font-size: 1.2rem !important;
         margin: 0 !important;
         filter: none !important;
         line-height: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .spatial-card .card-icon img {
+        width: 24px !important;
+        height: 24px !important;
+        object-fit: contain !important;
     }
 
     /* 5. 交互微调 */
