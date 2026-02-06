@@ -28,8 +28,10 @@
 -   **必须**阅读文件功能说明书。
 -   **必须**使用 ES6 Modules (`import/export`)。
 -   **必须**检查文件后缀，确认为 `.module.js`。
--   **必须**在修改 HTML 时检查是否破坏了关键渲染路径 (Flash Guard)。
+-   **必须**遵循“基础设施扁平化”原则：共享 UI 逻辑置于 `shared/`，通用管理中台置于 `data-manage/`。
+-   **必须**在修改 HTML 时检查是否破坏了关键渲染路径 (Flash Guard 路径为 `shared/flash-guard.js`)。
 -   **必须**在修改后端 Python 服务时，使用标准化的**双语日志格式**进行回显：`print(f"  [ MODULE ] 图标 描述 | Description")`。
+-   **必须**在实现复杂子管理模块时（如 CMS 标签），使用 `autoSaveBar: false` 将保存条控制权移交给中央调度器，避免 UI 冲突。
 -   **必须**使用 `fetch` 替代 XHR。
 -   **必须**使用 `querySelector` 和 `addEventListener`。
 
@@ -37,7 +39,7 @@
 -   **禁止**写入 HTML 内联事件 (`onclick="..."`)。
 -   **禁止**使用 `var` 声明变量（全部使用 `const/let`）。
 -   **禁止**向全局 `window` 对象挂载新变量（除非是 Explicit Debugging Interface）。
--   **禁止**删除 `flash-guard.js` 的同步引用。
+-   **禁止**删除 `shared/flash-guard.js` 的同步引用。
 -   **禁止**在业务模块的主 CSS 文件中编写 `max-width` 媒体查询（必须去 `zmobile adaptation` 目录）。
 -   **禁止**滥用 `!important`。**尽量**通过 CSS 权重管理（如 `body` 前缀策略）解决冲突，仅在覆盖行内样式或第三方库强样式等必要场景下使用。
 -   **禁止**保留“僵尸代码”或无用注释。修改功能时，**必须删除**旧逻辑，绝不允许采取“保留旧代码但在下方通过新代码覆盖”的增量式写法。

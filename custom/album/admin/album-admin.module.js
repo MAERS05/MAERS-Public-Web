@@ -5,9 +5,6 @@
  * @version 3.0.0 - ES6 Module
  */
 
-// Import Config
-import '../viewer/album-config.module.js';
-
 // 依赖声明
 let AdminCore;
 
@@ -34,8 +31,7 @@ async function init() {
 
     manager = new AdminCore.BatchItemManager({
         list: currentData,
-        onUpdate: render,
-        onChange: () => AdminCore?.SaveButton?.show()
+        onUpdate: render
     });
 
     // Init Save Button
@@ -61,8 +57,12 @@ async function loadData() {
     try {
         const res = await fetch(`data/album-config.json?v=${Date.now()}`);
         let initialData = [];
-        if (res.ok) initialData = await res.json();
-        else initialData = (window.CATEGORY_CONFIG) ? JSON.parse(JSON.stringify(window.CATEGORY_CONFIG)) : [];
+        if (res.ok) {
+            initialData = await res.json();
+        } else {
+            console.error('Failed to load album config');
+            initialData = [];
+        }
 
         // Deep copy for editing
         currentData = JSON.parse(JSON.stringify(initialData));
@@ -104,7 +104,7 @@ async function handleSave() {
             });
 
             if (deletePhysical && AdminCore.Feedback) {
-                AdminCore.Feedback.notifySuccess(`已删除物理目录: ${item.id}`);
+                AdminCore.Feedback.notifySuccess(`已删除关联目录: ${item.id}`);
             }
         }
 
@@ -275,7 +275,7 @@ export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
 
     if (changed) {
         render();
-        AdminCore?.SaveButton?.show();
+        manager.updateSaveState();
     }
 }
 

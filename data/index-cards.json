@@ -32,19 +32,19 @@
     "url": "notes.html"
   },
   {
-    "id": "nav-record",
-    "bgText": "IDEA",
-    "icon": "ui/record-icon.svg",
-    "title": "Record",
-    "description": "Recording resonance sentence and insights.",
-    "url": "record.html"
-  },
-  {
     "id": "nav-literature",
     "bgText": "BOOK",
     "icon": "ui/literature-icon.svg",
     "title": "Literature",
     "description": "Private bookshelf for golden lines and thoughts.",
     "url": "literature.html"
+  },
+  {
+    "id": "nav-record",
+    "bgText": "IDEA",
+    "icon": "ui/record-icon.svg",
+    "title": "Record",
+    "description": "Recording resonance sentence and insights.",
+    "url": "record.html"
   }
 ]

@@ -142,15 +142,9 @@ export function setupGridEventDelegation() {
                     const hasFilter = State.AppState.activeFilters.size > 0;
 
                     if (hasSearch || hasFilter) {
-                        // User is filtering. Ask intent.
-                        // Using timeout ensures the Editor is visible behind this modal.
-                        // YES (OK) -> Preview Only -> Do Nothing
-                        // NO (Cancel) -> Go to location -> Navigate
+                        const shouldNavigate = confirm("是否跳转到文本所在目录？\n\n【确定】跳转到文本所在目录 (更新导航栏)\n【取消】保持当前筛选状态 (仅预览)");
 
-                        const isPreviewOnly = confirm("是否仅预览？\n\n【确定】仅预览 (保持当前筛选列表)\n【取消】跳转到文件所在目录 (清空筛选并定位)");
-
-                        // If User chose Cancel (which means "Go to location"), we navigate.
-                        if (!isPreviewOnly) {
+                        if (shouldNavigate) {
                             navigateToFileContext(node);
                         }
                     }

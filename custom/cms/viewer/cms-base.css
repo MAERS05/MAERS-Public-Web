@@ -401,11 +401,81 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 15px;
-  margin-bottom: 8px;
+  padding: 10px 15px;
+  margin-bottom: 4px;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
+  border: 1px solid transparent;
+}
+
+.tag-select-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  display: inline-block;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.light-mode .tag-select-dot {
+  border-color: rgba(0, 0, 0, 0.5);
+}
+
+/* 阶梯 1: 鼠标在整行上，小球受光 */
+.drawer-item:hover .tag-select-dot {
+  border-color: rgba(120, 255, 214, 0.5);
+}
+
+.light-mode .drawer-item:hover .tag-select-dot {
+  border-color: rgba(0, 184, 148, 0.6);
+}
+
+/* 阶梯 2: 鼠标直接在小球上 */
+.tag-select-dot:hover {
+  border-color: #78ffd6 !important;
+  background: rgba(120, 255, 214, 0.1);
+}
+
+.light-mode .tag-select-dot:hover {
+  border-color: #00b894 !important;
+  background: rgba(0, 184, 148, 0.15);
+}
+
+.drawer-item.is-picked {
+  background: rgba(120, 255, 214, 0.05) !important;
+  border-color: rgba(120, 255, 214, 0.2);
+}
+
+.drawer-item.is-picked .tag-select-dot {
+  background: #78ffd6;
+  border-color: #78ffd6;
+}
+
+.light-mode .drawer-item.is-picked .tag-select-dot {
+  background: #00b894;
+  border-color: #00b894;
+}
+
+/* 已选中状态下的阶梯 2 */
+.drawer-item.is-picked .tag-select-dot:hover {
+  background: #40ffc8 !important;
+  border-color: #40ffc8 !important;
+}
+
+.light-mode .drawer-item.is-picked .tag-select-dot:hover {
+  background: #009677 !important;
+  border-color: #009677 !important;
+}
+
+.tag-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.95rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .tag-count-badge {

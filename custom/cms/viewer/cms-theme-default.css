@@ -2,10 +2,20 @@
 /* This file contains the default visual theme (colors, shadows, decorations) */
 /* Modules can skip loading this file to use their own custom themes */
 
+/* ==================== 0. Layout Fixes for Shadows ==================== */
+.folder-grid {
+  padding: 20px !important;
+  /* 给边缘卡片的外部漫反射留出空间，防止被容器切断 */
+  margin: -20px !important;
+  /* 抵消内边距对整体布局宽度的影响 */
+  width: calc(100% + 40px) !important;
+}
+
 /* ==================== 1. Grid Item Default Theme ==================== */
 .grid-item {
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
 }
 
 .grid-item:hover {
@@ -36,9 +46,12 @@
   backface-visibility: hidden;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  -webkit-font-smoothing: antialiased;
-  background: linear-gradient(0deg, #8e9eab 0%, #eef2f3 100%);
-  box-shadow: none;
+  /* 极致高亮荧光色条 (双向漫反射 - 收紧版) */
+  background: linear-gradient(180deg, #ccfffa 0%, #00ffca 100%);
+  opacity: 1;
+  box-shadow:
+    0 0 5px rgba(204, 255, 250, 0.9),
+    0 0 10px rgba(0, 255, 202, 0.5);
 }
 
 .type-folder:hover::before,
@@ -87,11 +100,7 @@
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
   position: relative;
-  clip-path: polygon(0 0,
-      100% 0,
-      100% calc(100% - 20px),
-      calc(100% - 20px) 100%,
-      0 100%);
+  /* 移除 clip-path，因为它会切断外部发光 (Glow Shadow) */
 }
 
 /* Folded corner effect */
@@ -466,8 +475,12 @@
 }
 
 .dragging {
-  opacity: 0.5;
+  opacity: 0.7;
   cursor: grabbing;
+  box-shadow: 0 0 15px rgba(120, 255, 214, 0.6);
+  border: 1px solid #78ffd6;
+  background: rgba(120, 255, 214, 0.1) !important;
+  transform: scale(0.98);
 }
 
 @keyframes pulse-drag {

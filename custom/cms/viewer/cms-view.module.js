@@ -85,7 +85,7 @@ export const View = {
     clearTagFilter: () => Tags?.clearTagFilter(),
 
     // Render Module
-    renderGrid: (list, isSearch) => Render?.renderGrid(list, isSearch),
+    renderGrid: (list, isSearch, shouldResetManager) => Render?.renderGrid(list, isSearch, shouldResetManager),
     renderBreadcrumb: () => Render?.renderBreadcrumb(),
     renderPageTitle: () => Render?.renderPageTitle(),
     navigateTo: (index) => Render?.navigateTo(index),
@@ -143,16 +143,8 @@ export function setupViewEventListeners() {
     if (drawerSearch)
         drawerSearch.addEventListener("input", () => View.refreshDrawerList());
 
-    // Drawer List Event Delegation
-    if (drawerList) {
-        drawerList.addEventListener("click", (e) => {
-            const drawerItem = e.target.closest(".drawer-item");
-            if (drawerItem) {
-                const tag = drawerItem.dataset.tag;
-                if (tag) View.selectTagFromDrawer(tag);
-            }
-        });
-    }
+    // Drawer List interaction is now handled by event delegation in cms-tags.module.js
+
 
     // Editor Close (Static binding, dynamic ones handled in Editor.open)
     const editorCloseBtns = document.querySelectorAll(".close-btn");

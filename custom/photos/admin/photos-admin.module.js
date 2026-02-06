@@ -53,8 +53,7 @@ export function initManager(dataList) {
             if (View?.render) {
                 View.render();
             }
-        },
-        onChange: () => AdminCore?.SaveButton?.show()
+        }
     });
 
     // Init Save Button
@@ -140,7 +139,10 @@ async function handleSave() {
             if (manager && manager.setList) {
                 manager.setList(Controller.State.loadedData);
             }
-            if (AdminCore.Feedback) AdminCore.Feedback.notifySaveSuccess();
+            if (AdminCore.Feedback) {
+                const msg = dels.length > 0 ? "保存成功，关联物理图片已同步删除" : "保存成功";
+                AdminCore.Feedback.notifySaveSuccess(msg);
+            }
             if (View?.render) {
                 View.render();
             }

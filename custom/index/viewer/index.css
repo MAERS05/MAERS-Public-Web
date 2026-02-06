@@ -39,8 +39,9 @@
     height: 100px;
     margin-bottom: 25px;
     color: #d0d0d0;
-    filter: invert(0.8) drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
-    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.5s ease;
+    /* 深空黑色调：降低亮度和饱和度 */
+    filter: invert(0.85) brightness(0.9) drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.5s ease;
     will-change: transform;
     /* Fix ghosting */
 }
@@ -59,7 +60,6 @@
     font-size: 2.8rem;
     font-weight: 800;
     margin-bottom: 12px;
-    color: #8a8a8a;
     letter-spacing: 2px;
     text-transform: uppercase;
 }
@@ -68,6 +68,11 @@
     display: inline-block;
     cursor: pointer;
     transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    /* 深空黑渐变：从左到右 */
+    background: linear-gradient(90deg, #1e1e22 0%, #24242a 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .maers-interactive:hover {

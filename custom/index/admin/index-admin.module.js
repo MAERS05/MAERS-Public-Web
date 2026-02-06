@@ -130,7 +130,7 @@ export const IndexAdmin = {
             });
 
             // 手动微调按钮位置 (也可在CSS中定义 .nav-card-actions)
-            // inline styles removed to use admin.css rules (top: 12px, right: 12px)
+            // inline styles removed to use admin-portal.css rules (top: 12px, right: 12px)
 
             card.appendChild(btnContainer);
             this.grid.appendChild(card);

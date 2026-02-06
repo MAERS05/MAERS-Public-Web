@@ -9,7 +9,7 @@ from . import cms
 import config
 
 def handle_ops(path, body):
-    conf = cms.load_json(config.ALBUM_CONFIG_JSON, config.ALBUM_CONFIG_JS) or []
+    conf = cms.load_json(config.ALBUM_CONFIG_JSON) or []
     
     changed = False
     
@@ -53,7 +53,7 @@ def handle_ops(path, body):
             changed = True
             
         if changed:
-            cms.save_json(config.ALBUM_CONFIG_JSON, conf, config.ALBUM_CONFIG_JS, 'CATEGORY_CONFIG')
+            cms.save_json(config.ALBUM_CONFIG_JSON, conf)
             return 200, {"status": "success", "dirs_created": dirs_created}
             
     elif path == '/api/delete_category': 
@@ -89,6 +89,6 @@ def handle_ops(path, body):
                 changed = True
 
     if changed:
-        cms.save_json(config.ALBUM_CONFIG_JSON, conf, config.ALBUM_CONFIG_JS, 'CATEGORY_CONFIG')
+        cms.save_json(config.ALBUM_CONFIG_JSON, conf)
     
     return 200, {"status": "success"}

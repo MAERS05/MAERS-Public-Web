@@ -37,5 +37,5 @@ initPIP(Player, { playNext, playPrev });
 initPlayer(UI, { ensurePlayerFrame }, { enableBackgroundPlayback, disableBackgroundPlayback });
 initControl(Player, UI);
 initRender(UI, null, Player, { ...Utils, Search: UrlSearch }, null);
-initUI({ renderCategories, renderCollections, renderAlbums }, { playNext, playPrev }, null, Player); // Search passed as null
+initUI({ renderCategories, renderCollections, renderAlbums }, { playNext, playPrev }, UrlSearch, Player);
 initState(Player, UI);

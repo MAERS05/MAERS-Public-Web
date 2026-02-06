@@ -53,8 +53,7 @@ def wipe_all_data():
         (config.MUSIC_DATA, [], 'json'),
         (os.path.join(config.DATA_DIR, 'search-index.json'), [], 'json'),
         # 重置相册分类配置
-        (config.ALBUM_CONFIG_JSON, [], 'json'),
-        (config.ALBUM_CONFIG_JS, 'window.CATEGORY_CONFIG = [];', 'js_content')
+        (config.ALBUM_CONFIG_JSON, [], 'json')
     ]
     
     for file_path, default_val, f_type in file_resets:

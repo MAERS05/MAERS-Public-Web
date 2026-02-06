@@ -8,15 +8,16 @@
 // 依赖声明
 let Controller, Admin, AdminCore;
 
-// Import Config
-// Import Config
-import '../../album/viewer/album-config.module.js';
+// Import Utils
 import { Utils } from '../../../shared/utils.module.js';
 
 // Mobile Adaptation
 import '../../zmobile adaptation/mobile-photos.js';
 
 const WHEEL_DELAY = 250;
+
+// Album Config (loaded dynamically)
+let CATEGORY_CONFIG = [];
 
 // 依赖注入
 export function initView(controller, admin = null, adminCore = null) {
@@ -47,9 +48,21 @@ async function init() {
     saveBtn = document.getElementById('save-order-btn');
     const titleEl = document.getElementById('page-title');
 
+    // 加载相册配置
+    try {
+        const response = await fetch('data/album-config.json?t=' + Date.now());
+        if (response.ok) {
+            CATEGORY_CONFIG = await response.json();
+        } else {
+            console.error('Failed to load album config');
+        }
+    } catch (err) {
+        console.error('Error loading album config:', err);
+    }
+
     // 设置标题
     if (titleEl) {
-        const cfg = (window.CATEGORY_CONFIG || []).find(c => c.id === Controller.State.category);
+        const cfg = CATEGORY_CONFIG.find(c => c.id === Controller.State.category);
         if (cfg) {
             titleEl.innerHTML = `${cfg.icon} ${cfg.subtitle || cfg.title}`;
 

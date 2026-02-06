@@ -5,7 +5,7 @@
  * 更新方式：每次发布新版本前，更新下方的 VERSION 常量即可。
  */
 
-const VERSION = '2026.02.05-2111'; // 📅 修改此处触发全站更新
+const VERSION = '2026.02.06-1300'; // 📅 修改此处触发全站更新
 const CACHE_NAME = `maers-cache-${VERSION}`;
 
 // 监听安装事件
@@ -37,11 +37,19 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // 1. 只拦截同源请求 (本站的 JS, CSS, JSON, HTML)
+    // 1. 拦截策略优化
     if (url.origin === location.origin) {
 
-        // 排除 API 请求、sw.js 自身、以及已经带有版本号的请求
-        if (url.pathname.startsWith('/api/') ||
+        // 排除：
+        // - 非 GET 请求 (POST/PUT/DELETE 等通常包含 Body，不应加版本号拦截)
+        // - 以 /api/ 开头的 API 请求
+        // - 常见的上传/操作接口 (/upload, /delete, /reorder)
+        // - Service Worker 自身
+        if (event.request.method !== 'GET' ||
+            url.pathname.startsWith('/api/') ||
+            url.pathname === '/upload' ||
+            url.pathname === '/delete' ||
+            url.pathname === '/reorder' ||
             url.pathname.includes('sw.js') ||
             url.searchParams.has('maers_ver')) {
             return;

@@ -270,6 +270,21 @@ export function renderAlbums(catIndex, colIndex) {
                 extraClass: ''
             });
 
+            // 补全：还原分P按钮 (↺)
+            const resetBtn = document.createElement('span');
+            resetBtn.className = 'maers-admin-btn';
+            resetBtn.title = '还原所有原始分P';
+            resetBtn.textContent = '↺';
+            resetBtn.style.color = 'var(--text-sub)';
+            resetBtn.onclick = (e) => Admin.uiResetTracks(e, catIndex, colIndex, albIndex);
+
+            // 插入到删除按钮之前
+            if (actionsEl.children.length > 0) {
+                actionsEl.insertBefore(resetBtn, actionsEl.lastChild);
+            } else {
+                actionsEl.appendChild(resetBtn);
+            }
+
             const actionWrapper = document.createElement('div');
             actionWrapper.className = 'item-actions';
             actionWrapper.appendChild(actionsEl);
@@ -306,6 +321,26 @@ export function renderAlbums(catIndex, colIndex) {
                     e.stopPropagation();
                     if (Player?.playTrack) Player.playTrack(album.bvid, realPage, mapping.length, catIndex, colIndex, albIndex, trackDiv, trackIdx);
                 };
+
+                if (IsAdmin()) {
+                    const iconGroup = document.createElement('div');
+                    iconGroup.style.display = 'flex';
+                    iconGroup.style.gap = '5px';
+
+                    const eI = document.createElement('span');
+                    eI.className = 'track-edit-icon'; eI.textContent = '✎';
+                    eI.onclick = (e) => Admin.uiRenamePart(e, albIndex, trackIdx);
+                    iconGroup.appendChild(eI);
+
+                    const dI = document.createElement('span');
+                    dI.className = 'track-edit-icon'; dI.textContent = '✕';
+                    dI.style.color = '#ff4757';
+                    dI.onclick = (e) => Admin.uiDeletePart(e, albIndex, trackIdx);
+                    iconGroup.appendChild(dI);
+
+                    trackDiv.appendChild(iconGroup);
+                }
+
                 dropdown.appendChild(trackDiv);
             });
             wrapper.appendChild(dropdown);

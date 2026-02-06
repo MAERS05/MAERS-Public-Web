@@ -31,12 +31,7 @@
         margin-top: 10px;
     }
 
-    /* Action Buttons Mobile Size */
-    .btn-export,
-    .btn-import {
-        padding: 8px 16px !important;
-        font-size: 0.9rem !important;
-    }
+
 
     /* 2. Grid Adjustment */
     .admin-grid {

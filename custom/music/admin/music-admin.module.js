@@ -37,8 +37,7 @@ function ensureManager(level) {
     if (!managers[level] || managers[level].list !== list) {
         managers[level] = new AdminCore.BatchItemManager({
             list: list,
-            onUpdate: () => UI.refreshCurrentView && UI.refreshCurrentView(),
-            onChange: () => AdminCore.SaveButton.show()
+            onUpdate: () => UI.refreshCurrentView && UI.refreshCurrentView()
         });
     }
 
@@ -176,6 +175,63 @@ async function handleComplexEdit(alb, mgr) {
     UI.refreshCurrentView();
 }
 
+export function uiRenamePart(e, albIdx, trackIdx) {
+    e.stopPropagation();
+    const alb = ensureManager(2).list[albIdx];
+    const old = (alb.custom_parts && alb.custom_parts[trackIdx]) || `P${trackIdx + 1}`;
+    const n = prompt("重命名该分P:", old);
+    if (n && n !== old) {
+        if (!alb.custom_parts) alb.custom_parts = [];
+        alb.custom_parts[trackIdx] = n;
+        ensureManager(2).onChange();
+        UI.refreshCurrentView();
+    }
+}
+
+export function uiDeletePart(e, albIdx, trackIdx) {
+    e.stopPropagation();
+    if (!confirm("确定要删除吗？")) return;
+    const alb = ensureManager(2).list[albIdx];
+    const mapping = alb.page_mapping || Array.from({ length: parseInt(alb.total) || 1 }, (_, k) => k + 1);
+    if (mapping.length <= 1) return alert("最后一个不可删除");
+    mapping.splice(trackIdx, 1);
+    if (alb.custom_parts) alb.custom_parts.splice(trackIdx, 1);
+    alb.page_mapping = mapping;
+    alb.total = mapping.length;
+    ensureManager(2).onChange();
+    UI.refreshCurrentView();
+}
+
+export async function uiResetTracks(e, catIdx, colIdx, albIdx) {
+    e.stopPropagation();
+    if (!confirm("确定要恢复该视频的所有原始分P吗？")) return;
+
+    // 我们既可以调用 API，也可以在本地尝试重置并保存
+    // 优先本地重置以保持 UI 状态同步
+    const alb = UI.libraryData[catIdx].collections[colIdx].albums[albIdx];
+
+    // 如果没有 bili_total，尝试从 total 获取（前提是我们没改过 total）
+    // 或者干脆重新通过 BV 号获取一次信息
+    try {
+        const response = await fetch(`${API_BASE}/api/get_bili_info?bvid=${alb.bvid}`);
+        const info = await response.json();
+
+        alb.total = info.pages.length;
+        alb.page_mapping = Array.from({ length: alb.total }, (_, k) => k + 1);
+        alb.custom_parts = info.pages.map(p => p.part);
+        alb.durations = {};
+        info.pages.forEach(p => {
+            alb.durations[p.page] = p.duration;
+        });
+
+        ensureManager(2).onChange();
+        UI.refreshCurrentView();
+        if (window.MAERS?.Toast) window.MAERS.Toast.success("已还原原始分P");
+    } catch (err) {
+        alert("获取原始信息失败：" + err.message);
+    }
+}
+
 // Creation Helper (Direct execution logic: Update -> Save -> No Prompt)
 
 export async function addCategory() {
@@ -190,7 +246,7 @@ export async function addCategory() {
             if (mgr) mgr.setList(UI.libraryData);
 
             if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
-            if (window.MAERS?.Toast) window.MAERS.Toast.success("添加成功");
+            if (window.MAERS?.Toast) window.MAERS.Toast.success("创建成功");
         }
         UI.refreshCurrentView();
     }
@@ -209,7 +265,7 @@ export async function addCollection() {
             if (mgr) mgr.setList(cat.collections);
 
             if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
-            if (window.MAERS?.Toast) window.MAERS.Toast.success("添加成功");
+            if (window.MAERS?.Toast) window.MAERS.Toast.success("创建成功");
         }
         UI.refreshCurrentView();
     }
@@ -274,6 +330,9 @@ export const Admin = {
     uiDelete,
     uiRename,
     uiEditAlbum,
+    uiRenamePart,
+    uiDeletePart,
+    uiResetTracks,
     addCategory,
     addCollection,
     addAlbum

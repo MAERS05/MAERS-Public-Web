@@ -182,3 +182,137 @@ html.light-mode .admin-editor-mode #edit-preview {
     border-color: rgba(0, 0, 0, 0.1);
     color: #333;
 }
+
+/* ==========================================================================
+   Vditor Dark Mode Contrast Fixes
+   ========================================================================== */
+
+/* 1. Editor Main Container */
+.vditor {
+    background-color: var(--bg-base) !important;
+    border: 1px solid var(--pill-border) !important;
+    border-radius: 8px !important;
+    /* overflow: hidden; -- Removed to prevent tooltip clipping */
+}
+
+/* 1.1 Contrast Fix for floating tooltips (hints) */
+.vditor-tooltipped::after {
+    background: #4a4f56 !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+}
+
+/* Tooltip Arrow Fixes (Full directional coverage) */
+.vditor-tooltipped::before {
+    border-top-color: #4a4f56 !important;
+}
+
+[class*="vditor-tooltipped__n"]::before {
+    border-top-color: #4a4f56 !important;
+}
+
+[class*="vditor-tooltipped__s"]::before {
+    border-bottom-color: #4a4f56 !important;
+}
+
+[class*="vditor-tooltipped__w"]::before {
+    border-left-color: #4a4f56 !important;
+}
+
+[class*="vditor-tooltipped__e"]::before {
+    border-right-color: #4a4f56 !important;
+}
+
+/* 1.3 Force Centering for Edge Tooltips (Override Vditor's NE/NW logic) */
+.vditor-tooltipped__ne::after,
+.vditor-tooltipped__nw::after,
+.vditor-tooltipped__se::after,
+.vditor-tooltipped__sw::after {
+    left: auto !important;
+    right: 50% !important;
+    margin-left: 0 !important;
+    transform: translateX(50%) !important;
+}
+
+.vditor-tooltipped__ne::before,
+.vditor-tooltipped__nw::before,
+.vditor-tooltipped__se::before,
+.vditor-tooltipped__sw::before {
+    left: auto !important;
+    right: 50% !important;
+    margin-left: 0 !important;
+    margin-right: -5px !important;
+}
+
+/* 1.2 Contrast Fix for dropdown menus (Heading/Emoji etc) */
+.vditor-hint,
+.vditor-panel {
+    background-color: #1e2227 !important;
+    border: 1px solid var(--pill-border) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+}
+
+.vditor-hint li:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}
+
+/* 4. Content Area (IR/SV/WYSIWYG) */
+.vditor-ir,
+.vditor-wysiwyg,
+.vditor-sv {
+    background-color: var(--bg-base) !important;
+    color: var(--text-main) !important;
+}
+
+/* 5. Text & Caret Priority */
+.vditor-reset {
+    color: var(--text-main) !important;
+    caret-color: var(--text-main) !important;
+    font-family: var(--font-main) !important;
+}
+
+/* 6. Fix for Code Blocks & Inline Code in Dark Mode */
+.vditor-reset code:not(.hljs) {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ff79c6 !important;
+    /* Pink-ish for code visibility */
+    padding: 2px 4px !important;
+    border-radius: 4px !important;
+}
+
+/* 7. Markdown Symbols (e.g., #, **, >) visibility */
+.vditor-ir__marker {
+    color: var(--text-sub) !important;
+    opacity: 0.6;
+}
+
+/* 8. Table Fix - Avoid blinding white backgrounds */
+.vditor-reset table {
+    background: transparent !important;
+    color: var(--text-main) !important;
+    border-collapse: collapse !important;
+}
+
+.vditor-reset table th,
+.vditor-reset table td {
+    border: 1px solid var(--pill-border) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    padding: 8px !important;
+}
+
+/* 9. Scrollbar for Vditor Content */
+.vditor-ir::-webkit-scrollbar,
+.vditor-wysiwyg::-webkit-scrollbar,
+.vditor-sv::-webkit-scrollbar {
+    width: 6px;
+}
+
+.vditor-ir::-webkit-scrollbar-thumb,
+.vditor-wysiwyg::-webkit-scrollbar-thumb,
+.vditor-sv::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 10px;
+}

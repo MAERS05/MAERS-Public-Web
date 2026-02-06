@@ -137,7 +137,7 @@ function _renderAdminEditor(layer, node) {
         preview: {
             theme: {
                 current: contentTheme,
-                path: 'assets/vditor-assets/css/content-theme'
+                path: 'plugins/vditor-assets/css/content-theme'
             }
         },
         cache: { enable: false },

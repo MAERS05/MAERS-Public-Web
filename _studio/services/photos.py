@@ -78,7 +78,8 @@ def to_web_path(path):
 def handle_upload(query, file_data):
     """处理图片上传请求"""
     category = os.path.basename(query.get('category', ['default'])[0])
-    raw_name_input = query.get('name', ['temp.jpg'])[0]
+    import urllib.parse
+    raw_name_input = urllib.parse.unquote(query.get('name', ['temp.jpg'])[0])
     ext = os.path.splitext(raw_name_input)[1].lower()
     if not ext: ext = '.jpg'
     

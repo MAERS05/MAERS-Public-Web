@@ -256,7 +256,7 @@ export async function bootstrap(View) {
         View.setupSearchListeners();
         View.renderPageTitle();
         View.renderBreadcrumb();
-        View.renderGrid(AppState.root);
+        View.renderGrid(AppState.root, false, true);
     } else {
         console.error("[MAERS.CMS] Failed to load data.");
         if (window.MAERS?.Toast) window.MAERS.Toast.error("Failed to load data.");

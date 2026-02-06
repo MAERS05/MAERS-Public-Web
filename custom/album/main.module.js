@@ -11,9 +11,7 @@ import { initLayout, renderPageHeader } from '../../shared/layout.module.js';
 import { initTheme } from '../../shared/theme.module.js';
 
 // 2. Album Specific
-// 2. Album Specific
-import './viewer/album-config.module.js';
-const CATEGORY_CONFIG = window.CATEGORY_CONFIG || [];
+let CATEGORY_CONFIG = [];
 
 // --- Initialization ---
 
@@ -24,11 +22,23 @@ initLayout();
 initTheme();
 
 // C. Render Logic
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Render Header
+document.addEventListener('DOMContentLoaded', async () => {
+    // 1. Load Album Config
+    try {
+        const response = await fetch('data/album-config.json?t=' + Date.now());
+        if (response.ok) {
+            CATEGORY_CONFIG = await response.json();
+        } else {
+            console.error('Failed to load album config');
+        }
+    } catch (err) {
+        console.error('Error loading album config:', err);
+    }
+
+    // 2. Render Header
     renderPageHeader('<img src="ui/album-icon.svg" alt="Album" style="height: 1.25em; width: auto; vertical-align: middle;"> My Gallery');
 
-    // 2. Render Grid
+    // 3. Render Grid
     const grid = document.getElementById('category-grid');
     if (!grid) return;
 

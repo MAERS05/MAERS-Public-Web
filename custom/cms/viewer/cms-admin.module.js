@@ -28,21 +28,18 @@ export async function initAdminFeatures() {
     // 1. 初始化 Manager
     manager = new BatchItemManager({
         list: [],
+        autoSaveBar: false,
         onUpdate: () => {
             // skipSync=true 避免重新同步 Manager（防止循环依赖）
             Render?.renderGrid(manager.list, false, false, true);
-        },
-        onChange: (isDirty) => {
-            if (isDirty) SaveButton.show();
-            else SaveButton.hide();
         }
     });
 
-    // 2. 初始化 SaveButton
-    SaveButton.init(document.body, performSave, performCancel);
+    // 2. 初始化 SaveButton - 移至 admin-main.module.js 统一管理
+    // SaveButton.init(document.body, performSave, performCancel);
 
-    // 3. 初始同步
-    syncManagerList();
+    // 3. 初始同步 - 使用 true 以重置 initialSnapshot，建立正确的“原始状态”
+    syncManagerList(null, true);
 
     // 4. Inject Create Buttons
     const existingAddBtn = document.querySelector('.cms-add-btn-group');
@@ -56,7 +53,7 @@ export async function initAdminFeatures() {
             const searchBox = targetContainer.querySelector('.search-box') || targetContainer.querySelector('input');
             const insertRef = searchBox || targetContainer.firstChild;
 
-            // Create Buttons using 'cms-create-btn' (Styles defined in admin-cms.css)
+            // Create Buttons using 'cms-create-btn' (Styles defined in cms-editor.css)
             const btnFolder = document.createElement('button');
             btnFolder.className = 'cms-create-btn';
             btnFolder.innerHTML = '＋ 文件';
@@ -101,7 +98,7 @@ export function syncManagerList(list, shouldReset = false) {
     }
 }
 
-async function performSave() {
+export async function performSave() {
     if (!manager) return;
 
     const deletedItems = manager.list.filter(item => item._deleted);
@@ -109,9 +106,15 @@ async function performSave() {
 
 
     let success = true;
+    let deletedWithCover = false;
 
     // 1. Batch Delete
     for (const item of deletedItems) {
+        // Check if item has cover before deletion
+        if (item.coverImage) {
+            deletedWithCover = true;
+        }
+
         const res = await Controller.deleteNode(item.id);
         if (!res.success) {
             success = false;
@@ -139,8 +142,14 @@ async function performSave() {
 
     // 3. Finalize
     if (success) {
-        if (Feedback) Feedback.notifySaveSuccess();
-        else if (window.MAERS?.Toast) window.MAERS.Toast.success("保存成功");
+        // [Modified]: Feedback removed, handled by global coordination in admin-main
+        // if (Feedback) Feedback.notifySaveSuccess();
+        // else if (window.MAERS?.Toast) window.MAERS.Toast.success("保存成功");
+
+        // Show cover deletion notice if applicable
+        if (deletedWithCover && window.MAERS?.Toast) {
+            window.MAERS.Toast.info("封面已一并删除");
+        }
 
         // Reload View
         // [Fix]: Force Manager Reset (true, true) to ensure clean state matching the new data
@@ -155,7 +164,7 @@ async function performSave() {
     }
 }
 
-async function performCancel() {
+export async function performCancel() {
     if (manager) {
         // 1. Manually revert changes on the Source of Truth (AppState)
         // because manager manages a detached sorted array and reset() replaces objects 
@@ -172,7 +181,8 @@ async function performCancel() {
         // 3. Refresh View to reflect clean AppState
         await refreshView(false);
 
-        if (Feedback) Feedback.notifyCancel();
+        // [Modified]: Feedback removed, handled by global coordination in admin-main
+        // if (Feedback) Feedback.notifyCancel();
     }
 }
 
@@ -314,7 +324,12 @@ export async function uiUploadCover(e, id) {
             formData.append("file", file);
             formData.append("nodeId", id);
             const res = await Controller.uploadCover?.(formData);
-            if (res?.success) refreshView();
+            if (res?.success) {
+                if (window.MAERS?.Toast) {
+                    window.MAERS.Toast.success("封面上传成功");
+                }
+                refreshView();
+            }
         }
     };
     input.click();
@@ -324,7 +339,12 @@ export async function uiRemoveCover(e, id) {
     e.preventDefault();
     e.stopPropagation();
     if (confirm("Remove cover image?")) {
-        await Controller.updateNode?.(id, { coverImage: null });
+        const res = await Controller.updateNode?.(id, { coverImage: null });
+        if (res?.success || res === undefined) {
+            if (window.MAERS?.Toast) {
+                window.MAERS.Toast.success("封面删除成功");
+            }
+        }
         refreshView();
     }
 }
@@ -372,5 +392,7 @@ export const Admin = {
     uiUploadCover,
     uiRemoveCover,
     uiAddTag,
-    uiRemoveTag
+    uiRemoveTag,
+    performSave,
+    performCancel
 };

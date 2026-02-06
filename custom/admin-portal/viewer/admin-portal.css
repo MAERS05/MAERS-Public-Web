@@ -75,13 +75,15 @@ h1.admin-title {
     object-fit: contain;
 }
 
-/* 后端管理页 Record 图标变色适配 */
-.admin-card img[src*="record-icon"] {
+/* 后端管理页图标变色适配 (Record & Index) */
+.admin-card img[src*="record-icon"],
+.admin-card img[src*="index.svg"] {
     filter: invert(0.9);
     transition: filter 0.3s ease;
 }
 
-html.light-mode .admin-card img[src*="record-icon"] {
+html.light-mode .admin-card img[src*="record-icon"],
+html.light-mode .admin-card img[src*="index.svg"] {
     filter: none;
 }
 
@@ -166,46 +168,3 @@ html.light-mode .admin-card img[src*="record-icon"] {
 }
 
 /* Action Buttons */
-.btn-export {
-    padding: 10px 24px;
-    background: #7effd4;
-    border: none;
-    color: #2d3436;
-    border-radius: 50px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(126, 255, 212, 0.3);
-}
-
-.btn-export:hover {
-    filter: brightness(1.05);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(126, 255, 212, 0.4);
-}
-
-.btn-import {
-    padding: 10px 24px;
-    background: #ff7675;
-    border: none;
-    color: #ffffff;
-    border-radius: 50px;
-    cursor: pointer;
-    font-size: 1rem;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    transition: 0.2s;
-    box-shadow: 0 4px 10px rgba(255, 118, 117, 0.3);
-}
-
-.btn-import:hover {
-    filter: brightness(1.05);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 15px rgba(255, 118, 117, 0.4);
-}

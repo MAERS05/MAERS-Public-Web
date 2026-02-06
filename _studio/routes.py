@@ -74,13 +74,16 @@ def dispatch_post(path, query_params, body_data, file_data=None):
         return cms.handle_request(path, 'POST', query_params, body_data)
     
     # 2. Photos (Upload/Delete/Reorder) (Ex-Album)
-    if path == '/upload' and file_data:
+    clean_path = path.rstrip('/')
+    if clean_path == '/upload':
+        if not file_data:
+            return 400, {"error": "Upload failed: No file data received (Check Service Worker body handling)"}
         return 200, photos.handle_upload(query_params, file_data)
     
-    if path == '/delete':
+    if clean_path == '/delete':
         return 200, photos.handle_delete(body_data)
 
-    if path == '/reorder':
+    if clean_path == '/reorder':
         return 200, photos.handle_reorder(query_params, body_data)
 
     # 3. Music

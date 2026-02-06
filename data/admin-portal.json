@@ -8,7 +8,7 @@
     "title": "图片管理",
     "icon": "ui/album-icon.svg",
     "url": "admin-album.html?type=photos",
-    "style": "custom/album/admin/admin-album.css"
+    "style": "custom/album/admin/album-admin.css"
   },
   {
     "title": "音视管理",

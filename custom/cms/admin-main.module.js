@@ -56,6 +56,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         await bootstrap(View);
 
+        // -- Global Admin Coordination --
+        if (State.IS_ADMIN) {
+            // Function to check if anything is dirty across all managers
+            const checkGlobalDirty = () => {
+                const adminManager = Admin.getManager();
+                const tagManager = Tags.getManager?.();
+
+                const adminDirty = adminManager ? (adminManager.getSnapshot() !== adminManager.initialSnapshot) : false;
+                const tagDirty = tagManager ? (tagManager.getSnapshot() !== tagManager.initialSnapshot) : false;
+
+                if (adminDirty || tagDirty) SaveButton.show();
+                else SaveButton.hide();
+            };
+
+            // Initialize SaveButton once
+            SaveButton.init(document.body, async () => {
+                // Joint Save
+                await Admin.performSave();
+                if (Tags.tagPerformSave) await Tags.tagPerformSave();
+                SaveButton.hide();
+                // Central success notification
+                Feedback.notifySaveSuccess();
+            }, async () => {
+                // Joint Cancel
+                await Admin.performCancel();
+                if (Tags.tagPerformCancel) await Tags.tagPerformCancel();
+                SaveButton.hide();
+                // Central cancel notification
+                Feedback.notifyCancel();
+            });
+
+            // Override managers' onChange to use our global check
+            // We do this after modules are initialized
+            setTimeout(() => {
+                const am = Admin.getManager();
+                if (am) am.onChange = checkGlobalDirty;
+
+                // Tags manager might be initialized lazily, so we hook into its toggle
+                const originalToggle = Tags.toggleTagDrawer;
+                Tags.toggleTagDrawer = () => {
+                    originalToggle();
+                    const tm = Tags.getManager?.();
+                    if (tm) tm.onChange = checkGlobalDirty;
+                };
+            }, 100);
+        }
+
         // Setup event listeners after bootstrap
         setupViewEventListeners();
 

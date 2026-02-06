@@ -20,7 +20,6 @@ export const Admin = {
         await this.loadModules();
         this.initManager();
         this.render(); // 初始渲染
-        this.bindEvents();
     },
 
     async loadModules() {
@@ -37,8 +36,7 @@ export const Admin = {
         // 初始化 BatchItemManager
         this.manager = new BatchItemManager({
             list: this.modules,
-            onUpdate: () => this.render(),
-            onChange: () => SaveButton.show()
+            onUpdate: () => this.render()
         });
 
         // 初始化保存按钮
@@ -300,82 +298,6 @@ export const Admin = {
         Feedback.notifyCancel();
     },
 
-    async exportModules() {
-        try {
-            const res = await fetch('/api/modules');
-            const data = await res.json();
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `modules_backup_${Date.now()}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            Toast.success('✅ 配置已导出');
-        } catch (e) {
-            Toast.error('❌ 导出失败: ' + e.message);
-        }
-    },
 
-    async importModules(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-
-            if (!Array.isArray(data)) {
-                alert('❌ 文件格式错误: 必须是数组格式');
-                return;
-            }
-
-            for (let mod of data) {
-                if (!mod.title || !mod.icon || !mod.url) {
-                    alert('❌ 文件格式错误: 每个模块必须包含 title, icon, url 字段');
-                    return;
-                }
-            }
-
-            const res = await fetch('/api/save_modules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(data)
-            });
-
-            if (res.ok) {
-                Toast.success(`✅ 成功导入 ${data.length} 个模块`);
-                await this.loadModules();
-                this.manager.setList(this.modules);
-                this.render();
-            } else {
-                Toast.error('❌ 保存失败');
-            }
-        } catch (e) {
-            Toast.error('❌ 导入失败: ' + e.message);
-        } finally {
-            event.target.value = '';
-        }
-    },
-
-    bindEvents() {
-        const exportBtn = document.getElementById('export-btn');
-        const importBtn = document.getElementById('import-btn');
-        const importFile = document.getElementById('import-file');
-
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => this.exportModules());
-        }
-
-        if (importBtn) {
-            importBtn.addEventListener('click', () => {
-                if (importFile) importFile.click();
-            });
-        }
-
-        if (importFile) {
-            importFile.addEventListener('change', (e) => this.importModules(e));
-        }
-    }
 };
 
