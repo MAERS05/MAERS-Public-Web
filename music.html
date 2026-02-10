@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
     <script src="custom/config.js"></script>
@@ -21,22 +21,6 @@
     <link rel="stylesheet" href="custom/music/viewer/music.css">
 
     <!-- 数据现在通过 ES6 模块异步加载 (data/music-data.json) -->
-    <style>
-        /* [Fix] Match album.html layout behavior */
-        .container {
-            padding: 15px !important;
-            height: 100vh !important;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-card {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-    </style>
 </head>
 
 <body>
@@ -45,8 +29,10 @@
             <!-- 头部 -->
             <div class="music-header-bar">
                 <a href="index.html" class="back-btn">← Back</a>
-                <div class="center-title">Music & Video Space</div>
-                <div class="right-icon zoom-trigger-whole"><img src="ui/music-headphone.svg"
+                <div class="center-title"><img src="ui/music-icon.svg" class="music-title-icon zoom-trigger-icon"
+                        style="height: 1.1em; width: 1.1em; position: relative; top: 3px; margin-right: 4px;">Music &
+                    Video</div>
+                <div class="right-icon"><img src="ui/music-headphone.svg"
                         style="width: 1em; height: 1em; vertical-align: middle;"></div>
             </div>
             <!-- 主内容区 -->

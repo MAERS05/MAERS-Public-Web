@@ -5,6 +5,7 @@
  */
 
 import { AdminButtonHelper } from '../../../../data-manage/admin-base.module.js';
+import { Search as SearchUtils } from '../../../../shared/utils.module.js';
 
 // Dependency injection
 let State = null;
@@ -74,7 +75,7 @@ export function refreshDrawerList(updateManagerCallback) {
     let visibleTags = Object.keys(tagCounts);
 
     if (query) {
-        visibleTags = visibleTags.filter(t => t.toLowerCase().includes(query));
+        visibleTags = visibleTags.filter(t => SearchUtils.match(t, query));
     }
 
     // 3. Organize

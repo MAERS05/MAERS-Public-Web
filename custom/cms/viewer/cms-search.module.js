@@ -27,7 +27,22 @@ export function setupSearchListeners() {
 
     const mainInput = document.getElementById(State.SELECTORS.SEARCH_INPUT.slice(1));
     if (mainInput) {
+        let lastKeyword = "";
+
         mainInput.addEventListener("input", (e) => {
+            const currentKeyword = e.target.value.trim();
+
+            if (lastKeyword === "" && currentKeyword !== "") {
+                State.addFilter(currentKeyword);
+            } else if (lastKeyword !== "" && currentKeyword === "") {
+                State.removeFilter(lastKeyword);
+            } else if (lastKeyword !== "" && currentKeyword !== "" && lastKeyword !== currentKeyword) {
+                State.removeFilter(lastKeyword);
+                State.addFilter(currentKeyword);
+            }
+
+            lastKeyword = currentKeyword;
+
             autoResizeInput(e.target);
             applyFilter();
         });
@@ -63,9 +78,9 @@ export function applyFilter() {
     const Search = SearchUtils;
     if (!Search) return;
 
-    // [Fix] Search Scope: Based on current path, not always root.
-    // This allows filtering "within" a folder when navigating.
+    // Search Scope: Current folder's immediate children
     let searchScope = State.AppState.root;
+
     if (State.AppState.pathStack && State.AppState.pathStack.length > 0) {
         const current = State.AppState.pathStack[State.AppState.pathStack.length - 1];
         if (current !== 'root' && current.children) {
@@ -73,11 +88,28 @@ export function applyFilter() {
         }
     }
 
-    const results = Search.filterNodes(
-        searchScope,
-        State.AppState.activeFilters,
-        keywordStr,
-    );
+    // When tag filters are active, only search immediate children (non-recursive)
+    const hasTagFilters = State.AppState.activeFilters.size > 0;
+    let results;
+
+    if (hasTagFilters && !keywordStr) {
+        // Tag-only filter: non-recursive, immediate children only
+
+        results = searchScope.filter(node => {
+            if (!node.tags) return false;
+            for (let tag of State.AppState.activeFilters) {
+                if (!node.tags.includes(tag)) return false;
+            }
+            return true;
+        });
+    } else {
+        // Keyword search or combined: use recursive search
+        results = Search.filterNodes(
+            searchScope,
+            State.AppState.activeFilters,
+            keywordStr,
+        );
+    }
 
     const hasFilter = State.AppState.activeFilters.size > 0 || keywordStr;
 

@@ -107,6 +107,42 @@ class MaersJanitor:
         except Exception as e:
             self.warn(f"读取 music-data.json 出错: {e}")
 
+    def collect_from_space(self):
+        """扫描 Space 配置文件中的本地图标引用"""
+        if not os.path.exists(config.SPACE_DATA):
+            return
+        
+        self.log("正在扫描 space-tree.json...")
+        try:
+            with open(config.SPACE_DATA, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            def scan_nodes(nodes):
+                if not nodes:
+                    return
+                for node in nodes:
+                    # 扫描图标字段
+                    if 'icon' in node and node['icon']:
+                        icon_path = node['icon']
+                        # 只处理本地路径（不以 http:// 或 https:// 开头）
+                        if not icon_path.startswith(('http://', 'https://')):
+                            path = normalize_path(icon_path)
+                            self.used_files.add(path)
+                            # 如果是 photos 目录下的图标，也添加对应的缩略图
+                            if path.startswith('photos/images/'):
+                                self.used_files.add(path.replace('photos/images/', 'photos/thumbnails/'))
+                                self.used_files.add(path.replace('photos/images/', 'photos/previews/'))
+                    
+                    # 递归扫描子节点
+                    if 'children' in node and node['children']:
+                        scan_nodes(node['children'])
+            
+            if 'root' in data:
+                scan_nodes(data['root'])
+                
+        except Exception as e:
+            self.warn(f"读取 space-tree.json 出错: {e}")
+
     def clean_physical_files(self):
         """遍历 photos 目录及其子目录，删除未被引用的文件"""
         self.log("正在清理物理文件 (photos/)...")
@@ -202,6 +238,7 @@ class MaersJanitor:
         self.collect_from_cms()
         self.collect_from_gallery()
         self.collect_from_music()
+        self.collect_from_space()
         
         total_refs = len(self.used_files)
         self.success(f"白名单构建完成，共计引用 {total_refs} 个有效路径")

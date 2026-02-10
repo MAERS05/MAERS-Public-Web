@@ -156,8 +156,8 @@ export function initZoomSystem() {
             { path: "index.html", selector: "#brand-logo", mode: "whole" },
             { path: "admin-index.html", selector: "#brand-logo", mode: "whole" },
             { path: "", selector: "#brand-logo", mode: "whole" },
-            { path: "music.html", selector: ".right-icon", mode: "whole" },
-            { path: "admin-music.html", selector: ".right-icon", mode: "whole" },
+            { path: "music.html", selector: ".music-title-icon", mode: "icon_only" },
+            { path: "admin-music.html", selector: ".music-title-icon", mode: "icon_only" },
             { path: "*", selector: ".header-title", mode: "icon_only" },
         ];
         return Promise.resolve(ZOOM_CONFIG);

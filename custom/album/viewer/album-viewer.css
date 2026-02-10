@@ -9,8 +9,6 @@
   flex: 1;
   overflow-y: auto;
   padding: 40px;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
   background: transparent !important;
   border: none !important;
   backdrop-filter: none !important;
@@ -20,14 +18,6 @@
 html.light-mode .gallery-content {
   background: transparent !important;
   border: none !important;
-}
-
-.gallery-content::-webkit-scrollbar {
-  display: none;
-}
-
-.gallery-content::-webkit-scrollbar-track {
-  background: transparent !important;
 }
 
 /* ==========================================================================

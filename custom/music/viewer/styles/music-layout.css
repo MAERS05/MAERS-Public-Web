@@ -47,6 +47,7 @@
 #search-input:focus {
     background: rgba(255, 255, 255, 0.2);
     width: 220px;
+    box-shadow: none;
 }
 
 .search-results {
@@ -125,7 +126,6 @@
     color: var(--text-main);
     opacity: 0.8;
     z-index: 5;
-    cursor: pointer;
     display: inline-block;
     transform-origin: center center;
     transition: transform 0.3s ease, color 0.3s ease, opacity 0.3s ease;
@@ -204,7 +204,7 @@ html.light-mode #search-input {
 html.light-mode #search-input:focus {
     background: white;
     border-color: #aaa;
-    box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    box-shadow: none;
 }
 
 a,

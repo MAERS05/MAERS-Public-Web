@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
 
@@ -22,23 +22,6 @@
     <link rel="stylesheet" href="static-style/toast.css">
     <link rel="stylesheet" href="custom/music/viewer/music.css">
     <link rel="stylesheet" href="custom/music/admin/music-admin.css">
-    <style>
-        /* 统一 admin 布局：全屏填充 */
-        .container {
-            padding: 15px !important;
-            height: 100vh !important;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-card {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            max-height: none !important;
-        }
-    </style>
 
 </head>
 
@@ -63,8 +46,10 @@
             <!-- 头部 -->
             <div class="music-header-bar">
                 <a href="admin-portal.html" class="back-btn">← Back</a>
-                <div class="center-title">Music & Video Space</div>
-                <div class="right-icon zoom-trigger-whole"><img src="ui/music-headphone.svg"
+                <div class="center-title"><img src="ui/music-icon.svg" class="music-title-icon zoom-trigger-icon"
+                        style="height: 1.1em; width: 1.1em; position: relative; top: 3px; margin-right: 4px;">Music &
+                    Video</div>
+                <div class="right-icon"><img src="ui/music-headphone.svg"
                         style="width: 1em; height: 1em; vertical-align: middle;"></div>
             </div>
             <!-- 主内容区 -->

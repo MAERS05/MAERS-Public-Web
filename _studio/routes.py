@@ -3,7 +3,7 @@ import urllib.parse
 import json
 
 # Services
-from services import cms, photos, music, bili, album
+from services import cms, photos, music, bili, album, space
 import config
 
 PAGE_TEMPLATE = """<!DOCTYPE html>
@@ -43,6 +43,10 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 
 def dispatch_get(path, query_params):
     parsed_path = path
+
+    # 0. CMS Tags (Special Case)
+    if parsed_path == '/api/cms/tag_categories':
+        return 200, cms.get_tag_categories()
     
     # 1. CMS
     if parsed_path.startswith('/api/cms/'):
@@ -58,19 +62,58 @@ def dispatch_get(path, query_params):
         bvid = query_params.get('bvid', [None])[0]
         return bili.get_video_info(bvid)
     
+    # 4. CMS Tags
+    if parsed_path == '/api/cms/tag_categories':
+        return 200, cms.get_tag_categories()
+    
     # 4. Music - 获取音乐数据 API
     if parsed_path == '/api/music_data':
         data = cms.load_json('data/music-data.json', 'data/music-data.js')
         if data is not None:
             return 200, data
         return 404, {"error": "Music data not found"}
+    
+    if parsed_path == '/api/space/save_tree':
+        # This is a POST-only API usually, but routes might direct here if misconfigured?
+        # Actually dispatch_post handles this. Let's redirect logic if needed or just return 405.
+        return 405, {"error": "Method Not Allowed"}
+
+    # 5. Space - 获取收藏数据 API
+    if parsed_path == '/api/space/collections':
+        data = space.load_collections()
+        return 200, data
 
     return 404, None  # 返回 None 让 SimpleHTTPRequestHandler 处理静态文件
 
 def dispatch_post(path, query_params, body_data, file_data=None):
     
+    # 0. CMS Tags (Special Case)
+    if path == '/api/cms/save_tag_categories':
+        success = cms.save_tag_categories(body_data)
+        if success:
+            return 200, {"status": "success"}
+        else:
+            return 500, {"error": "Failed to save tag categories"}
+
     # 1. CMS
     if path.startswith('/api/cms/'):
+        # Check for granular tag update
+        if path == '/api/cms/update_tags':
+            module = query_params.get('module', ['notes'])[0]
+            node_id = body_data.get('id')
+            tags = body_data.get('tags', [])
+            
+            if not node_id:
+                return 400, {"error": "Node ID is required"}
+            
+            try:
+                if cms.update_node_tags(module, node_id, tags):
+                    return 200, {"status": "success", "message": "Tags updated"}
+                else:
+                    return 404, {"error": "Node not found"}
+            except Exception as e:
+                return 500, {"error": str(e)}
+        
         return cms.handle_request(path, 'POST', query_params, body_data)
     
     # 2. Photos (Upload/Delete/Reorder) (Ex-Album)
@@ -85,6 +128,21 @@ def dispatch_post(path, query_params, body_data, file_data=None):
 
     if clean_path == '/reorder':
         return 200, photos.handle_reorder(query_params, body_data)
+
+    if clean_path == '/api/photos/update_tags':
+        photo_id = body_data.get('id')
+        tags = body_data.get('tags', [])
+        
+        if not photo_id:
+            return 400, {"error": "Photo ID is required"}
+            
+        try:
+            if photos.update_tags(photo_id, tags):
+                return 200, {"status": "success"}
+            else:
+                return 404, {"error": "Photo not found"}
+        except Exception as e:
+            return 500, {"error": str(e)}
 
     # 3. Music
     if path == '/api/save_music':
@@ -150,7 +208,95 @@ def dispatch_post(path, query_params, body_data, file_data=None):
                 return 500, {"error": str(e)}
         return 404, {"error": "File not found"}
 
+
     if path in ['/api/add_category', '/api/delete_category', '/api/reorder_category', '/api/update_category']:
         return album.handle_ops(path, body_data)
+    
+    # 5.5 CMS Tags APIs
+    if path == '/api/cms/save_tag_categories':
+        success = cms.save_tag_categories(body_data)
+        if success:
+            return 200, {"status": "success"}
+        else:
+            return 500, {"error": "Failed to save tag categories"}
+
+    # 6. Space Management APIs
+    if path == '/api/space/fetch_meta':
+        url = body_data.get('url')
+        if not url:
+            return 400, {"error": "URL is required"}
+        try:
+            meta = space.fetch_url_metadata(url)
+            return 200, meta
+        except Exception as e:
+            return 500, {"error": str(e)}
+    
+    if path == '/api/space/add':
+        try:
+            space.add_collection(body_data)
+            return 200, {"status": "success"}
+        except ValueError as e:
+            return 400, {"error": str(e)}
+        except Exception as e:
+            return 500, {"error": str(e)}
+    
+    if path == '/api/space/update':
+        item_id = body_data.get('id')
+        update_data = body_data.get('data', {})
+        if not item_id:
+            return 400, {"error": "ID is required"}
+        try:
+            space.update_collection(item_id, update_data)
+            return 200, {"status": "success"}
+        except ValueError as e:
+            return 404, {"error": str(e)}
+        except Exception as e:
+            return 500, {"error": str(e)}
+    
+    if path == '/api/space/delete':
+        item_id = body_data.get('id')
+        if not item_id:
+            return 400, {"error": "ID is required"}
+        try:
+            space.delete_collection(item_id)
+            return 200, {"status": "success"}
+        except ValueError as e:
+            return 404, {"error": str(e)}
+        except Exception as e:
+            return 500, {"error": str(e)}
+    
+    if path == '/api/space/reorder':
+        id_list = body_data.get('ids', [])
+        try:
+            space.reorder_collections(id_list)
+            return 200, {"status": "success"}
+        except Exception as e:
+            return 500, {"error": str(e)}
+
+    # 6.5 Space Tree Save (New)
+    if path == '/api/space/save_tree':
+        # Direct file write to space-tree.json
+        try:
+            space_tree_path = os.path.join(config.DATA_DIR, 'space-tree.json')
+            cms.save_json(space_tree_path, body_data)
+            return 200, {"status": "success", "message": "Space tree saved"}
+        except Exception as e:
+            print(f"Error saving space tree: {e}")
+            return 500, {"error": str(e)}
+
+    # 6.6 Space Tag Update (Granular)
+    if path == '/api/space/update_tags':
+        node_id = body_data.get('id')
+        tags = body_data.get('tags', [])
+        if not node_id:
+            return 400, {"error": "Node ID is required"}
+        
+        try:
+            if space.update_node_tags(node_id, tags):
+                return 200, {"status": "success", "message": "Tags updated"}
+            else:
+                return 404, {"error": "Node not found"}
+        except Exception as e:
+            return 500, {"error": str(e)}
 
     return 404, {"error": "API not found"}

@@ -10,6 +10,7 @@ import { BatchItemManager, SaveButton } from '../../../data-manage/admin-base.mo
 let State = null;
 let Controller = null;
 
+// ...
 // Track which categories are expanded
 export const expandedCategories = new Set();
 // Track selected tags for batch operation
@@ -28,6 +29,7 @@ export function initManager(onUpdateCallback) {
         const categories = (Controller && Controller.AppState.tagCategories) ? Controller.AppState.tagCategories : [];
         categoryManager = new BatchItemManager({
             list: categories,
+            // Revert autoSaveBar to false to rely on initUnified
             autoSaveBar: false,
             onUpdate: (newList) => {
                 if (newList && Controller) {
@@ -39,6 +41,7 @@ export function initManager(onUpdateCallback) {
         });
     }
 }
+
 
 export function getManager() {
     return categoryManager;
@@ -68,8 +71,12 @@ export async function tagPerformSave() {
 }
 
 export async function tagPerformCancel() {
-    if (categoryManager) {
+    if (categoryManager && Controller) {
         categoryManager.reset();
+
+        if (Controller.AppState && Controller.AppState.tagCategories) {
+            categoryManager.setList(Controller.AppState.tagCategories);
+        }
     }
 }
 
@@ -193,7 +200,7 @@ export async function createCategory(refreshCallback) {
 
             if (SaveButton) SaveButton.hide();
 
-            if (window.MAERS?.Toast) window.MAERS.Toast.success("分类已添加");
+            // Toast handled by caller or unified logic if part of batch
         } else {
             categoryManager.onChange();
         }

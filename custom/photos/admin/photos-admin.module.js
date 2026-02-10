@@ -17,6 +17,7 @@ export function initAdmin(controller, view, adminCore) {
 }
 
 import { Utils } from '../../../shared/utils.module.js';
+import { setupTagDragAndMenu } from '../../cms/admin/tag-interactions.module.js';
 
 let container = null;
 let manager = null;
@@ -135,22 +136,29 @@ async function handleSave() {
         const res = await Controller.saveChanges(dels, newOrder);
         if (res.success) {
             await Controller.reloadData();
-            // Fix: Sync manager with fresh data after save to clear _deleted flags and update indices
+            // Sync manager with fresh data after save to clear _deleted flags and update indices
             if (manager && manager.setList) {
                 manager.setList(Controller.State.loadedData);
             }
-            if (AdminCore.Feedback) {
-                const msg = dels.length > 0 ? "保存成功，关联物理图片已同步删除" : "保存成功";
-                AdminCore.Feedback.notifySaveSuccess(msg);
-            }
+
             if (View?.render) {
                 View.render();
             }
+            return true;
         } else throw res.error;
     } catch (e) {
         console.error(e);
-        if (AdminCore.Feedback) AdminCore.Feedback.notifySaveFail();
+        // Let InitUnified handle failure notification if we return false/undefined
+        return false;
     }
+}
+
+export async function performSave() {
+    return await handleSave();
+}
+
+export async function performCancel() {
+    if (manager) manager.reset();
 }
 
 function bindAdminEvents() {
@@ -206,8 +214,72 @@ export const Admin = {
     stageDelete,
     executeMove,
     getManager: () => manager,
-    isReordering: () => manager && manager.selectedIndices.length > 0
+    isReordering: () => manager && manager.selectedIndices.length > 0,
+    addTag,
+    bindTagEvents,
+    performSave,
+    performCancel
 };
+
+// --- Tagging Features (Space-Style) ---
+
+async function addTag(photo) {
+    if (!photo) return;
+    const tag = prompt("添加标签 (Add Tag):");
+    if (!tag || !tag.trim()) return;
+
+    const cleanTag = tag.trim();
+
+    // Optimistic update
+    if (!photo.tags) photo.tags = [];
+    if (photo.tags.includes(cleanTag)) return;
+
+    const newTags = [...photo.tags, cleanTag];
+
+    await updateTagsAPI(photo, newTags, true); // Silent add
+}
+
+function bindTagEvents(span, photo, tag) {
+    // Only bind once per container
+    const container = span.parentNode;
+    if (container.dataset.tagSetup) return;
+
+    container.dataset.tagSetup = "true";
+
+    setupTagDragAndMenu({
+        tagsContainer: container,
+        getTags: () => photo.tags || [],
+        onTagsUpdate: async (newTags) => {
+            await updateTagsAPI(photo, newTags, true); // Silent
+            // Since updateTagsAPI calls View.render(), the DOM is replaced.
+            // Returning false prevents tag-interactions from trying to update stale DOM elements.
+            return false;
+        }
+    });
+}
+
+async function updateTagsAPI(photo, newTags, silent = false) {
+    try {
+        const res = await fetch('/api/photos/update_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: photo.id, tags: newTags })
+        });
+        const data = await res.json();
+
+        if (data.status === 'success') {
+            photo.tags = newTags;
+            // Refresh View to show new state
+            if (View?.render) View.render();
+            if (!silent && window.MAERS?.Toast) window.MAERS.Toast.success("标签已更新");
+        } else {
+            alert("Error: " + (data.error || "Unknown"));
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Network Error during tag update");
+    }
+}
 
 // Auto-init when DOM ready
 if (document.readyState === 'loading') {

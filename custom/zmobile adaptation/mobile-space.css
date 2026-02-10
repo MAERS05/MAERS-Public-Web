@@ -1,0 +1,164 @@
+/* ==========================================================================
+   📱 Mobile Space Styles - Internal Card Fix Only
+   ========================================================================== */
+
+@media (max-width: 900px) {
+
+    /* --- 1. Header Layout --- */
+    .explorer-header {
+        display: grid !important;
+        grid-template-columns: 1fr auto !important;
+        grid-template-rows: auto auto !important;
+        gap: 15px !important;
+        padding-bottom: 20px !important;
+        align-items: center !important;
+    }
+
+    .header-left {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+    }
+
+    .header-title {
+        font-size: 1.25rem !important;
+        font-weight: 800 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        flex: 1;
+    }
+
+    .back-btn {
+        padding: 5px 10px !important;
+        font-size: 0.85rem !important;
+        min-width: unset !important;
+    }
+
+    .header-right {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 10px !important;
+        height: auto !important;
+        position: static !important;
+    }
+
+    .tag-toggle-btn {
+        padding: 6px 10px !important;
+        font-size: 0.85rem !important;
+        white-space: nowrap;
+    }
+
+    .recent-toggle-btn {
+        position: static !important;
+        margin: 0 !important;
+        opacity: 0.7;
+        padding: 5px !important;
+    }
+
+    /* --- Search Box Optimization --- */
+    .explorer-header .search-box {
+        grid-column: 1 / -1 !important;
+        grid-row: 2 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        display: flex !important;
+        justify-content: center !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .search-input {
+        width: 90% !important;
+        height: 38px !important;
+        font-size: 15px !important;
+        text-align: center;
+        border-radius: 19px !important;
+        box-shadow: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .search-input:focus {
+        width: 100% !important;
+        background: #121212;
+        outline: none;
+    }
+
+    /* Light Mode Overrides */
+    .light-mode .search-input,
+    html.light-mode .search-input {
+        background: #ffffff;
+        color: #000000;
+    }
+
+    .light-mode .search-input:focus,
+    html.light-mode .search-input:focus {
+        background: #ffffff;
+    }
+
+
+    /* --- 2. Card Internal Layout Fix (No overlapping) --- */
+    .grid-layout {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+
+    /* 
+       Force flow layout:
+       Icon -> Title -> Desc -> Tags
+       Tags moved to static positioning to naturally sit below description.
+    */
+    .space-card {
+        height: auto !important;
+        /* Allow growing */
+        min-height: 160px !important;
+        padding: 20px 15px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+    }
+
+    .space-icon {
+        margin-bottom: 8px !important;
+    }
+
+    .space-title {
+        font-size: 1.3rem !important;
+        margin-bottom: 8px !important;
+        text-align: center !important;
+    }
+
+    .space-desc {
+        position: static !important;
+        /* Remove absolute positioning */
+        margin-bottom: 12px !important;
+        /* Visual gap before tags */
+        max-width: 100% !important;
+        text-align: center !important;
+        -webkit-line-clamp: 4 !important;
+        /* Optional: limit lines */
+        opacity: 0.7 !important;
+    }
+
+    .space-tags {
+        position: static !important;
+        /* Remove absolute positioning */
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        margin-top: auto !important;
+        /* Push to bottom if space allows */
+        bottom: auto !important;
+        left: auto !important;
+        right: auto !important;
+    }
+}

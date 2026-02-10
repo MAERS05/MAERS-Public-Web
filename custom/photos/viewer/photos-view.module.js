@@ -248,9 +248,11 @@ function getTime(item) {
     return 0;
 }
 
-export function render() {
+export function render(list = null) {
     if (!container) return;
-    const dataList = Controller.State.loadedData;
+
+    // Use list if provided (e.g. search results), otherwise use globally loaded data
+    const dataList = list || Controller.State.loadedData || [];
 
     // --- Smart Diff Rendering (In-Place) ---
     // This ensures we never empty the container, preventing scroll jumps.
@@ -315,6 +317,45 @@ export function render() {
             }
         }
 
+        // --- Render Tags ---
+        const existingTags = div.querySelector('.photo-tags');
+        if (existingTags) existingTags.remove();
+
+        if (img.tags && img.tags.length > 0) {
+            const tagsDiv = document.createElement('div');
+            tagsDiv.className = 'photo-tags';
+            img.tags.forEach(t => {
+                const span = document.createElement('span');
+                span.className = 'photo-tag-chip';
+                span.textContent = t;
+                tagsDiv.appendChild(span);
+
+                // Bind Delete Event (Right Click)
+                if (Admin && Admin.bindTagEvents) {
+                    Admin.bindTagEvents(span, img, t);
+                }
+
+                // Bind Tag Click (Filter)
+                if (AdminCore && AdminCore.Tags && AdminCore.Tags.filterByTag) {
+                    span.title = "Click to filter";
+                    span.style.cursor = "pointer";
+
+                    // Highlight Active
+                    if (AdminCore.AppState && AdminCore.AppState.activeFilters && AdminCore.AppState.activeFilters.has(t)) {
+                        span.classList.add('active');
+                    }
+
+                    span.onclick = (e) => {
+                        e.stopPropagation();
+                        AdminCore.Tags.filterByTag(e, t);
+                    };
+                }
+
+                // Bind Tag Click (Filter) for remaining logic
+            });
+            div.appendChild(tagsDiv);
+        }
+
         // Apply Admin Buttons
         const existingBtns = div.querySelector('.photo-admin-actions');
         if (existingBtns) existingBtns.remove();
@@ -334,6 +375,18 @@ export function render() {
                 extraClass: '',
                 containerClass: 'photo-admin-actions'
             });
+
+            // Space-Style 'Add Tag' Button
+            const addTagBtn = document.createElement('span');
+            addTagBtn.className = 'maers-admin-btn';
+            addTagBtn.innerHTML = '＋';
+            addTagBtn.title = 'Add Tag';
+            addTagBtn.onclick = (e) => {
+                e.stopPropagation();
+                if (Admin && Admin.addTag) Admin.addTag(img);
+            };
+            adminEl.appendChild(addTagBtn);
+
             div.appendChild(adminEl);
         }
 
@@ -541,6 +594,8 @@ function bindLightbox() {
         document.body.classList.remove('is-viewing');
     };
 }
+
+
 
 // 导出 View 对象（向后兼容）
 export const View = {

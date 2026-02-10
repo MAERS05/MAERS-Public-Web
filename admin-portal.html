@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
-  <link rel="icon" type="image/svg+xml" href="ui/icon.svg" />
+  <link rel="icon" type="image/svg+xml" href="ui/logo.svg" />
   <script src="shared/flash-guard.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -17,27 +17,10 @@
   <link rel="stylesheet" href="static-style/style.css" />
   <link rel="stylesheet" href="static-style/toast.css" />
   <link rel="stylesheet" href="custom/admin-portal/viewer/admin-portal.css" />
+  <link rel="stylesheet" href="static-style/admin-modal.css" />
 
   <!-- Dependencies handled by main.js -->
   <script type="module" src="custom/admin-portal/admin/main.module.js"></script>
-
-  <style>
-    /* 统一 admin 布局：全屏填充 */
-    .container {
-      padding: 15px !important;
-      height: 100vh !important;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .main-card {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      max-height: none !important;
-    }
-  </style>
 </head>
 
 <body>

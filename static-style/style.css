@@ -229,3 +229,100 @@ body.is-viewing .auto-mode-btn:hover {
     object-fit: contain;
     display: inline-block;
 }
+
+/* ==========================================================================
+   Fixed Layout Utility - Photos Model
+   ========================================================================== */
+/* Standardizes layout: fixed 100vh container + hidden card overflow */
+/* Content areas (.photo-grid, .folder-grid, etc.) handle their own scrolling */
+/* Page itself remains scrollable (NO overflow:hidden on html/body) */
+
+html.fixed-layout-page .container {
+    height: 100vh !important;
+    padding: 15px !important;
+    display: flex;
+    flex-direction: column;
+}
+
+html.fixed-layout-page .main-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: none !important;
+}
+
+/* ==========================================================================
+   Global Custom Scrollbar
+   ========================================================================== */
+/* Unified scrollbar styles for all scrollable containers */
+
+.photo-grid,
+.folder-grid,
+.drawer-body,
+.reader-view,
+.reader-scroll-area,
+.gallery-content,
+.admin-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+.photo-grid::-webkit-scrollbar,
+.folder-grid::-webkit-scrollbar,
+.drawer-body::-webkit-scrollbar,
+.reader-view::-webkit-scrollbar,
+.reader-scroll-area::-webkit-scrollbar,
+.gallery-content::-webkit-scrollbar,
+.admin-content::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: transparent;
+}
+
+.photo-grid::-webkit-scrollbar-track,
+.folder-grid::-webkit-scrollbar-track,
+.drawer-body::-webkit-scrollbar-track,
+.reader-view::-webkit-scrollbar-track,
+.reader-scroll-area::-webkit-scrollbar-track,
+.gallery-content::-webkit-scrollbar-track,
+.admin-content::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+.photo-grid::-webkit-scrollbar-thumb,
+.folder-grid::-webkit-scrollbar-thumb,
+.drawer-body::-webkit-scrollbar-thumb,
+.reader-view::-webkit-scrollbar-thumb,
+.reader-scroll-area::-webkit-scrollbar-thumb,
+.gallery-content::-webkit-scrollbar-thumb,
+.admin-content::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 10px;
+}
+
+.photo-grid::-webkit-scrollbar-thumb:hover,
+.folder-grid::-webkit-scrollbar-thumb:hover,
+.drawer-body::-webkit-scrollbar-thumb:hover,
+.reader-view::-webkit-scrollbar-thumb:hover,
+.reader-scroll-area::-webkit-scrollbar-thumb:hover,
+.gallery-content::-webkit-scrollbar-thumb:hover,
+.admin-content::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+/* Light mode overrides specific to these classes */
+html.light-mode .photo-grid::-webkit-scrollbar-thumb,
+html.light-mode .folder-grid::-webkit-scrollbar-thumb,
+html.light-mode .gallery-content::-webkit-scrollbar-thumb,
+html.light-mode .admin-content::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+html.light-mode .photo-grid::-webkit-scrollbar-thumb:hover,
+html.light-mode .folder-grid::-webkit-scrollbar-thumb:hover,
+html.light-mode .gallery-content::-webkit-scrollbar-thumb:hover,
+html.light-mode .admin-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}

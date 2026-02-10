@@ -130,7 +130,7 @@
   transform: scale(1.05);
   background: rgba(255, 255, 255, 0.15);
   color: var(--text-main);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.1);
 }
 
 .mini-tag.active {
@@ -150,7 +150,7 @@
 .search-input:focus {
   background: rgba(0, 0, 0, 0.4);
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 /* ==================== 7. Breadcrumb Theme ==================== */
@@ -351,6 +351,11 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
+.light-mode .breadcrumb-overlay {
+  background: transparent !important;
+  backdrop-filter: none !important;
+}
+
 
 .light-mode .reader-toolbar {
   border-bottom-color: rgba(0, 0, 0, 0.06);
@@ -415,9 +420,7 @@
   color: #444;
 }
 
-.light-mode .explorer-header {
-  border-bottom-color: rgba(0, 0, 0, 0.05);
-}
+
 
 /* ==================== 13. Tag Category Theme ==================== */
 .tag-category-group {

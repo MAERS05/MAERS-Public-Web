@@ -116,14 +116,6 @@ html.light-mode .view-header img[src*="music-class"] {
     padding: 10px;
 }
 
-.view-content::-webkit-scrollbar {
-    display: none;
-}
-
-.view-content {
-    scrollbar-width: none;
-}
-
 .list-item {
     padding: 12px 15px;
     margin-bottom: 5px;

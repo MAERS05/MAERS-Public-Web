@@ -18,8 +18,6 @@
         height: 100vh;
         width: 100vw;
         margin: 0;
-        background: var(--bg-card) !important;
-        /* 确保不透明 */
     }
 
     /* 2. Grid Layout Adjustment: Single/Dual Column */
@@ -66,19 +64,13 @@
         display: none !important;
     }
 
-    /* 4. Header Compact Mode - Remove transparency to fix logo overlap */
+    /* 4. Header Compact Mode */
     body .page-header-bar {
         padding: 10px 15px;
         height: 60px;
-        /* 强制使用纯色背景，遮挡后面内容 */
-        background: var(--bg-card) !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
         position: sticky;
         top: 0;
         z-index: 50;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        /* 稍微加个底边框区分 */
     }
 
     body .header-title {

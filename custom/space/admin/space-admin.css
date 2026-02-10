@@ -1,0 +1,208 @@
+/**
+ * Space Admin - Card-specific Styles
+ * (Modal styles moved to admin-modal.css)
+ */
+
+/* Admin Actions on Cards */
+.admin-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    margin-top: -12px;
+    padding-top: 12px;
+}
+
+.admin-actions button {
+    flex: 1;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-sub, rgba(255, 255, 255, 0.7));
+}
+
+.admin-actions button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-main, #ffffff);
+}
+
+.btn-edit:hover {
+    border-color: rgba(100, 150, 255, 0.6);
+    color: rgba(100, 150, 255, 1);
+}
+
+.btn-delete:hover {
+    border-color: rgba(255, 100, 100, 0.6);
+    color: rgba(255, 100, 100, 1);
+}
+
+/* Tag Management UI */
+.tag-input-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    min-height: 48px;
+    align-items: center;
+}
+
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex: 1;
+}
+
+.modal-tag-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(120, 255, 214, 0.15);
+    color: #78ffd6;
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 13px;
+    border: 1px solid rgba(120, 255, 214, 0.2);
+    transition: all 0.2s;
+}
+
+.modal-tag-pill:hover {
+    background: rgba(120, 255, 214, 0.25);
+    border-color: rgba(120, 255, 214, 0.4);
+}
+
+.tag-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    border-radius: 50%;
+    cursor: pointer;
+    opacity: 0.6;
+    font-size: 14px;
+    line-height: 1;
+}
+
+.tag-remove:hover {
+    background: rgba(255, 255, 255, 0.2);
+    opacity: 1;
+    color: #fff;
+}
+
+.btn-add-tag {
+    background: transparent;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.6);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-add-tag:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* Fetch Button Animation */
+.btn-fetch-meta.loading {
+    animation: rotate 1s linear infinite;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Quick Add Tag on Card */
+.btn-quick-add-tag {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px dashed rgba(255, 255, 255, 0.2);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 10px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    line-height: 1;
+    padding: 0;
+}
+
+.btn-quick-add-tag:hover {
+    background: rgba(120, 255, 214, 0.2);
+    border-color: #78ffd6;
+    color: #78ffd6;
+    transform: scale(1.1);
+}
+
+/* Light Mode Card Add Tag */
+.light-mode .btn-quick-add-tag {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.2);
+    color: rgba(0, 0, 0, 0.4);
+}
+
+
+.light-mode .btn-quick-add-tag:hover {
+    border-color: #000;
+    color: #000;
+}
+
+/* Light Mode Modal Overrides */
+.light-mode .modal-content {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #1a1a1a;
+}
+
+.light-mode .modal-content h3 {
+    color: #1a1a1a;
+}
+
+.light-mode .modal-content label {
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.light-mode .modal-content input,
+.light-mode .modal-content textarea {
+    background: #f5f5f5;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #1a1a1a;
+}
+
+.light-mode .modal-content input:focus,
+.light-mode .modal-content textarea:focus {
+    background: #ffffff;
+    border-color: var(--accent-color, #0066cc);
+}
+
+.light-mode .btn-cancel {
+    background: rgba(0, 0, 0, 0.05);
+    color: #1a1a1a;
+}
+
+.light-mode .btn-cancel:hover {
+    background: rgba(0, 0, 0, 0.1);
+}

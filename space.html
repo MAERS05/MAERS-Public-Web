@@ -1,66 +1,71 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
     <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Me - MAERS</title>
+    <title>MAERS Space - Collections</title>
 
-    <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
     <link rel="preload" href="static-style/components.css" as="style">
 
     <link rel="stylesheet" href="static-style/theme.css">
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
-    <script type="module" src="data-manage/data-provider.module.js"></script>
-    <!-- Layout handled by module -->
-    <style>
-        .placeholder-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            color: var(--text-sub);
-        }
+    <link rel="stylesheet" href="custom/cms/viewer/cms-base.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css">
+    <link rel="stylesheet" href="custom/space/viewer/space-viewer.css">
 
-        .placeholder-text {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-top: 20px;
-        }
-
-        /* [Optimal] 消除移动端点击延迟 */
-        a,
-        button,
-        input,
-        .photo-item,
-        .list-item,
-        .card-icon,
-        .tech-pill {
-            touch-action: manipulation;
-        }
-    </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="main-card clean-layout">
-            <div class="placeholder-content">
-                <div style="font-size: 4rem;">SPACE</div>
-                <div class="placeholder-text">待更新ing...</div>
-                <p>Knowledge needs time to accumulate.</p>
+        <div class="main-card">
+            <div class="explorer-header">
+                <div class="header-left">
+                    <a href="index.html" class="back-btn">← Back</a>
+                    <div class="header-title"><img src="ui/space-icon.svg" alt="Space"
+                            style="height: 1.25em; width: auto; vertical-align: middle;"> Other Spaces</div>
+                </div>
+
+                <div class="search-box">
+                    <input type="search" class="search-input" id="search-input" placeholder="搜索收藏的内容...">
+                </div>
+
+                <div class="header-right">
+                    <div class="header-tools-row">
+                        <button class="tag-toggle-btn">
+                            🏷️ Tags
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="breadcrumb-bar" id="breadcrumb"></div>
+
+            <div class="gallery-content">
+                <div class="grid-layout" id="category-grid"></div>
             </div>
         </div>
     </div>
-    <script type="module">
-        import { renderPageHeader } from './shared/simple-main.module.js';
-        renderPageHeader("Other Spaces", "index.html", "Back");
-    </script>
+
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+    <div id="tag-drawer" class="tag-drawer">
+        <div class="drawer-header">
+            <div class="drawer-title-row">
+                <h3>Filter by Tags</h3>
+                <button class="btn-close-drawer">×</button>
+            </div>
+            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags">
+        </div>
+        <div class="drawer-body" id="drawer-list"></div>
+        <div class="drawer-footer">
+            <button class="btn-clear-tags">Clear All</button>
+        </div>
+    </div>
+
+    <script type="module" src="custom/space/viewer/space-view.module.js"></script>
 </body>
 
 </html>

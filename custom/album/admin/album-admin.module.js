@@ -5,6 +5,8 @@
  * @version 3.0.0 - ES6 Module
  */
 
+import { AdminModal } from '../../../data-manage/admin-modal.module.js';
+
 // 依赖声明
 let AdminCore;
 
@@ -247,36 +249,35 @@ export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
 
     const item = currentData[index];
 
-    // 1. Title
-    const title = prompt("修改标题:", oldTitle);
-    if (title === null) return;
+    AdminModal.open({
+        title: 'Edit Category',
+        isNew: false,
+        data: {
+            title: oldTitle,
+            subtitle: oldSub,
+            icon: oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon
+        },
+        fields: [
+            { name: 'title', label: 'Title', type: 'text', required: true },
+            { name: 'subtitle', label: 'Subtitle', type: 'text', required: true },
+            { name: 'icon', label: 'Icon (SVG path or Emoji)', type: 'text', required: true }
+        ],
+        onSave: async (formData) => {
+            item.title = formData.title;
+            item.subtitle = formData.subtitle;
 
-    // 2. Subtitle
-    const subtitle = prompt("修改副标题:", oldSub);
-    if (subtitle === null) return;
+            // Icon logic
+            if ((formData.icon.includes('/') || formData.icon.includes('.')) && !formData.icon.trim().startsWith('<')) {
+                item.icon = `<img src="${formData.icon}" style="width: 1em; height: 1em;">`;
+            } else {
+                item.icon = formData.icon;
+            }
 
-    // 3. Icon
-    const icon = prompt("修改图标 (输入SVG路径或Emoji):", oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon);
-    if (icon === null) return;
-
-    let changed = false;
-    if (title !== oldTitle) { item.title = title; changed = true; }
-    if (subtitle !== oldSub) { item.subtitle = subtitle; changed = true; }
-
-    // Icon logic
-    if (icon !== (oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon)) {
-        if ((icon.includes('/') || icon.includes('.')) && !icon.trim().startsWith('<')) {
-            item.icon = `<img src="${icon}" style="width: 1em; height: 1em;">`;
-        } else {
-            item.icon = icon;
+            render();
+            manager.updateSaveState();
+            return true;
         }
-        changed = true;
-    }
-
-    if (changed) {
-        render();
-        manager.updateSaveState();
-    }
+    });
 }
 
 function _extractSrc(html) {
@@ -285,54 +286,66 @@ function _extractSrc(html) {
 }
 
 export async function addNewCategory() {
-    const title = prompt("分类标题 (中文):");
-    if (title === null) return;
+    const newCategory = {
+        title: '',
+        subtitle: '',
+        icon: '',
+        id: ''
+    };
 
-    const subtitle = prompt("副标题 (英文):");
-    if (subtitle === null) return;
-
-    const iconInput = prompt("图标 (输入SVG路径或Emoji):");
-    if (iconInput === null) return;
-
-    const id = prompt("分类ID (物理目录，英文小写，不可修改):");
-    if (id === null) return;
-
-    let finalIcon = iconInput;
-    if (finalIcon && (finalIcon.includes('/') || finalIcon.includes('.')) && !finalIcon.trim().startsWith('<')) {
-        finalIcon = `<img src="${finalIcon}" style="width: 1em; height: 1em;">`;
-    }
-
-    if (title && id) {
-        try {
-            const res = await fetch('/api/add_category', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, subtitle, icon: finalIcon, id })
-            });
-            if (res.ok) {
-                const data = await res.json();
-                await loadData();
-                render(); // Trigger view update
-
-                // Hide SaveBar (just in case)
-                if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
-
-                if (AdminCore.Feedback) {
-                    if (data.dirs_created) {
-                        AdminCore.Feedback.notifyAddSuccess(`已自动创建物理目录: ${id}`);
-                    } else {
-                        AdminCore.Feedback.notifyAddSuccess();
-                    }
-                }
-            } else {
-                if (AdminCore.Feedback) AdminCore.Feedback.notifyAddFail();
-                else alert("添加失败");
+    AdminModal.open({
+        title: 'Add New Category',
+        isNew: true,
+        data: newCategory,
+        fields: [
+            { name: 'title', label: 'Title (Chinese)', type: 'text', required: true },
+            { name: 'subtitle', label: 'Subtitle (English)', type: 'text', required: true },
+            { name: 'icon', label: 'Icon (SVG path or Emoji)', type: 'text', required: true },
+            { name: 'id', label: 'Category ID (lowercase, immutable)', type: 'text', required: true, placeholder: 'category-name' }
+        ],
+        onSave: async (formData) => {
+            let finalIcon = formData.icon;
+            if (finalIcon && (finalIcon.includes('/') || finalIcon.includes('.')) && !finalIcon.trim().startsWith('<')) {
+                finalIcon = `<img src="${finalIcon}" style="width: 1em; height: 1em;">`;
             }
-        } catch (e) {
-            if (AdminCore.Feedback) AdminCore.Feedback.notifyError("Error: " + e.message);
-            else alert("Error: " + e.message);
+
+            try {
+                const res = await fetch('/api/add_category', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: formData.title,
+                        subtitle: formData.subtitle,
+                        icon: finalIcon,
+                        id: formData.id
+                    })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    await loadData();
+                    render();
+
+                    if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
+
+                    if (AdminCore.Feedback) {
+                        if (data.dirs_created) {
+                            AdminCore.Feedback.notifyAddSuccess(`已自动创建物理目录: ${formData.id}`);
+                        } else {
+                            AdminCore.Feedback.notifyAddSuccess();
+                        }
+                    }
+                    return true;
+                } else {
+                    if (AdminCore.Feedback) AdminCore.Feedback.notifyAddFail();
+                    return false;
+                }
+            } catch (e) {
+                if (AdminCore.Feedback) AdminCore.Feedback.notifyError("Error: " + e.message);
+                return false;
+            }
         }
-    }
+    });
 }
 
 // 导出 Admin 对象（向后兼容）

@@ -33,5 +33,10 @@
     "icon": "ui/record-icon.svg",
     "url": "admin-cms.html?module=record",
     "style": "custom/record/viewer/record.css"
+  },
+  {
+    "title": "空间管理",
+    "icon": "ui/space-icon.svg",
+    "url": "admin-space.html"
   }
 ]

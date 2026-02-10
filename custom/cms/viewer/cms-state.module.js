@@ -34,6 +34,9 @@ let IS_ADMIN = false;
 let currentRenderTask = 0;
 let gridEventsDelegated = false;
 
+// Filter order tracking for breadcrumb navigation
+let filterOrder = [];
+
 // Dependency injection - Controller will be injected
 let Controller = null;
 
@@ -74,5 +77,33 @@ export const State = {
 
     escapeAttr(input) {
         return Utils ? Utils.escapeAttr(input) : String(input ?? '');
+    },
+
+    addFilter(filterItem) {
+        if (!filterOrder.includes(filterItem)) {
+            filterOrder.push(filterItem);
+        }
+    },
+
+    removeFilter(filterItem) {
+        const index = filterOrder.indexOf(filterItem);
+        if (index !== -1) {
+            filterOrder.splice(index, 1);
+        }
+    },
+
+    jumpToFilter(filterItem) {
+        const index = filterOrder.indexOf(filterItem);
+        if (index !== -1) {
+            filterOrder = filterOrder.slice(0, index + 1);
+        }
+    },
+
+    getFilterOrder() {
+        return filterOrder;
+    },
+
+    clearFilters() {
+        filterOrder = [];
     }
 };

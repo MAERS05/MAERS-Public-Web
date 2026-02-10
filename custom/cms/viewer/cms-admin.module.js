@@ -186,6 +186,26 @@ export async function performCancel() {
     }
 }
 
+async function performUpdateTags(nodeId, tags) {
+    try {
+        const module = Controller.CONFIG.CURRENT_MODULE;
+        const res = await fetch(`/api/cms/update_tags?module=${module}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: nodeId, tags: tags })
+        });
+
+        if (res.ok) {
+            return { success: true };
+        }
+        throw new Error(res.status);
+    } catch (e) {
+        console.error("Update tags failed", e);
+        if (window.MAERS?.Toast) window.MAERS.Toast.error("Update tags failed");
+        return { success: false };
+    }
+}
+
 export async function refreshView(fullReload = false, forceResetManager = false) {
     if (fullReload) {
         await Controller.loadData();
@@ -357,11 +377,26 @@ export async function uiAddTag(e, id) {
 
     const tag = prompt("Enter tag name (without #):");
     if (tag) {
-        const currentTags = node.tags || [];
-        if (!currentTags.includes(tag)) {
-            const updated = [...currentTags, tag];
-            const res = await Controller.updateTags(id, updated);
-            if (res.success) refreshView();
+        const cleanTag = tag.trim();
+        if (cleanTag) {
+            const currentTags = node.tags || [];
+            if (!currentTags.includes(cleanTag)) {
+                const newTags = [...currentTags, cleanTag];
+
+                // Optimistic update
+                node.tags = newTags;
+
+                // Call granular API
+                const res = await performUpdateTags(id, newTags);
+                if (res.success) {
+                    // Success - UI already updated optimistically
+                    refreshView();
+                } else {
+                    // Revert on failure
+                    node.tags = currentTags;
+                    refreshView();
+                }
+            }
         }
     }
 }
@@ -374,9 +409,24 @@ export async function uiRemoveTag(e, id, tag) {
     if (!confirm(`确定要删除标签 #${tag} 吗？`)) return;
 
     const node = State.AppState.allNodes.find((n) => n.id === id);
-    const updated = (node.tags || []).filter((t) => t !== tag);
-    const res = await Controller.updateTags(id, updated);
-    if (res.success) refreshView();
+    if (!node) return;
+
+    const oldTags = [...(node.tags || [])];
+    const newTags = oldTags.filter((t) => t !== tag);
+
+    // Optimistic update
+    node.tags = newTags;
+
+    // Call granular API
+    const res = await performUpdateTags(id, newTags);
+    if (res.success) {
+        // Success - UI already updated optimistically
+        refreshView();
+    } else {
+        // Revert on failure
+        node.tags = oldTags;
+        refreshView();
+    }
 }
 
 export const Admin = {

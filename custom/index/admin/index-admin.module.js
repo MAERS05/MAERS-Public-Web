@@ -8,6 +8,7 @@ import { initLayout } from '../../../shared/layout.module.js';
 import { initTheme } from '../../../shared/theme.module.js';
 import { Toast } from '../../../shared/toast.module.js';
 import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin-base.module.js';
+import { AdminModal } from '../../../data-manage/admin-modal.module.js';
 
 // 初始化基础 UI
 initLayout();
@@ -188,126 +189,128 @@ export const IndexAdmin = {
         if (this.manager.isDeleted(index)) return;
 
         const item = this.items[index];
-
-        const newTitle = prompt("修改标题:", item.title);
-        if (newTitle === null) return;
-
-        const newDesc = prompt("修改描述:", item.description);
-        if (newDesc === null) return;
-
-        const newBg = prompt("修改背景文字 (4字符):", item.bgText);
-        if (newBg === null) return;
-
-        const newIcon = prompt("修改图标路径 (或 Emoji):", item.icon);
-        if (newIcon === null) return;
-
-        const newUrl = prompt("跳转链接 (会自动创建不存在的文件):", item.url);
-        if (newUrl === null) return;
-
-        // 更新数据
-        let changed = false;
-        if (newTitle !== item.title) { item.title = newTitle; changed = true; }
-        if (newDesc !== item.description) { item.description = newDesc; changed = true; }
-        if (newBg !== item.bgText) { item.bgText = newBg; changed = true; }
-
         const oldUrl = item.url;
-        if (newUrl !== item.url) { item.url = newUrl; changed = true; }
-        if (newIcon !== item.icon) { item.icon = newIcon; changed = true; }
 
-        if (changed) {
-            // Deferred Auto Create Page Logic (For Edit)
-            if (item.url && item.url !== oldUrl && item.url.endsWith('.html') && !item.url.startsWith('http') && !item.url.includes('/')) {
-                fetch('/api/ensure_page', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ filename: item.url, title: item.title })
-                })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.status === 'created') {
-                            Feedback.notifySuccess(`已自动创建页面: ${item.url}`);
-                        }
+        AdminModal.open({
+            title: 'Edit Card',
+            isNew: false,
+            data: item,
+            fields: [
+                { name: 'title', label: 'Title', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea', required: true },
+                { name: 'bgText', label: 'Background Text (4 chars)', type: 'text', required: true, placeholder: 'ABCD' },
+                { name: 'icon', label: 'Icon (Path or Emoji)', type: 'text', required: true, placeholder: 'ui/logo.svg or 📝' },
+                { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' }
+            ],
+            onSave: async (formData) => {
+                // Update item
+                item.title = formData.title;
+                item.description = formData.description;
+                item.bgText = formData.bgText;
+                item.icon = formData.icon;
+                item.url = formData.url;
+
+                // Auto create page if URL changed
+                if (item.url && item.url !== oldUrl && item.url.endsWith('.html') && !item.url.startsWith('http') && !item.url.includes('/')) {
+                    fetch('/api/ensure_page', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: item.url, title: item.title })
                     })
-                    .catch(err => console.error("Page creation check failed", err));
-            }
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'created') {
+                                Feedback.notifySuccess(`已自动创建页面: ${item.url}`);
+                            }
+                        })
+                        .catch(err => console.error("Page creation check failed", err));
+                }
 
-            this.manager.updateSaveState(); // 标记为脏
-            this.render();
-            Feedback.notifyEditSuccess();
-        }
+                this.manager.updateSaveState();
+                this.render();
+                Feedback.notifyEditSuccess();
+                return true;
+            }
+        });
     },
 
     async uiAdd() {
-        const title = prompt("新卡片标题:", "New Card");
-        if (!title) return;
-
-        const desc = prompt("卡片描述:", "Description...");
-        if (!desc) return;
-
-        const bgText = prompt("背景文字 (建议4个大写字母):", "NEW");
-        if (!bgText) return;
-
-        const icon = prompt("图标路径 (或 Emoji):", "ui/icon.svg");
-        if (!icon) return;
-
-        const url = prompt("跳转链接*.html (会自动创建不存在的文件):",);
-        if (!url) return;
-
-        // Auto Create Page Logic
-        if (url.endsWith('.html') && !url.startsWith('http') && !url.includes('/')) {
-            // Check if we should create this page
-            // We do this non-blocking, but notify user
-            fetch('/api/ensure_page', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: url, title: title })
-            })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'created') {
-                        Feedback.notifySuccess(`已自动创建页面: ${url}`);
-                    } else if (data.status === 'exists') {
-                        // console.log("Page exists, linking directly.");
-                    }
-                })
-                .catch(err => console.error("Page creation check failed", err));
-        }
-
-        const id = "nav-" + title.toLowerCase().replace(/\s+/g, '-');
-
-        // 构建新对象
         const newItem = {
-            id, bgText, icon, title, description: desc, url
+            id: '',
+            bgText: 'NEW',
+            icon: 'ui/logo.svg',
+            title: 'New Card',
+            description: 'Description...',
+            url: ''
         };
 
-        // 添加到本地
-        this.items.push(newItem);
+        AdminModal.open({
+            title: 'Add New Card',
+            isNew: true,
+            data: newItem,
+            fields: [
+                { name: 'title', label: 'Title', type: 'text', required: true },
+                { name: 'description', label: 'Description', type: 'textarea', required: true },
+                { name: 'bgText', label: 'Background Text (4 chars)', type: 'text', required: true, placeholder: 'ABCD' },
+                { name: 'icon', label: 'Icon (Path or Emoji)', type: 'text', required: true, placeholder: 'ui/logo.svg or 📝' },
+                { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' }
+            ],
+            onSave: async (formData) => {
+                // Auto create page
+                if (formData.url.endsWith('.html') && !formData.url.startsWith('http') && !formData.url.includes('/')) {
+                    fetch('/api/ensure_page', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ filename: formData.url, title: formData.title })
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.status === 'created') {
+                                Feedback.notifySuccess(`已自动创建页面: ${formData.url}`);
+                            }
+                        })
+                        .catch(err => console.error("Page creation check failed", err));
+                }
 
-        // 立即原子化保存 (因为添加通常是确定的操作)
-        // 注意：这里我们选择直接调用 performSave 以复用保存逻辑
-        // 但为了更好的体验，我们可以只针对添加做保存，或者整体保存
-        // 为保持一致性，这里调用整体保存接口
-        try {
-            const res = await fetch('/api/save_index_cards', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(this.items) // 发送含新项的完整列表
-            });
+                const id = "nav-" + formData.title.toLowerCase().replace(/\s+/g, '-');
 
-            if (res.ok) {
-                // 更新快照，避免 SaveButton 依然显示
-                this.manager.initialSnapshot = JSON.stringify(this.items);
-                this.manager.updateSaveState();
-                this.render();
-                Feedback.notifyAddSuccess();
-            } else {
-                throw new Error("Server Error");
+                const finalItem = {
+                    id,
+                    bgText: formData.bgText,
+                    icon: formData.icon,
+                    title: formData.title,
+                    description: formData.description,
+                    url: formData.url
+                };
+
+                // Add to local
+                this.items.push(finalItem);
+
+                // Immediate save
+                try {
+                    const res = await fetch('/api/save_index_cards', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(this.items)
+                    });
+
+                    if (res.ok) {
+                        this.manager.initialSnapshot = JSON.stringify(this.items);
+                        this.manager.updateSaveState();
+                        this.render();
+                        Feedback.notifyAddSuccess();
+                        return true;
+                    } else {
+                        throw new Error("Server Error");
+                    }
+                } catch (e) {
+                    this.items.pop(); // Rollback
+                    this.render();
+                    Feedback.notifyAddFail();
+                    return false;
+                }
             }
-        } catch (e) {
-            this.items.pop(); // 回滚
-            this.render();
-            Feedback.notifyAddFail();
-        }
+        });
     },
 
     // --- 核心保存/取消 ---

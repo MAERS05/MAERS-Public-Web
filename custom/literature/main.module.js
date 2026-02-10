@@ -46,7 +46,7 @@ initStateModule(Controller);
 initSearch(State, Render, Tags, LiteratureView);
 initEvents(State, Render, null, Tags, Editor, LiteratureView, Recent);
 initTags(State, Controller, Search);
-initRender(State, null, Controller, Events, null, LiteratureView);
+initRender(State, null, Controller, Events, null, LiteratureView, Search);
 initLightbox();
 
 // 2. Init Components

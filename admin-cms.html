@@ -1,5 +1,5 @@
 ﻿<!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
   <script src="shared/flash-guard.js"></script>
@@ -41,24 +41,6 @@
   </script>
   <link rel="stylesheet" href="custom/cms/admin/cms-editor.css" />
   <link rel="stylesheet" href="static-style/splash.css" />
-
-  <style>
-    /* 统一 admin 布局：全屏填充 */
-    .container {
-      padding: 15px !important;
-      height: 100vh !important;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .main-card {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      max-height: none !important;
-    }
-  </style>
 </head>
 
 <body>
@@ -103,7 +85,6 @@
     </div>
     <div class="reader-scroll-area">
       <div class="markdown-body paper-sheet" id="reader-content"></div>
-      <div class="reader-footer">— End of Note —</div>
     </div>
   </div>
 

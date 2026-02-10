@@ -34,6 +34,9 @@
 -   **必须**在实现复杂子管理模块时（如 CMS 标签），使用 `autoSaveBar: false` 将保存条控制权移交给中央调度器，避免 UI 冲突。
 -   **必须**使用 `fetch` 替代 XHR。
 -   **必须**使用 `querySelector` 和 `addEventListener`。
+-   **必须**通过 `shared/namespace.module.js` 统一管理全局命名空间初始化，严禁散落挂载。
+-   **必须**使用 `shared/templates.module.js` 构建复杂 DOM，替代 `innerHTML` 拼接，以防止 XSS 和提升可读性。
+-   **必须**在复用 CMS 适配器（如 Photos Viewer, Space Viewer）时，**显式设定** `{ initialState: { IS_ADMIN: false } }`，防止管理 UI 泄露。
 
 ### ❌ Don'ts (禁止做)
 -   **禁止**写入 HTML 内联事件 (`onclick="..."`)。

@@ -11,7 +11,7 @@ def wipe_all_data():
     print(" 此操作将执行以下动作：")
     print(" 1. 清空 cms.db (笔记、文献、随笔)")
     print(" 2. 清空 gallery.db (相册数据库)")
-    print(" 3. 重置所有 data/*.json 静态文件")
+    print(" 3. 重置所有 data/*.json 静态文件 (包括 Space 收藏)")
     print(" 4. 删除 photos/ 下的所有物理图片 (原图、缩略图、预览图)")
     print("========================================================")
     
@@ -53,7 +53,9 @@ def wipe_all_data():
         (config.MUSIC_DATA, [], 'json'),
         (os.path.join(config.DATA_DIR, 'search-index.json'), [], 'json'),
         # 重置相册分类配置
-        (config.ALBUM_CONFIG_JSON, [], 'json')
+        (config.ALBUM_CONFIG_JSON, [], 'json'),
+        # 重置 Space 收藏数据
+        (config.SPACE_DATA, {"root": []}, 'json')
     ]
     
     for file_path, default_val, f_type in file_resets:

@@ -74,9 +74,7 @@ html {
     }
 
     /* 其他页面的通用卡片保持单列横向 */
-    body:not(.home-page) .grid-layout {
-        /* Intentionally empty to inherit or allow other rules */
-    }
+
 
     /* 2. Mobile Performance Optimization: Instant Switch (No Animation) */
     @media (max-width: 1024px) {
@@ -111,22 +109,16 @@ html {
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
 
-            /* 2. 改用高不透明度纯色：弥补视觉质感 */
-            /* 深色模式下：几乎全黑 */
-            background: rgba(20, 20, 20, 0.98) !important;
-
-            /* 3. 移除大阴影：减少 GPU 渲染开销 */
+            /* 2. 移除大阴影：减少 GPU 渲染开销 */
             box-shadow: none !important;
 
-            /* 4. 移除边框或简化 */
+            /* 3. 移除边框或简化 */
             border: 1px solid rgba(255, 255, 255, 0.05) !important;
         }
 
-        /* 5. 适配白昼模式 */
+        /* 4. 适配白昼模式边框 */
         html.light-mode .main-card,
         html.light-mode .nav-card {
-            /* 白昼模式下：几乎全白 */
-            background: rgba(255, 255, 255, 0.98) !important;
             border: 1px solid rgba(0, 0, 0, 0.05) !important;
         }
     }
@@ -176,6 +168,7 @@ html {
         body .brand-logo {
             width: 70px !important;
             height: 70px !important;
-            margin-bottom: 15px !important;
+            margin-bottom: 4px !important;
         }
     }
+}

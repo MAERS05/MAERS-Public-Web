@@ -99,7 +99,7 @@
             var link = document.createElement('link');
             link.type = 'image/svg+xml';
             link.rel = 'icon';
-            link.href = 'ui/icon.svg';
+            link.href = 'ui/logo.svg';
             document.getElementsByTagName('head')[0].appendChild(link);
         }
     } catch (e) { }

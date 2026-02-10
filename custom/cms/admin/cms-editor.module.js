@@ -180,7 +180,6 @@ function _renderVisitorReader(layer, node) {
   </div>
   <div class="reader-scroll-area">
       <div class="markdown-body paper-sheet" id="reader-content">${htmlContent}</div>
-      <div class="reader-footer">— End of Note —</div>
   </div>
   `;
 

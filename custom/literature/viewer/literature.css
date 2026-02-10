@@ -222,6 +222,17 @@
     border-radius: 6px !important;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    transition: background 0.2s, color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+/* 3.4.1 Active (Highlight) Tag Style - Aligned with Photos/Space */
+.folder-grid .grid-item .mini-tag.active {
+    background: #78ffd6 !important;
+    color: #000 !important;
+    box-shadow: 0 0 10px rgba(120, 255, 214, 0.6) !important;
+    transform: scale(1.05);
+    border-color: transparent !important;
+    pointer-events: auto;
 }
 
 /* 3.5 Hover Effects */

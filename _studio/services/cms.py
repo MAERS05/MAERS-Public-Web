@@ -278,6 +278,32 @@ def _action_move(module, node_id, target_parent_id):
     print(f"  [ CMS ] 🚚 节点已跨级移动 | Node moved: {node_id} -> {target_parent_id}")
     return True
 
+def update_node_tags(module, node_id, tags):
+    """Granular tag update - only updates tags field without full tree regeneration"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        tags_json = json.dumps(tags, ensure_ascii=False)
+        cursor.execute("UPDATE nodes SET tags=? WHERE id=? AND module=?", (tags_json, node_id, module))
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            return False
+            
+        conn.commit()
+        conn.close()
+        
+        # Still sync the JS file for frontend consistency
+        sync_js_file(module)
+        
+        print(f"  [ CMS ] 🏷️  Tags Updated: {node_id} -> {tags}")
+        return True
+    except Exception as e:
+        print(f"  [ CMS ] ❌ Tag update failed: {e}")
+        conn.close()
+        return False
+
 # ================= 总入口 =================
 
 def load_json(path, fallback_path=None):
@@ -373,3 +399,27 @@ def handle_request(path, method, query_params, body_data):
         import traceback
         traceback.print_exc()
         return 500, {"error": str(e)}
+# ================= 标签操作 =================
+
+TAG_CATEGORIES_FILE = os.path.join(DATA_DIR, 'cms-tag-categories.json')
+
+def get_tag_categories():
+    """读取标签分类配置"""
+    if not os.path.exists(TAG_CATEGORIES_FILE):
+        return []
+    try:
+        with open(TAG_CATEGORIES_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error reading tag categories: {e}")
+        return []
+
+def save_tag_categories(data):
+    """保存标签分类配置"""
+    try:
+        with open(TAG_CATEGORIES_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving tag categories: {e}")
+        return False

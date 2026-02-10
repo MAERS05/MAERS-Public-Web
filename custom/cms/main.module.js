@@ -32,7 +32,7 @@ initStateModule(Controller);
 initSearch(State, Render, Tags);
 initEvents(State, Render, null, Tags, Editor, null, Recent); // No Admin, No LitView (yet), Yes Recent
 initTags(State, Controller, Search);
-initRender(State, null, Controller, Events, null); // No Admin/Drag in user view
+initRender(State, null, Controller, Events, null, null, Search); // No Admin/Drag/LiteratureView in user view, but include Search
 initViewModule({
     State,
     Search,

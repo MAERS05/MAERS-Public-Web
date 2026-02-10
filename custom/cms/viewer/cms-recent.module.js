@@ -37,7 +37,7 @@ function injectUI() {
         if (headerRight) {
             const btn = document.createElement('button');
             btn.className = 'recent-toggle-btn';
-            btn.style.cssText = 'align-self: flex-end; margin-top: 5px; background: transparent; border: none; padding: 5px; cursor: pointer; opacity: 0.7; transition: 0.2s; color: var(--text-sub);';
+            btn.style.cssText = 'position: absolute; top: 100%; right: 0; margin-top: 8px; background: transparent; border: none; padding: 5px; cursor: pointer; opacity: 0.7; transition: 0.2s; color: var(--text-sub); z-index: 10;';
             btn.innerHTML = `<img src="ui/cms-history.svg" style="width:24px; height:24px; display:block; color:inherit;">`;
             btn.title = '快速访问';
             headerRight.appendChild(btn);

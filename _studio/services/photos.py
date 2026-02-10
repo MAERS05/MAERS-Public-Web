@@ -36,6 +36,16 @@ except ImportError:
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    
+    # Check for tags column migration
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(photos)")
+    columns = [r['name'] for r in cursor.fetchall()]
+    if 'tags' not in columns:
+        print("  [ PHOTOS ] ⚠️  Schema Migration: Adding 'tags' column...")
+        cursor.execute("ALTER TABLE photos ADD COLUMN tags TEXT")
+        conn.commit()
+    
     return conn
 
 def sync_gallery_js():
@@ -54,11 +64,13 @@ def sync_gallery_js():
         if cat not in data: data[cat] = []
         
         item = {
+            "id": row['id'],
             "path": row['path'],
             "name": row['name'],
             "thumb": row['thumb'],
             "preview": row['preview'],
-            "hash": row['hash']
+            "hash": row['hash'],
+            "tags": json.loads(row['tags']) if row['tags'] else []
         }
         data[cat].append(item)
     
@@ -310,3 +322,26 @@ def handle_reorder(query, body):
     conn.close()
     sync_gallery_js()
     return {}
+
+def update_tags(photo_id, tags):
+    """Update tags for a specific photo"""
+    if not photo_id:
+        raise ValueError("Photo ID is required")
+        
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Verify existence
+    cursor.execute("SELECT id FROM photos WHERE id=?", (photo_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError(f"Photo not found: {photo_id}")
+        
+    tags_json = json.dumps(tags, ensure_ascii=False)
+    cursor.execute("UPDATE photos SET tags=? WHERE id=?", (tags_json, photo_id))
+    conn.commit()
+    conn.close()
+    
+    print(f"  [ PHOTOS ] 🏷️  Tags Updated: {photo_id} -> {tags}")
+    sync_gallery_js()
+    return True

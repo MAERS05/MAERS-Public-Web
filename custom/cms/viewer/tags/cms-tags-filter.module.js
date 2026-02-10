@@ -19,8 +19,10 @@ export function filterByTag(e, tag) {
 
     if (State.AppState.activeFilters.has(tag)) {
         State.AppState.activeFilters.delete(tag);
+        State.removeFilter(tag);
     } else {
         State.AppState.activeFilters.add(tag);
+        State.addFilter(tag);
     }
 
     if (Search?.applyFilter) Search.applyFilter();

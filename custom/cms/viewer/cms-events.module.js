@@ -218,16 +218,8 @@ export function setupGridEventDelegation() {
                 return;
             }
 
-            const tag = e.target.closest(".mini-tag");
-            if (tag) {
-                e.preventDefault();
-                e.stopPropagation();
-                const tagName = tag.getAttribute("data-tag");
-                const nodeId = tag.getAttribute("data-node-id");
-                if (tagName && nodeId && Admin?.uiRemoveTag) {
-                    Admin.uiRemoveTag(e, nodeId, tagName);
-                }
-            }
+            // Note: Tag right-click interactions are now handled by setupTagDragAndMenu
+            // in cms-render-grid.module.js, so we don't need the old logic here
         });
     }
 

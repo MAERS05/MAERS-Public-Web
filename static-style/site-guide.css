@@ -1,0 +1,90 @@
+/* --- 10. Site Guide Button & Modal --- */
+.site-guide-wrapper {
+    position: fixed;
+    top: 5px;
+    left: 20px;
+    z-index: 10000;
+    width: auto;
+    height: 30px;
+    padding: 0 15px;
+    border-radius: 50px;
+    background: var(--toggle-bg);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--text-sub);
+    font-size: 0.75rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.4s ease;
+}
+
+.site-guide-wrapper:hover {
+    transform: scale(1.02);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--text-main);
+}
+
+
+
+
+
+html.light-mode .site-guide-wrapper {
+    border-color: rgba(0, 0, 0, 0.15) !important;
+    background-color: rgba(255, 255, 255, 0.4) !important;
+    color: #333 !important;
+}
+
+
+
+/* Video Modal */
+.video-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    z-index: 20000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(10px);
+}
+
+.video-modal-content {
+    position: relative;
+    width: 85%;
+    max-width: 1000px;
+    aspect-ratio: 16 / 9;
+    background: #000;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.video-modal-content video {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.video-close {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    color: white;
+    font-size: 35px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 10;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    transition: transform 0.2s;
+}
+
+.video-close:hover {
+    transform: scale(1.2);
+}

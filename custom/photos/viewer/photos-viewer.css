@@ -19,50 +19,33 @@
     overflow-y: auto;
 }
 
+/* Breadcrumb Styles - Copied from Space */
+.breadcrumb-bar {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    margin-bottom: 20px;
+    z-index: 99 !important;
+    position: relative;
+    padding-left: 12px;
+}
+
+/* Ensure no accidental opacity override when searching, unless overlaid */
+.breadcrumb-bar.is-searching>span:not(.breadcrumb-overlay) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.breadcrumb-overlay {
+    z-index: 100 !important;
+}
+
 .photo-grid::after {
     content: '';
     flex-grow: 99999;
 }
 
-/* ==========================================================================
-   Custom Scrollbar for Photo Grid
-   ========================================================================== */
 
-.photo-grid::-webkit-scrollbar {
-    display: block;
-    width: 6px;
-}
-
-.photo-grid::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.photo-grid::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb);
-    border-radius: 10px;
-}
-
-.photo-grid::-webkit-scrollbar-thumb:hover {
-    background-color: var(--scrollbar-thumb-hover);
-}
-
-.photo-grid {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-}
-
-/* Light mode scrollbar - explicitly dark */
-html.light-mode .photo-grid::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.6);
-}
-
-html.light-mode .photo-grid::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 0.8);
-}
-
-html.light-mode .photo-grid {
-    scrollbar-color: rgba(0, 0, 0, 0.6) transparent;
-}
 
 /* ==========================================================================
    Photo Item Styles
@@ -285,9 +268,6 @@ html.light-mode .photo-grid {
     touch-action: manipulation;
 }
 
-/* ==========================================================================
-   Admin Actions Positioning (Layout Only)
-   ========================================================================== */
 .photo-admin-actions {
     position: absolute;
     top: 8px;
@@ -296,3 +276,69 @@ html.light-mode .photo-grid {
     display: inline-flex;
     gap: 4px;
 }
+
+/* ==========================================================================
+   Photo Tags (Hover Reveal)
+   ========================================================================== */
+.photo-tags {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 30px 10px 10px;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    z-index: 15;
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.3s ease;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+
+.photo-tags>* {
+    pointer-events: auto;
+}
+
+.photo-item:hover .photo-tags {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.photo-tag-chip {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+    font-weight: 500;
+    cursor: context-menu;
+    transition: background 0.2s;
+}
+
+.photo-tag-chip.active {
+    background: #78ffd6;
+    color: #000;
+    box-shadow: 0 0 10px rgba(120, 255, 214, 0.6);
+    /* Space uses scale(1.1), but we add pointer-events */
+    transform: scale(1.05);
+    /* slightly less than Space to potentially avoid overlap */
+    border-color: transparent;
+    pointer-events: auto;
+}
+
+
+
+
+
+.photo-tag-chip:not(.active):hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Tag Filter Bar Styles Removed */

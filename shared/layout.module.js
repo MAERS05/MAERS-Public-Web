@@ -7,15 +7,6 @@
 import { initSpatialNav } from './spatial-nav.module.js';
 
 export function injectThemeSwitch() {
-    const path = window.location.pathname;
-    // Original check includes checking if it's index.html, but strictly speaking 
-    // the original code just checked this boolean but didn't actually use it to guard execution?
-    // Let's re-read line 18-20 of layout.js carefully.
-    // Line 18: const isHome = ...
-    // Line 20: if (document.querySelector('.theme-switch-wrapper')) return;
-    // It seems `isHome` was calculated but unused in `injectThemeSwitch`? 
-    // Wait, let me check layout.js again.
-
     if (document.querySelector('.theme-switch-wrapper')) return;
 
     const html = `
@@ -27,6 +18,12 @@ export function injectThemeSwitch() {
     </div>`;
 
     document.body.insertAdjacentHTML('afterbegin', html);
+}
+
+function _runInit() {
+    injectThemeSwitch();
+    // Load Spatial Nav (replaces loadSpatialNav which injected script tag)
+    initSpatialNav();
 }
 
 export function renderPageHeader(title, backUrl = "index.html", backText = "Back to Home") {
@@ -57,12 +54,6 @@ export function initLayout() {
     } else {
         _runInit();
     }
-}
-
-function _runInit() {
-    injectThemeSwitch();
-    // Load Spatial Nav (replaces loadSpatialNav which injected script tag)
-    initSpatialNav();
 }
 
 // Global Mount Removed

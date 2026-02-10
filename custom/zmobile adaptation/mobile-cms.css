@@ -75,6 +75,44 @@
         padding: 0 10px;
         margin-bottom: 60px;
         font-size: 0.95rem;
+        max-width: 100%;
+        /* 确保不超出视口 */
+        box-sizing: border-box;
+        /* padding 计入总宽度 */
+    }
+
+    /* Markdown Content Responsive Styles */
+    body .markdown-body {
+        max-width: 100% !important;
+        /* 覆盖 900px 限制 */
+        overflow-x: auto;
+        /* 允许水平滚动以防内容被裁剪 */
+        word-wrap: break-word;
+    }
+
+    /* 表格响应式 */
+    body .markdown-body table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        /* iOS 平滑滚动 */
+        font-size: 0.85rem;
+    }
+
+    /* 代码块响应式 */
+    body .markdown-body pre,
+    body .markdown-body code {
+        max-width: 100%;
+        overflow-x: auto;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+    }
+
+    /* 列表和其他元素 */
+    body .markdown-body ul,
+    body .markdown-body ol {
+        padding-left: 20px;
     }
 
     /* Lightbox */

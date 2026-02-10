@@ -1,5 +1,5 @@
 ﻿<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
     <script src="shared/flash-guard.js"></script>
@@ -33,25 +33,8 @@
     </script>
     <script type="module" src="shared/toast.module.js"></script>
     <link rel="stylesheet" href="custom/album/admin/album-admin.css">
+    <link rel="stylesheet" href="static-style/admin-modal.css">
     <link rel="stylesheet" href="static-style/splash.css">
-
-    <style>
-        /* 统一 admin 布局：全屏填充 */
-        .container {
-            padding: 15px !important;
-            height: 100vh !important;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .main-card {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            max-height: none !important;
-        }
-    </style>
 </head>
 
 <body>
@@ -60,7 +43,8 @@
         <div class="main-card">
             <div class="page-header-bar">
                 <a href="admin-portal.html" class="back-btn">← Back to Console</a>
-                <div class="header-title">🛠️ Gallery Manager</div>
+                <div class="header-title"><img src="ui/album-icon.svg" alt="Album"
+                        style="height: 1.25em; width: auto; vertical-align: middle;"> My Gallery</div>
                 <div class="header-actions">
                     <button id="save-order-btn" title="保存修改">💾</button>
                 </div>

@@ -4,6 +4,8 @@
  * @version 1.0.0 - ES6 Module
  */
 
+import { Toast } from '../../shared/toast.module.js';
+
 export const SaveButton = {
     element: null,
     onSave: null,
@@ -109,12 +111,87 @@ export const SaveButton = {
 
     hide() {
         if (this.element) this.element.classList.remove('active');
+    },
+
+    /**
+     * Initialize Unified Save Logic for Multiple Managers
+     * @param {Array<Function>} getManagers - Array of functions returning manager instances
+     * @param {Function} onJointSave - Async function to save all contents
+     * @param {Function} onJointCancel - Async function to cancel all contents
+     */
+    initUnified(getManagers, onJointSave, onJointCancel) {
+        console.log("[DEBUG] SaveButton.initUnified called");
+        this.init(document.body, async () => {
+            console.log("[DEBUG] SaveButton: onJointSave triggered");
+            try {
+                await onJointSave();
+                console.log("[DEBUG] SaveButton: onJointSave completed");
+                this.checkUnifiedDirty(getManagers);
+            } catch (e) {
+                console.error("[DEBUG] Unified Save Failed", e);
+                Feedback.notifySaveFail("保存失败: " + e.message);
+            }
+        }, async () => {
+            console.log("[DEBUG] SaveButton: onJointCancel triggered");
+            try {
+                await onJointCancel();
+                console.log("[DEBUG] SaveButton: onJointCancel completed");
+                this.checkUnifiedDirty(getManagers);
+            } catch (e) {
+                console.error("[DEBUG] Unified Cancel Failed", e);
+                Feedback.toast("取消失败: " + e.message, 'error');
+            }
+        });
+
+        // Hook into managers
+        setTimeout(() => {
+            getManagers.forEach(getManager => {
+                const manager = getManager();
+                if (manager) {
+                    this._hookManager(manager, () => this.checkUnifiedDirty(getManagers));
+                }
+            });
+        }, 500);
+
+        // Expose a helper to re-hook lazy loaded managers (like Tags)
+        this.reHook = () => {
+            getManagers.forEach(getManager => {
+                const manager = getManager();
+                if (manager) {
+                    this._hookManager(manager, () => this.checkUnifiedDirty(getManagers));
+                }
+            });
+        };
+    },
+
+    _hookManager(manager, checkFn) {
+        if (manager._unifiedHook) return;
+        manager._unifiedHook = true;
+        const originalOnChange = manager.onChange;
+        manager.onChange = () => {
+            if (originalOnChange) originalOnChange();
+            checkFn();
+        };
+    },
+
+    checkUnifiedDirty(getManagers) {
+        let isDirty = false;
+        getManagers.forEach(getManager => {
+            const m = getManager();
+            if (m && m.getSnapshot() !== m.initialSnapshot) isDirty = true;
+        });
+
+        if (isDirty) this.show();
+        else this.hide();
     }
 };
 
 export const Feedback = {
     toast(msg, type = 'info') {
-        if (window.MAERS?.Toast) {
+        console.log(`[DEBUG] Feedback.toast called: ${msg} (${type})`);
+        if (Toast) {
+            Toast[type](msg);
+        } else if (window.MAERS?.Toast) {
             window.MAERS.Toast[type](msg);
         } else {
             console.log(`[${type}] ${msg}`);

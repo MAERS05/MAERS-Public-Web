@@ -29,9 +29,52 @@ export function renderBreadcrumb() {
 
     container.innerHTML = "";
 
+    const isSearching = hasSearch || hasFilter;
+    if (isSearching) {
+        container.classList.add("is-searching");
+    } else {
+        container.classList.remove("is-searching");
+    }
+
     const overlay = document.createElement("div");
-    overlay.className = `breadcrumb-overlay ${hasSearch || hasFilter ? 'active' : ''}`;
-    overlay.innerText = "All";
+    overlay.className = `breadcrumb-overlay ${isSearching ? 'active' : ''}`;
+
+    const prefix = document.createElement("span");
+    prefix.className = "filter-prefix";
+    prefix.textContent = "Filter : ";
+    prefix.style.marginRight = "8px";
+    prefix.style.opacity = "0.6";
+    overlay.appendChild(prefix);
+
+    const items = State.getFilterOrder();
+
+    if (items.length > 0) {
+        items.forEach((filterItem, index) => {
+            if (index > 0) {
+                const sep = document.createElement("span");
+                sep.className = "filter-separator";
+                sep.textContent = " / ";
+                overlay.appendChild(sep);
+            }
+
+            const item = document.createElement("span");
+            item.className = "filter-item";
+            item.textContent = filterItem;
+
+            item.onclick = (e) => {
+                e.stopPropagation();
+                jumpToFilterItem(filterItem);
+            };
+
+            overlay.appendChild(item);
+        });
+    } else {
+        const item = document.createElement("span");
+        item.className = "filter-item";
+        item.textContent = "All";
+        overlay.appendChild(item);
+    }
+
     container.appendChild(overlay);
 
     const rootSpan = document.createElement("span");
@@ -71,6 +114,41 @@ export function renderBreadcrumb() {
                 else navigateTo(idx);
             });
         }
+    }
+}
+
+function jumpToFilterItem(filterItem) {
+    State.jumpToFilter(filterItem);
+
+    const newOrder = State.getFilterOrder();
+    const searchInput = document.getElementById('search-input');
+
+    State.AppState.activeFilters.clear();
+
+    newOrder.forEach(item => {
+        const isSearchKeyword = searchInput && searchInput.value.trim() === item;
+        if (!isSearchKeyword) {
+            State.AppState.activeFilters.add(item);
+        }
+    });
+
+    const lastItem = newOrder[newOrder.length - 1];
+    const isLastItemSearch = searchInput && !State.AppState.activeFilters.has(lastItem);
+
+    if (isLastItemSearch) {
+        searchInput.value = lastItem;
+        if (Search && Search.autoResizeInput) {
+            Search.autoResizeInput(searchInput);
+        }
+    } else if (searchInput && !newOrder.includes(searchInput.value.trim())) {
+        searchInput.value = "";
+        if (Search && Search.autoResizeInput) {
+            Search.autoResizeInput(searchInput);
+        }
+    }
+
+    if (Search && Search.applyFilter) {
+        Search.applyFilter();
     }
 }
 
@@ -174,3 +252,7 @@ export function renderPageTitle() {
         }
     }
 }
+
+export const Nav = {
+    renderBreadcrumb
+};

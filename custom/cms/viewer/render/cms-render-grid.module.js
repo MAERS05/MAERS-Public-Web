@@ -5,6 +5,7 @@
  */
 
 import { AdminButtonHelper } from '../../../../data-manage/admin-base.module.js';
+import { setupTagDragAndMenu } from '../../admin/tag-interactions.module.js';
 
 // Dependency injection
 let State = null;
@@ -131,6 +132,46 @@ function createGridItem(node, State, index) {
         tagsDiv.appendChild(span);
     });
     el.appendChild(tagsDiv);
+
+    // Setup tag interactions (drag-and-drop + context menu) in admin mode
+    if (State.IS_ADMIN && Admin && tagsDiv.children.length > 0) {
+        setupTagDragAndMenu({
+            tagsContainer: tagsDiv,
+            getTags: () => {
+                const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
+                return currentNode?.tags || [];
+            },
+            onTagsUpdate: async (newTags) => {
+                const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
+                if (!currentNode) return false;
+
+                const oldTags = [...(currentNode.tags || [])];
+                currentNode.tags = newTags;
+
+                // Call update API
+                const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
+                try {
+                    const res = await fetch(`/api/cms/update_tags?module=${module}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: node.id, tags: newTags })
+                    });
+
+                    if (res.ok) {
+                        return true;
+                    } else {
+                        currentNode.tags = oldTags;
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('Update tags failed', e);
+                    currentNode.tags = oldTags;
+                    if (window.MAERS?.Toast) window.MAERS.Toast.error('标签更新失败');
+                    return false;
+                }
+            }
+        });
+    }
 
     return el;
 }

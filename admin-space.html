@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="fixed-layout-page">
+
+<head>
+    <script src="shared/flash-guard.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Admin - MAERS</title>
+
+    <link rel="preload" href="static-style/theme.css" as="style">
+    <link rel="preload" href="static-style/components.css" as="style">
+
+    <link rel="stylesheet" href="static-style/theme.css">
+    <link rel="stylesheet" href="static-style/components.css">
+    <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/toast.css">
+    <link rel="stylesheet" href="custom/space/viewer/space-viewer.css">
+    <link rel="stylesheet" href="static-style/responsive.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-base.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css">
+
+    <link rel="stylesheet" href="custom/space/admin/space-admin.css">
+
+    <script type="module" src="shared/utils.module.js"></script>
+    <script type="module" src="shared/style-injector.module.js"></script>
+    <script type="module" src="shared/layout.module.js"></script>
+    <script type="module">
+        import { initTheme } from './shared/theme.module.js';
+        initTheme();
+    </script>
+    <script type="module" src="shared/toast.module.js"></script>
+    <style>
+        /* Admin 专用调整 */
+        .admin-actions {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            pointer-events: none;
+            /* 默认穿透 */
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+
+        .space-card:hover .admin-actions {
+            opacity: 1;
+            pointer-events: auto !important;
+        }
+
+        /* 强制按钮本身也可交互 */
+        .admin-actions .maers-admin-btn,
+        .admin-actions .action-btn {
+            pointer-events: auto !important;
+        }
+
+        /* 强制确保卡片是相对定位的，以容纳 admin-actions */
+        /* 强制确保卡片是相对定位的，以容纳 admin-actions */
+        .space-card {
+            position: relative !important;
+            transition: all 0.2s;
+        }
+
+        /* 选中状态（排序用） */
+        .space-card.selected {
+            border: 2px solid #78ffd6 !important;
+            background: rgba(120, 255, 214, 0.08) !important;
+            transform: scale(0.98);
+            opacity: 1 !important;
+        }
+
+        /* 删除标记状态 */
+        .space-card.deleted {
+            filter: grayscale(100%);
+            opacity: 0.4;
+            transform: scale(0.9);
+            border: 2px solid #ff4757 !important;
+            pointer-events: none;
+            /* 防止再次操作 */
+        }
+
+        /* 但允许管理按钮操作以恢复 */
+        .space-card.deleted .admin-actions {
+            pointer-events: auto !important;
+            filter: none;
+            opacity: 1;
+        }
+
+        .space-card.deleted .admin-actions .maers-admin-btn {
+            background: #ff4757;
+            color: white;
+        }
+
+        /* 序号显示 */
+        .space-card[data-order-num]::before {
+            content: attr(data-order-num);
+            position: absolute;
+            top: 8px;
+            /* 移入卡片内部 */
+            left: 8px;
+            /* 移入卡片内部 */
+            width: 24px;
+            height: 24px;
+            background: #78ffd6 !important;
+            /* 青绿色 */
+            color: #000 !important;
+            /* 黑色文字 */
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 20;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .func-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 200px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: all 0.3s;
+            border: 2px dashed var(--border-color);
+            background: transparent !important;
+        }
+
+        .func-card:hover {
+            opacity: 1;
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+
+        .func-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .func-text {
+            font-size: 0.9rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        /* 保存按钮悬浮窗 */
+        #save-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Save Bar Container -->
+    <div id="save-bar" class="save-bar-container"></div>
+
+    <div class="container">
+        <div class="main-card">
+            <!-- 找回 CMS 风格的 Explorer Header -->
+            <div class="explorer-header">
+                <div class="header-left">
+                    <a href="admin-portal.html" class="back-btn">← Back</a>
+                    <div class="header-title"><img src="ui/space-icon.svg" alt="Space"
+                            style="height: 1.25em; width: auto; vertical-align: middle;"> Other Spaces</div>
+                </div>
+
+                <!-- 找回 搜索框 -->
+                <div class="search-box">
+                    <input type="search" class="search-input" id="search-input" placeholder="搜索网站标题、描述或标签...">
+                </div>
+
+                <div class="header-right">
+                    <div class="header-tools-row">
+                        <!-- 找回 标签按钮 (ID: tag-toggle-btn) -->
+                        <button class="tag-toggle-btn" id="tag-toggle-btn">🏷️ Tags</button>
+                        <!-- 最近访问按钮会由 Recent 模块自动注入或我们预留 -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="breadcrumb-bar" id="breadcrumb"></div>
+
+            <div class="gallery-content">
+                <div class="grid-layout" id="category-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 找回 Tag Drawer -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+    <div id="tag-drawer" class="tag-drawer">
+        <div class="drawer-header">
+            <div class="drawer-title-row">
+                <h3>Filter by Tags</h3>
+                <button class="btn-close-drawer">×</button>
+            </div>
+            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="搜索标签...">
+        </div>
+        <div class="drawer-body" id="drawer-list"></div>
+        <div class="drawer-footer">
+            <button class="btn-clear-tags">Clear All Filters</button>
+        </div>
+    </div>
+
+    <script type="module" src="custom/space/admin-main.module.js?v=20260207_fix"></script>
+</body>
+
+</html>
