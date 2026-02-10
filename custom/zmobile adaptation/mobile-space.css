@@ -114,51 +114,88 @@
        Icon -> Title -> Desc -> Tags
        Tags moved to static positioning to naturally sit below description.
     */
-    .space-card {
-        height: auto !important;
-        /* Allow growing */
-        min-height: 160px !important;
-        padding: 20px 15px !important;
+    /* 
+       Ultimate Fix: Reset Everything to Standard Flow Layout
+       Icon -> Text (Title+Desc) -> Tags
+    */
+    .space-card,
+    .space-card.space-card {
+        /* Container Layout */
         display: flex !important;
         flex-direction: column !important;
         align-items: center !important;
         justify-content: flex-start !important;
+
+        /* Sizing - Let content dictate height */
+        height: auto !important;
+        min-height: auto !important;
+        max-height: none !important;
+        width: 100% !important;
+
+        /* Spacing */
+        padding: 20px 15px 30px 15px !important;
+        /* Extra bottom padding */
+        margin: 0 !important;
+
+        /* Visibility */
+        overflow: visible !important;
+
+        /* Reset positioning context */
+        position: relative !important;
+    }
+
+    /* Reset all children to static flow */
+    .space-card>* {
+        position: static !important;
+        flex: 0 0 auto !important;
+        /* Do not grow or shrink weirdly */
+        width: 100% !important;
     }
 
     .space-icon {
-        margin-bottom: 8px !important;
+        width: auto !important;
+        margin-bottom: 12px !important;
+    }
+
+    .space-text {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        margin-bottom: 12px !important;
     }
 
     .space-title {
         font-size: 1.3rem !important;
         margin-bottom: 8px !important;
         text-align: center !important;
+        white-space: normal !important;
+        line-height: 1.3 !important;
     }
 
     .space-desc {
-        position: static !important;
-        /* Remove absolute positioning */
-        margin-bottom: 12px !important;
-        /* Visual gap before tags */
-        max-width: 100% !important;
         text-align: center !important;
         -webkit-line-clamp: 4 !important;
-        /* Optional: limit lines */
+        line-clamp: 4 !important;
         opacity: 0.7 !important;
+        margin: 0 !important;
     }
 
+    /* Tags Wrapper */
     .space-tags {
-        position: static !important;
-        /* Remove absolute positioning */
-        width: 100% !important;
         display: flex !important;
-        justify-content: center !important;
         flex-wrap: wrap !important;
+        justify-content: center !important;
         gap: 6px !important;
-        margin-top: auto !important;
-        /* Push to bottom if space allows */
-        bottom: auto !important;
-        left: auto !important;
-        right: auto !important;
+        margin-top: 5px !important;
+        padding: 0 !important;
+        transform: none !important;
+    }
+
+    /* Tag Items */
+    .space-tag {
+        font-size: 0.75rem !important;
+        padding: 4px 10px !important;
+        white-space: nowrap !important;
+        display: inline-block !important;
     }
 }
