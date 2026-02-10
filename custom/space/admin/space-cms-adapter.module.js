@@ -32,7 +32,7 @@ export function setupSpaceAdapter(applyFiltersCallback) {
 
             // 标签过滤
             const matchesTags = AppState.activeFilters.size === 0 ||
-                Array.from(AppState.activeFilters).every(tag => node.tags?.includes(tag));
+                Array.from(AppState.activeFilters).some(tag => node.tags?.includes(tag));
 
             return matchesSearch && matchesTags;
         });
