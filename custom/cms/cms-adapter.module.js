@@ -139,18 +139,42 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
 }
 
 /**
- * 预加载标签数据 (统一数据源)
+ * 预加载标签数据 (带静态回退)
  * @param {Object} AppState - 应用状态对象
  * @param {string} moduleName - 当前模块名称
  */
 export async function preloadTagCategories(AppState, moduleName = 'cms') {
+    let success = false;
+
+    // 1. 优先尝试 API (适用于 Admin 模式或有后端支持的环境)
     try {
         const res = await fetch(`/api/cms/tag_categories?module=${moduleName}`);
         if (res.ok) {
             const data = await res.json();
-            AppState.tagCategories = data;
+            if (Array.isArray(data) && data.length > 0) {
+                AppState.tagCategories = data;
+                success = true;
+            }
         }
     } catch (e) {
-        console.error("Failed to load tag categories", e);
+        console.warn(`[MAERS.Tags] API loading failed for ${moduleName}, trying static fallback...`);
+    }
+
+    // 2. 静态回退 (适用于 线上部署/纯静态 环境)
+    if (!success) {
+        try {
+            const staticFile = `data/${moduleName}-tag-categories.json`;
+            const res = await fetch(`${staticFile}?t=${Date.now()}`);
+            if (res.ok) {
+                const data = await res.json();
+                AppState.tagCategories = data;
+            } else {
+                console.warn(`[MAERS.Tags] Static fallback file not found: ${staticFile}`);
+                AppState.tagCategories = [];
+            }
+        } catch (e) {
+            console.error(`[MAERS.Tags] Failed to load tag categories for ${moduleName}`, e);
+            AppState.tagCategories = [];
+        }
     }
 }

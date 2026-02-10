@@ -12,6 +12,7 @@ import { Search, initSearch, setupSearchListeners } from '../../cms/viewer/cms-s
 import { Tags, initTags } from '../../cms/viewer/cms-tags.module.js';
 import { Recent, initRecent } from '../../cms/viewer/cms-recent.module.js';
 import { initNav, Nav } from '../../cms/viewer/render/cms-render-nav.module.js';
+import { preloadTagCategories } from '../../cms/cms-adapter.module.js';
 
 // Import Space-Specific Renderer
 import { initSpaceRender, SpaceRender } from './space-render.module.js';
@@ -112,17 +113,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     SpaceController.AppState.tags = allTags;
 
-    // Load tag categories
-    try {
-        const res = await fetch('/api/cms/tag_categories');
-        if (res.ok) {
-            const categories = await res.json();
-            SpaceController.AppState.tagCategories = categories;
-        }
-    } catch (e) {
-        console.warn("Failed to load tag categories", e);
-        SpaceController.AppState.tagCategories = [];
-    }
+    // Load tag categories (with static fallback)
+    await preloadTagCategories(SpaceController.AppState, 'space');
 
     // Initialize CMS Core
     initStateModule(SpaceController);

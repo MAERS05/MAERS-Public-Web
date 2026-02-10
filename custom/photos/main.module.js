@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Initialize Shared CMS Components
     // Preload tag categories (for filtering logic)
-    preloadTagCategories(AppState);
+    preloadTagCategories(AppState, 'photos');
 
     // Initialize Tags System (Filter Logic Only, no Admin features since IS_ADMIN is false/default)
     initTags(StateWrapper, mockController, mockSearch);
