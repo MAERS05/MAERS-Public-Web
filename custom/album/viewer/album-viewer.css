@@ -39,7 +39,7 @@ html.light-mode .gallery-content {
 .category-card {
   position: relative;
   height: 200px;
-  background: var(--pill-bg);
+  background: var(--card-bg);
   border: 1px solid var(--pill-border);
   border-radius: 24px;
   box-shadow: var(--pill-shadow);

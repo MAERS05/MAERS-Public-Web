@@ -36,7 +36,7 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
         // 统一的标签保存逻辑
         saveTagCategories: async (categories) => {
             try {
-                const res = await fetch('/api/cms/save_tag_categories', {
+                const res = await fetch(`/api/cms/save_tag_categories?module=${moduleName}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(categories)
@@ -141,10 +141,11 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
 /**
  * 预加载标签数据 (统一数据源)
  * @param {Object} AppState - 应用状态对象
+ * @param {string} moduleName - 当前模块名称
  */
-export async function preloadTagCategories(AppState) {
+export async function preloadTagCategories(AppState, moduleName = 'cms') {
     try {
-        const res = await fetch('/api/cms/tag_categories');
+        const res = await fetch(`/api/cms/tag_categories?module=${moduleName}`);
         if (res.ok) {
             const data = await res.json();
             AppState.tagCategories = data;

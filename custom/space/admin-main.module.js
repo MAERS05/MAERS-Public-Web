@@ -16,7 +16,7 @@ initTheme();
 const { AppState, mockController, mockSearch, StateWrapper } = setupSpaceAdapter(applyFilters);
 
 // 预加载标签数据
-preloadTagCategories(AppState);
+preloadTagCategories(AppState, 'space');
 
 const AdminCore = {
     BatchItemManager,

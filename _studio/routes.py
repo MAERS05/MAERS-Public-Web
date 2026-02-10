@@ -46,7 +46,8 @@ def dispatch_get(path, query_params):
 
     # 0. CMS Tags (Special Case)
     if parsed_path == '/api/cms/tag_categories':
-        return 200, cms.get_tag_categories()
+        module = query_params.get('module', ['cms'])[0]
+        return 200, cms.get_tag_categories(module)
     
     # 1. CMS
     if parsed_path.startswith('/api/cms/'):
@@ -62,9 +63,6 @@ def dispatch_get(path, query_params):
         bvid = query_params.get('bvid', [None])[0]
         return bili.get_video_info(bvid)
     
-    # 4. CMS Tags
-    if parsed_path == '/api/cms/tag_categories':
-        return 200, cms.get_tag_categories()
     
     # 4. Music - 获取音乐数据 API
     if parsed_path == '/api/music_data':
@@ -89,7 +87,8 @@ def dispatch_post(path, query_params, body_data, file_data=None):
     
     # 0. CMS Tags (Special Case)
     if path == '/api/cms/save_tag_categories':
-        success = cms.save_tag_categories(body_data)
+        module = query_params.get('module', ['cms'])[0]
+        success = cms.save_tag_categories(body_data, module)
         if success:
             return 200, {"status": "success"}
         else:
@@ -213,12 +212,6 @@ def dispatch_post(path, query_params, body_data, file_data=None):
         return album.handle_ops(path, body_data)
     
     # 5.5 CMS Tags APIs
-    if path == '/api/cms/save_tag_categories':
-        success = cms.save_tag_categories(body_data)
-        if success:
-            return 200, {"status": "success"}
-        else:
-            return 500, {"error": "Failed to save tag categories"}
 
     # 6. Space Management APIs
     if path == '/api/space/fetch_meta':

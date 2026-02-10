@@ -66,7 +66,8 @@ function showContextMenu(e, tagText, tagIndex, tagEl, tagsContainer, getTags, on
 
     const menu = document.createElement('div');
     menu.className = 'tag-context-menu';
-    menu.style.cssText = `position:fixed;left:${e.clientX}px;top:${e.clientY}px;background:var(--pill-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10000;min-width:120px;`;
+    // Initially position it far away to measure without flash
+    menu.style.cssText = `position:fixed;left:-9999px;top:-9999px;background:var(--pill-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10000;min-width:120px;`;
 
     // 重命名
     const rename = document.createElement('div');
@@ -108,10 +109,33 @@ function showContextMenu(e, tagText, tagIndex, tagEl, tagsContainer, getTags, on
     menu.append(rename, reorder, del);
     document.body.appendChild(menu);
 
-    setTimeout(() => document.addEventListener('click', function close() {
-        menu.remove();
-        document.removeEventListener('click', close);
-    }), 100);
+    // Smart Positioning
+    const menuWidth = menu.offsetWidth;
+    const menuHeight = menu.offsetHeight;
+    let posX = e.clientX;
+    let posY = e.clientY;
+
+    // Flip horizontally if overflow right
+    if (posX + menuWidth > window.innerWidth) {
+        posX = window.innerWidth - menuWidth - 10;
+    }
+    // Flip vertically if overflow bottom
+    if (posY + menuHeight > window.innerHeight) {
+        posY = posY - menuHeight; // Show above cursor
+        if (posY < 10) posY = 10; // Don't go above top edge
+    }
+
+    menu.style.left = `${posX}px`;
+    menu.style.top = `${posY}px`;
+
+    // Wait bit before adding close listener to avoid immediate close
+    setTimeout(() => {
+        const close = () => {
+            menu.remove();
+            document.removeEventListener('click', close);
+        };
+        document.addEventListener('click', close);
+    }, 100);
 }
 
 function startReorder(sourceTag, sourceIndex, tagsContainer, getTags, onTagsUpdate) {

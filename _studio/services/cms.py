@@ -401,25 +401,33 @@ def handle_request(path, method, query_params, body_data):
         return 500, {"error": str(e)}
 # ================= 标签操作 =================
 
-TAG_CATEGORIES_FILE = os.path.join(DATA_DIR, 'cms-tag-categories.json')
+def _get_tags_file(module):
+    """根据模块返回对应的标签分类文件路径"""
+    # 知识管理模块共享一个标签库
+    shared_modules = ['notes', 'literature', 'record', 'cms']
+    if not module or module in shared_modules:
+        return os.path.join(DATA_DIR, 'cms-tag-categories.json')
+    return os.path.join(DATA_DIR, f'{module}-tag-categories.json')
 
-def get_tag_categories():
+def get_tag_categories(module='cms'):
     """读取标签分类配置"""
-    if not os.path.exists(TAG_CATEGORIES_FILE):
+    filepath = _get_tags_file(module)
+    if not os.path.exists(filepath):
         return []
     try:
-        with open(TAG_CATEGORIES_FILE, 'r', encoding='utf-8') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             return json.load(f)
     except Exception as e:
-        print(f"Error reading tag categories: {e}")
+        print(f"Error reading tag categories for {module}: {e}")
         return []
 
-def save_tag_categories(data):
+def save_tag_categories(data, module='cms'):
     """保存标签分类配置"""
     try:
-        with open(TAG_CATEGORIES_FILE, 'w', encoding='utf-8') as f:
+        filepath = _get_tags_file(module)
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=2)
         return True
     except Exception as e:
-        print(f"Error saving tag categories: {e}")
+        print(f"Error saving tag categories for {module}: {e}")
         return False

@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     StateWrapper = adapterResult.StateWrapper;
 
     // Preload tag categories
-    preloadTagCategories(AppState);
+    preloadTagCategories(AppState, 'photos');
 
     // Initialize CMS Tags System
     console.log("Photos Admin: Initializing CMS Tags...");

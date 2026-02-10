@@ -84,7 +84,7 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, extra
 
             // 标签过滤
             const matchesTags = AppState.activeFilters.size === 0 ||
-                Array.from(AppState.activeFilters).some(tag => photo.tags?.includes(tag));
+                Array.from(AppState.activeFilters).every(tag => photo.tags?.includes(tag));
 
             return matchesSearch && matchesTags;
         });

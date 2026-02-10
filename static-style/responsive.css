@@ -36,14 +36,6 @@
         font-size: 1.6rem;
     }
 
-    .main-card,
-    .gallery-content {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        background: transparent !important;
-        /* Fix for potential white background in frames */
-    }
-
     /* --- Reorder Interaction (Multi-Select Version) --- */
 
     /* 1. 移动/选择按钮 (左上角) */
