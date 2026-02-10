@@ -379,8 +379,7 @@ export const Search = {
                 // 关键词搜索 (OR - 标题或拼音)
                 if (match && keywords.length > 0) {
                     const nameMatch = keywords.some(k =>
-                        this.match(node.title || node.name, k) ||
-                        (node.content && this.match(node.content, k))
+                        this.match(node.title || node.name, k)
                     );
                     if (!nameMatch) match = false;
                 }
