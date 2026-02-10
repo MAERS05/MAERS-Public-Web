@@ -17,7 +17,7 @@
         <div class="video-modal" id="video-modal">
             <div class="video-modal-content">
                 <span class="video-close">&times;</span>
-                <video id="guide-video" controls preload="none">
+                <video id="guide-video" controls preload="none" muted>
                     <source src="_说明/site-guide.mp4" type="video/mp4">
                     您的浏览器不支持视频播放。
                 </video>
