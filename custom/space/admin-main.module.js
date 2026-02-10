@@ -64,15 +64,8 @@ if (searchInput) {
     searchInput.addEventListener('input', (e) => {
         const currentKeyword = e.target.value.trim();
 
-        // Update Filter Badge Logic (Synced from CMS Search)
-        if (lastKeyword === "" && currentKeyword !== "") {
-            StateWrapper.addFilter(currentKeyword);
-        } else if (lastKeyword !== "" && currentKeyword === "") {
-            StateWrapper.removeFilter(lastKeyword);
-        } else if (lastKeyword !== "" && currentKeyword !== "" && lastKeyword !== currentKeyword) {
-            StateWrapper.removeFilter(lastKeyword);
-            StateWrapper.addFilter(currentKeyword);
-        }
+        // Update Filter Badge Logic (Use search query directly, not as a tag filter)
+        // Correctly handle search query without adding it to activeFilters (which are strictly for tags)
 
         lastKeyword = currentKeyword;
 

@@ -28,9 +28,7 @@ export function setupSpaceAdapter(applyFiltersCallback) {
             // 搜索过滤
             const matchesSearch = !query ||
                 node.name?.toLowerCase().includes(query) ||
-                node.title?.toLowerCase().includes(query) ||
-                node.description?.toLowerCase().includes(query) ||
-                node.content?.toLowerCase().includes(query);
+                node.title?.toLowerCase().includes(query);
 
             // 标签过滤
             const matchesTags = AppState.activeFilters.size === 0 ||
