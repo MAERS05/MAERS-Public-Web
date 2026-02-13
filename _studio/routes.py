@@ -3,7 +3,8 @@ import urllib.parse
 import json
 
 # Services
-from services import cms, photos, music, bili, album, space
+from services import cms, photos, music, album, space, music_api
+
 import config
 
 PAGE_TEMPLATE = """<!DOCTYPE html>
@@ -61,7 +62,8 @@ def dispatch_get(path, query_params):
     # 3. Bilibili
     if parsed_path == '/api/get_bili_info':
         bvid = query_params.get('bvid', [None])[0]
-        return bili.get_video_info(bvid)
+        return music_api.get_video_info(bvid)
+
     
     
     # 4. Music - 获取音乐数据 API
@@ -101,6 +103,33 @@ def dispatch_post(path, query_params, body_data, file_data=None):
             return 200, result
         else:
             return 500, result
+    
+    if path == '/api/cms/rename_tag':
+        module = query_params.get('module', ['cms'])[0]
+        old_name = body_data.get('old_name')
+        new_name = body_data.get('new_name')
+        
+        if not old_name or not new_name:
+            return 400, {"error": "old_name and new_name are required"}
+        
+        result = cms.rename_tag(module, old_name, new_name)
+        if result.get('success'):
+            return 200, result
+        else:
+            return 400, result
+    
+    if path == '/api/cms/delete_tag':
+        module = query_params.get('module', ['cms'])[0]
+        tag_name = body_data.get('tag_name')
+        
+        if not tag_name:
+            return 400, {"error": "tag_name is required"}
+        
+        result = cms.delete_tag(module, tag_name)
+        if result.get('success'):
+            return 200, result
+        else:
+            return 400, result
 
     # 1. CMS
     if path.startswith('/api/cms/'):

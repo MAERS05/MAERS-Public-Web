@@ -1,6 +1,14 @@
+"""
+MAERS Music API Module
+用于集成各种音乐/视频平台的 API 获取。
+"""
 import urllib.request
 import json
 import urllib.parse
+
+# ==========================================
+# BILIBILI API
+# ==========================================
 
 def get_video_info(bvid):
     if not bvid:

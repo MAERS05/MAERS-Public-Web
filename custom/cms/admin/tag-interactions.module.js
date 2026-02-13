@@ -139,10 +139,7 @@ function showContextMenu(e, tagText, tagIndex, tagEl, tagsContainer, getTags, on
 }
 
 function startReorder(sourceTag, sourceIndex, tagsContainer, getTags, onTagsUpdate) {
-    if (cancelReorderListener) {
-        document.removeEventListener('click', cancelReorderListener);
-        cancelReorderListener = null;
-    }
+    cancelReorder();
 
     reorderMode = { active: true, sourceTag, sourceIndex, tagsContainer, getTags, onTagsUpdate };
     sourceTag.classList.add('reorder-source');

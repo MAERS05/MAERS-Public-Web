@@ -216,7 +216,7 @@ export async function refreshView(fullReload = false, forceResetManager = false)
     const hasFilter = State.AppState.activeFilters.size > 0;
 
     if ((hasSearch || hasFilter) && Search && Search.applyFilter) {
-        Search.applyFilter();
+        Search.applyFilter(forceResetManager);
         // rely on Search to sync manager via renderGrid
         return;
     }
@@ -329,7 +329,10 @@ export async function uiRenameNode(e, id, oldTitle) {
     const newTitle = prompt("Enter new title:", oldTitle);
     if (newTitle && newTitle !== oldTitle) {
         const res = await Controller.renameNode(id, newTitle);
-        if (res.success) refreshView();
+        if (res.success) {
+            await refreshView(false, true);
+            if (SaveButton) SaveButton.hide();
+        }
     }
 }
 

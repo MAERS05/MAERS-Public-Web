@@ -275,7 +275,6 @@ export function renderAlbums(catIndex, colIndex) {
             resetBtn.className = 'maers-admin-btn';
             resetBtn.title = '还原所有原始分P';
             resetBtn.textContent = '↺';
-            resetBtn.style.color = 'var(--text-sub)';
             resetBtn.onclick = (e) => Admin.uiResetTracks(e, catIndex, colIndex, albIndex);
 
             // 插入到删除按钮之前

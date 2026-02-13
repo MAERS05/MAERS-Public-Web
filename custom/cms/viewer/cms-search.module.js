@@ -71,7 +71,7 @@ export function autoResizeInput(input) {
     document.body.removeChild(span);
 }
 
-export function applyFilter() {
+export function applyFilter(shouldResetManager = false) {
     const mainInput = document.getElementById(State.SELECTORS.SEARCH_INPUT.slice(1));
     const keywordStr = mainInput ? mainInput.value.trim() : "";
 
@@ -123,11 +123,11 @@ export function applyFilter() {
     // Render grid with filtered results
     if (Render?.renderGrid) {
         if (hasFilter) {
-            Render.renderGrid(results, true);
+            Render.renderGrid(results, true, shouldResetManager);
         } else {
             const current = State.AppState.pathStack[State.AppState.pathStack.length - 1];
             const list = current === "root" ? State.AppState.root : current.children;
-            Render.renderGrid(list);
+            Render.renderGrid(list, false, shouldResetManager);
         }
     }
 

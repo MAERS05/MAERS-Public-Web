@@ -57,6 +57,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // -- Global Admin Coordination --
         if (State.IS_ADMIN) {
+            // Expose refreshView to Controller for cross-module updates
+            Controller.refreshView = View.refreshView;
+
             // Function to check if anything is dirty across all managers
             const checkGlobalDirty = () => {
                 const adminManager = Admin.getManager();
