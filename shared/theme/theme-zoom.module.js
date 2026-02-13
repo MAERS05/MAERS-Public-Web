@@ -12,10 +12,14 @@ const ZOOM_TIP = "点击缩放，长按卡片空白处拖拽";
 
 function restoreGlobalView(e) {
     const t = e.target;
+    // If element is detached from DOM, it was likely removed by a UI interaction (like innerHTML refresh)
+    // In this case we should NOT restore the view.
+    if (!document.body.contains(t)) return;
 
     if (t.closest(".main-card, .home-container, .immersive-layer")) return;
     if (t.closest(".zoom-trigger-icon") || t.closest(".zoom-trigger-whole")) return;
     if (t.closest(".theme-switch-wrapper") || t.closest(".auto-mode-btn") || t.closest(".mode-text-btn") || t.closest(".lightbox") || t.closest(".lightbox-overlay")) return;
+    if (t.closest(".tag-drawer") || t.closest(".drawer-overlay") || t.closest(".admin-modal") || t.closest(".toast-container")) return;
 
     document.documentElement.classList.remove("shrink-view");
     document.removeEventListener("click", restoreGlobalView);

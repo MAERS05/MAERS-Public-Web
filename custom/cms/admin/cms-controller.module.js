@@ -7,7 +7,7 @@
 const URL_PARAMS = new URLSearchParams(window.location.search);
 
 export const CONFIG = {
-    CURRENT_MODULE: URL_PARAMS.get('module') || window.location.pathname.split('/').pop().replace('.html', '') || 'notes',
+    CURRENT_MODULE: window.CURRENT_MODULE || URL_PARAMS.get('module') || window.location.pathname.split('/').pop().replace('.html', '') || 'notes',
     IS_ADMIN: window.IS_ADMIN === true || URL_PARAMS.get('mode') === 'admin'
 };
 
@@ -77,20 +77,35 @@ export async function loadData() {
     AppState.allNodes = [];
     flattenNodes(AppState.root);
 
-    // Load Tag Categories from Config Node
-    const configNode = AppState.allNodes.find(n => n.title === '_TAG_CONFIG');
-    if (configNode && configNode.content) {
+    // Load Tag Categories (with robust fallbacks)
+    let tagSuccess = false;
+    try {
+        const tagRes = await fetch(`/api/cms/tag_categories?module=${CONFIG.CURRENT_MODULE}`);
+        if (tagRes.ok) {
+            const data = await tagRes.json();
+            if (Array.isArray(data) && data.length > 0) {
+                AppState.tagCategories = data;
+                tagSuccess = true;
+            }
+        }
+    } catch (e) {
+        console.warn("[MAERS.CMS] Tag API failed, trying static fallback...", e);
+    }
+
+    if (!tagSuccess) {
         try {
-            // Handle potential markdown wrapping or raw text
-            let cleanContent = configNode.content.trim();
-            // Simple cleanup if needed, but assuming raw JSON
-            AppState.tagCategories = JSON.parse(cleanContent);
+            const staticTagFile = `data/tags/cms-${CONFIG.CURRENT_MODULE}-tag-categories.json`;
+            const tagRes = await fetch(`${staticTagFile}?t=${Date.now()}`);
+            if (tagRes.ok) {
+                AppState.tagCategories = await tagRes.json();
+            } else {
+                console.warn(`[MAERS.CMS] Static tags file not found: ${staticTagFile}`);
+                AppState.tagCategories = [];
+            }
         } catch (e) {
-            console.warn("[MAERS.CMS] Failed to parse _TAG_CONFIG:", e);
+            console.error("[MAERS.CMS] Static tags load failed:", e);
             AppState.tagCategories = [];
         }
-    } else {
-        AppState.tagCategories = [];
     }
 
     return true;
@@ -155,28 +170,46 @@ export function reorderNodes(ids) {
 
 export async function saveTagCategories(categories) {
     AppState.tagCategories = categories;
-    const configNode = AppState.allNodes.find(n => n.title === '_TAG_CONFIG');
-    const content = JSON.stringify(categories, null, 2);
 
-    if (configNode) {
-        return callApi('update', { id: configNode.id, data: { content } });
-    } else {
-        // Create the config node. Hidden? We just use a confusing name to hide it slightly or use a distinct type if possible.
-        // Using type 'note' to store content.
-        return callApi('add', { parentId: 'root', type: 'note', title: '_TAG_CONFIG', content: content });
+    // Call API
+    try {
+        const res = await fetch(`/api/cms/save_categories?module=${CONFIG.CURRENT_MODULE}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(categories)
+        });
+
+        if (res.ok) {
+            return { success: true };
+        } else {
+            return { success: false, msg: 'API Error' };
+        }
+    } catch (e) {
+        console.error("Save Tags Failed", e);
+        return { success: false, msg: e.message };
     }
 }
 
 // Image Upload Logic (Business Logic)
 export async function uploadImage(file) {
-    const newFileName = `paste_${Date.now()}.avif`;
-    const res = await fetch(`/upload?category=_notes&name=${newFileName}&convert=avif`, {
+    const module = CONFIG.CURRENT_MODULE || 'notes';
+    let category = '_notes';
+
+    if (module === 'games') category = '_games';
+    else if (module === 'literature') category = '_literature';
+    else if (module === 'record') category = '_record';
+    else category = '_notes';
+
+    const ext = file.name.split('.').pop() || 'png';
+    const newFileName = `paste_${Date.now()}.${ext}`;
+    const res = await fetch(`/upload?category=${category}&name=${newFileName}`, {
         method: 'POST',
         body: file
     });
     if (res.ok) {
         const data = await res.json();
-        return { success: true, path: data.path };
+        // Return preview (AVIF) as the main path if available, otherwise fallback to raw path
+        return { success: true, path: data.preview || data.path };
     }
     return { success: false };
 }
@@ -199,7 +232,6 @@ export const Controller = {
     uploadCover
 };
 
-// ...
 
 // Cover Upload Logic
 export async function uploadCover(formData) {
@@ -208,12 +240,18 @@ export async function uploadCover(formData) {
     if (!file || !nodeId) return { success: false, msg: 'Missing file or nodeId' };
 
     // 1. Upload Image
-    // Using 'covers' category to organize files
+    // Determine category based on module
+    let category = 'literaturecovers';
+    const currentModule = CONFIG.CURRENT_MODULE;
+    if (currentModule === 'games') {
+        category = 'gamecovers';
+    }
+
     const ext = file.name.split('.').pop();
     const newName = `cover_${nodeId}_${Date.now()}.${ext}`;
 
     try {
-        const res = await fetch(`/upload?category=covers&name=${newName}&convert=avif`, {
+        const res = await fetch(`/upload?category=${category}&name=${newName}&convert=avif`, {
             method: 'POST',
             body: file // Body acts as file binary for this specific backend endpoint
         });

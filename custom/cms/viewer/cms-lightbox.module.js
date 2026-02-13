@@ -53,19 +53,11 @@ export function initLightbox() {
                 return;
             }
 
-            if (
-                target.closest(".markdown-body") ||
-                target.closest(".immersive-layer") ||
-                target.closest(".main-card") ||
-                target.closest("#vditor-container") ||
-                target.closest(".vditor-content") ||
-                target.closest(".vditor-reset")
-            ) {
-                e.preventDefault();
-                e.stopPropagation();
-                showLightbox(target.src);
-                return;
-            }
+            // Revert complex link parsing logic to a simple showLightbox(target.src)
+            e.preventDefault();
+            e.stopPropagation();
+            showLightbox(target.src);
+            return;
         }
 
         const vditorImgWrapper = target.closest(".vditor-ir__node--preview");

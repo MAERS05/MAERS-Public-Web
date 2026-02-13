@@ -203,11 +203,11 @@ html.light-mode .grid-item .mini-tag.active {
    ========================================================================== */
 .folder-grid .grid-item .item-icon,
 .grid-item .item-divider,
-.folder-grid .grid-item::before,
+.folder-grid .grid-item:not(.is-selected)::before,
 .folder-grid .grid-item::after,
-.folder-grid .type-folder::before,
+.folder-grid .type-folder:not(.is-selected)::before,
 .folder-grid .type-folder::after,
-.folder-grid .type-note::before,
+.folder-grid .type-note:not(.is-selected)::before,
 .folder-grid .type-note::after {
     display: none !important;
 }

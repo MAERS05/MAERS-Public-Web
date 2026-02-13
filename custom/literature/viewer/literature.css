@@ -146,8 +146,8 @@
     align-items: center;
 }
 
-/* Remove decorative artifacts from generic folders */
-.grid-item::before,
+/* Remove decorative artifacts from generic folders, but keep sequence badges */
+.grid-item:not(.is-selected)::before,
 .grid-item::after {
     display: none !important;
 }
@@ -159,9 +159,8 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-size: cover;
-    background-position: center;
     z-index: 1;
+    overflow: hidden;
 }
 
 /* 3.3 Typography (Cinzel) & Positioning */
@@ -282,10 +281,10 @@
     /* Removes generic hover lift, handled specifically above */
 }
 
-/* Kill all decorative pseudo-elements from generic CMS styles */
-.folder-grid .grid-item::before,
+/* Kill all decorative pseudo-elements from generic CMS styles, but keep sequence badges */
+.folder-grid .grid-item:not(.is-selected)::before,
 .folder-grid .grid-item::after,
-.folder-grid .type-note::before,
+.folder-grid .type-note:not(.is-selected)::before,
 .folder-grid .type-note::after {
     display: none !important;
 }

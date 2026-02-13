@@ -56,7 +56,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     StateWrapper = adapterResult.StateWrapper;
 
     // Preload tag categories
-    preloadTagCategories(AppState, 'photos');
+    const currentCategory = (Controller?.State?.category) || 'default';
+    const dynamicModuleName = `photos-${currentCategory}`;
+    await preloadTagCategories(AppState, dynamicModuleName);
 
     // Initialize CMS Tags System
     console.log("Photos Admin: Initializing CMS Tags...");
@@ -123,7 +125,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         const originalToggle = Tags.toggleTagDrawer;
         Tags.toggleTagDrawer = () => {
             originalToggle();
-            setTimeout(() => SaveButton.reHook?.(), 100);
+
+            // Retry hooking for stability
+            const tryHook = (attempts = 0) => {
+                if (SaveButton.reHook) {
+                    SaveButton.reHook();
+
+                    // Verify if manager is captured
+                    const tm = Tags.getManager?.();
+                    if (tm && !tm._unifiedHook) {
+                        if (attempts < 5) setTimeout(() => tryHook(attempts + 1), 200);
+                    }
+                }
+            };
+
+            setTimeout(() => tryHook(), 100);
         };
     }
 
@@ -150,6 +166,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (overlay) {
         overlay.addEventListener('click', () => {
             Tags.toggleTagDrawer();
+        });
+    }
+
+    // Bind Clear All button
+    const clearBtn = document.querySelector('.btn-clear-tags');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            const input = document.getElementById('tag-drawer-search');
+            if (input) input.value = '';
+            Tags.clearTagFilter();
+        });
+    }
+
+    // Bind tag search input
+    const tagSearchInput = document.getElementById('tag-drawer-search');
+    if (tagSearchInput) {
+        tagSearchInput.addEventListener('input', () => {
+            Tags.refreshDrawerList();
         });
     }
 });

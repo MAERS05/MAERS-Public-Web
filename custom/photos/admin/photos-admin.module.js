@@ -170,10 +170,14 @@ function bindAdminEvents() {
     if (fileInput) {
         Utils.bindEvent(fileInput, 'change', async (e) => {
             const res = await Controller.uploadFiles(e.target.files);
+            const totalCount = e.target.files.length;
+            const successCount = totalCount - res.dupCount;
+
+            if (successCount > 0) {
+                showToast(`成功上传 ${successCount} 张图片`, 'success');
+            }
             if (res.dupCount > 0) {
                 showToast(`发现 ${res.dupCount} 张重复图片`, 'warning');
-            } else {
-                showToast("上传成功", 'success');
             }
             await Controller.reloadData();
             if (manager && manager.setList) {

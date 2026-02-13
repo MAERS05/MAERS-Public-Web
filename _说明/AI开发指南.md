@@ -37,6 +37,13 @@
 -   **必须**通过 `shared/namespace.module.js` 统一管理全局命名空间初始化，严禁散落挂载。
 -   **必须**使用 `shared/templates.module.js` 构建复杂 DOM，替代 `innerHTML` 拼接，以防止 XSS 和提升可读性。
 -   **必须**在复用 CMS 适配器（如 Photos Viewer, Space Viewer）时，**显式设定** `{ initialState: { IS_ADMIN: false } }`，防止管理 UI 泄露。
+-   **必须**确保在 CMS 模块中执行增删改操作时，同步执行 `_studio/services/cms.py` 中的物理文件操作逻辑（如创建 `.md`、同步重命名）。
+-   **必须**在查询 CMS 内容时，首先检查 `content` 字段是否以 `.md` 结尾。如果是，前端必须执行异步 `fetch` 获取内容，而不是直接使用数据库字段。
+-   **必须**严格遵守 `data/<module>/<filename>.md` 的物理存放规则，禁止跨模块混放。
+-   **必须**通过 `/api/cms/get_categories?module=xxx` 和 `/api/cms/save_categories` 接口管理标签分类，严禁试图在 `nodes` 表中查找 `_TAG_CONFIG` 节点。
+-   **必须**在执行“出厂重置”或“清空数据”逻辑时，确保 `data/tags/` 目录下的 JSON 配置文件也被同步重置，并保持目录树 JSON 的 `{"root": []}` 初始结构。
+-   **必须**使用 `loading="lazy"` 属性替代 `InteractionObserver` 方案来实现图片懒加载。
+-   **必须**遵循 ADR-032 命名规范创建标签配置文件：`cms-{module}-tag-categories.json`。
 
 ### ❌ Don'ts (禁止做)
 -   **禁止**写入 HTML 内联事件 (`onclick="..."`)。

@@ -220,7 +220,9 @@ export const IndexAdmin = {
                         .then(res => res.json())
                         .then(data => {
                             if (data.status === 'created') {
-                                Feedback.notifySuccess(`已自动创建页面: ${item.url}`);
+                                Feedback.notifySuccess(`HTML文件创建成功`);
+                            } else if (data.status === 'exists') {
+                                Feedback.toast(`HTML文件已存在`, 'info');
                             }
                         })
                         .catch(err => console.error("Page creation check failed", err));
@@ -256,20 +258,17 @@ export const IndexAdmin = {
                 { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' }
             ],
             onSave: async (formData) => {
-                // Auto create page
                 if (formData.url.endsWith('.html') && !formData.url.startsWith('http') && !formData.url.includes('/')) {
-                    fetch('/api/ensure_page', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename: formData.url, title: formData.title })
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.status === 'created') {
-                                Feedback.notifySuccess(`已自动创建页面: ${formData.url}`);
-                            }
-                        })
-                        .catch(err => console.error("Page creation check failed", err));
+                    try {
+                        const pageRes = await fetch('/api/ensure_page', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filename: formData.url, title: formData.title })
+                        });
+                        const pageData = await pageRes.json();
+                        if (pageData.status === 'created') Feedback.notifySuccess('HTML文件创建成功');
+                        else if (pageData.status === 'exists') Feedback.toast('HTML文件已存在', 'info');
+                    } catch (e) { console.error(e); }
                 }
 
                 const id = "nav-" + formData.title.toLowerCase().replace(/\s+/g, '-');
@@ -298,7 +297,7 @@ export const IndexAdmin = {
                         this.manager.initialSnapshot = JSON.stringify(this.items);
                         this.manager.updateSaveState();
                         this.render();
-                        Feedback.notifyAddSuccess();
+                        Feedback.notifyAddSuccess("首页卡片创建成功");
                         return true;
                     } else {
                         throw new Error("Server Error");
@@ -306,7 +305,7 @@ export const IndexAdmin = {
                 } catch (e) {
                     this.items.pop(); // Rollback
                     this.render();
-                    Feedback.notifyAddFail();
+                    Feedback.notifyAddFail("首页卡片创建失败");
                     return false;
                 }
             }
@@ -332,7 +331,7 @@ export const IndexAdmin = {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ filename: item.url })
                         });
-                        Feedback.notifySuccess(`文件已彻底物理删除: ${item.url}`);
+                        Feedback.notifySuccess(`HTML文件已同步删除`);
                     } catch (e) {
                         console.error('File delete error', e);
                         Feedback.notifyError(`文件删除失败: ${item.url}`);

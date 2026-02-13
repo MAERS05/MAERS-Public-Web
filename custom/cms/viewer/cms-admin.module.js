@@ -35,8 +35,7 @@ export async function initAdminFeatures() {
         }
     });
 
-    // 2. 初始化 SaveButton - 移至 admin-main.module.js 统一管理
-    // SaveButton.init(document.body, performSave, performCancel);
+
 
     // 3. 初始同步 - 使用 true 以重置 initialSnapshot，建立正确的“原始状态”
     syncManagerList(null, true);
@@ -142,9 +141,11 @@ export async function performSave() {
 
     // 3. Finalize
     if (success) {
-        // [Modified]: Feedback removed, handled by global coordination in admin-main
-        // if (Feedback) Feedback.notifySaveSuccess();
-        // else if (window.MAERS?.Toast) window.MAERS.Toast.success("保存成功");
+        if (Feedback) {
+            if (deletedItems.length > 0) {
+                Feedback.notifyDeleteSuccess('MD 文档及其子节点已删除');
+            }
+        }
 
         // Show cover deletion notice if applicable
         if (deletedWithCover && window.MAERS?.Toast) {
@@ -180,9 +181,6 @@ export async function performCancel() {
 
         // 3. Refresh View to reflect clean AppState
         await refreshView(false);
-
-        // [Modified]: Feedback removed, handled by global coordination in admin-main
-        // if (Feedback) Feedback.notifyCancel();
     }
 }
 
@@ -285,7 +283,11 @@ export async function uiCreateNode(type) {
             // forceResetManager = true ensures we drop any stale state.
             await refreshView(true, true);
 
-            if (Feedback) Feedback.notifyAddSuccess();
+            // [Custom Feedback] User requested specific MD/Folder creation toast
+            if (Feedback) {
+                const msg = (actualType === 'note') ? 'MD 文档已创建' : '文件夹已创建';
+                Feedback.notifyAddSuccess(msg);
+            }
             // Force Hide SaveBar
             if (SaveButton) SaveButton.hide();
         } else {

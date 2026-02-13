@@ -50,7 +50,6 @@ initViewModule({
     Editor
 });
 initEditor(Controller);
-
 // Bootstrap on DOMContentLoaded with Error Handling
 document.addEventListener('DOMContentLoaded', async () => {
     try {

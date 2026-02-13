@@ -5,7 +5,7 @@
     <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MAERS Space - Games</title>
+    <title>MAERS Admin - Games</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style" />
@@ -14,10 +14,20 @@
     <link rel="stylesheet" href="static-style/theme.css" />
     <link rel="stylesheet" href="static-style/components.css" />
     <link rel="stylesheet" href="static-style/style.css" />
+    <link rel="stylesheet" href="static-style/toast.css" />
+    <link rel="stylesheet" href="plugins/vditor-assets/index.css" />
     <link rel="stylesheet" href="custom/cms/viewer/cms-base.css" />
     <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css" />
     <link rel="stylesheet" href="custom/games/viewer/games.css" />
     <link rel="stylesheet" href="custom/games/viewer/games-reset.css" />
+    <link rel="stylesheet" href="static-style/admin-modal.css" />
+    <link rel="stylesheet" href="custom/cms/admin/cms-editor.css" />
+    <link rel="stylesheet" href="static-style/splash.css" />
+
+    <script>
+        window.IS_ADMIN = true;
+        window.CURRENT_MODULE = 'games';
+    </script>
 </head>
 
 <body>
@@ -26,7 +36,7 @@
             <!-- 头部：标题与工具栏 -->
             <div class="explorer-header">
                 <div class="header-left">
-                    <a href="index.html" class="back-btn">← Back</a>
+                    <a href="admin-portal.html" class="back-btn">← Back</a>
                     <!-- Icon will use literature-icon if games-icon doesn't exist, or just text if image fails -->
                     <div class="header-title"><img src="ui/games-icon.svg" onerror="this.src='ui/literature-icon.svg'"
                             alt="Games" style="height: 1.25em; width: auto; vertical-align: middle;"> Games</div>

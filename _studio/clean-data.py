@@ -49,15 +49,62 @@ class MaersJanitor:
             for row in cursor.fetchall():
                 path = normalize_path(row[0])
                 self.used_files.add(path)
-                # 同时也要把对应的 thumb/preview 加入（如果是 photos 里的）
+                
+                # Enhanced: Handle thumbnails/previews with extension change
                 if path.startswith('photos/images/'):
-                    self.used_files.add(path.replace('photos/images/', 'photos/thumbnails/'))
-                    self.used_files.add(path.replace('photos/images/', 'photos/previews/'))
+                     # 1. Standard same-extension check (legacy)
+                     self.used_files.add(path.replace('photos/images/', 'photos/thumbnails/'))
+                     self.used_files.add(path.replace('photos/images/', 'photos/previews/'))
+                     
+                     # 2. Smart Extension Swap (for .webp/.avif generated files)
+                     base_path_no_ext = os.path.splitext(path)[0]
+                     
+                     # Thumb -> .webp
+                     thumb_path = base_path_no_ext.replace('photos/images/', 'photos/thumbnails/') + '.webp'
+                     self.used_files.add(thumb_path)
+                     
+                     # Preview -> .avif
+                     prev_path = base_path_no_ext.replace('photos/images/', 'photos/previews/') + '.avif'
+                     self.used_files.add(prev_path)
 
             # 2. 扫描正文图片
             cursor.execute("SELECT content FROM nodes WHERE content IS NOT NULL AND content != ''")
             for row in cursor.fetchall():
                 content = row[0]
+                
+                # New Logic: Handle MD files by reading their content
+                if str(content).endswith('.md'):
+                    # Add the MD file itself to whitelist
+                    self.used_files.add(normalize_path(content))
+                    
+                    # Try to locate the MD file
+                    # DB usually stores relative path like 'literature/foo.md'
+                    full_md_path = os.path.join(config.DATA_DIR, content)
+                    if not os.path.exists(full_md_path):
+                        full_md_path = os.path.join(config.PROJECT_ROOT, content)
+                        
+                    if os.path.exists(full_md_path):
+                        try:
+                            with open(full_md_path, 'r', encoding='utf-8') as f:
+                                file_content = f.read()
+                                # recursively scan content of the MD file
+                                matches = re.findall(r'photos/[^"\'\s)]+\.[\w]+', file_content)
+                                for m in matches:
+                                    path = normalize_path(m)
+                                    self.used_files.add(path)
+                                    if path.startswith('photos/images/'):
+                                        # 1. Standard same-extension
+                                        self.used_files.add(path.replace('photos/images/', 'photos/thumbnails/'))
+                                        self.used_files.add(path.replace('photos/images/', 'photos/previews/'))
+                                        # 2. Smart Extension Swap (.webp/.avif)
+                                        base = os.path.splitext(path)[0]
+                                        self.used_files.add(base.replace('photos/images/', 'photos/thumbnails/') + '.webp')
+                                        self.used_files.add(base.replace('photos/images/', 'photos/previews/') + '.avif')
+                        except Exception as e:
+                            self.warn(f"Failed to parse MD file {content}: {e}")
+                    continue
+
+                # Standard text content scanning (for non-MD content nodes)
                 matches = re.findall(r'photos/[^"\'\s)]+\.[\w]+', content)
                 for m in matches:
                     path = normalize_path(m)
@@ -65,6 +112,10 @@ class MaersJanitor:
                     if path.startswith('photos/images/'):
                         self.used_files.add(path.replace('photos/images/', 'photos/thumbnails/'))
                         self.used_files.add(path.replace('photos/images/', 'photos/previews/'))
+                        # Smart Extension Swap for inline content too
+                        base = os.path.splitext(path)[0]
+                        self.used_files.add(base.replace('photos/images/', 'photos/thumbnails/') + '.webp')
+                        self.used_files.add(base.replace('photos/images/', 'photos/previews/') + '.avif')
             
             conn.close()
         except Exception as e:
@@ -77,15 +128,41 @@ class MaersJanitor:
             return
 
         self.log("正在扫描 gallery.db...")
+        # Strict Cleanup Categories: These are considered "Attachment Folders"
+        # If an image in these categories is NOT referenced in text/CMS, it should be deleted.
+        ATTACHMENT_CATEGORIES = {'_notes', '_games', '_literature', '_record', 'default'}
+
         try:
             conn = sqlite3.connect(config.GALLERY_DB)
             cursor = conn.cursor()
             
-            cursor.execute("SELECT path, thumb, preview FROM photos")
+            cursor.execute("SELECT path, thumb, preview, category FROM photos")
             for row in cursor.fetchall():
-                self.used_files.add(normalize_path(row[0]))
-                self.used_files.add(normalize_path(row[1]))
-                self.used_files.add(normalize_path(row[2]))
+                path = normalize_path(row[0])
+                thumb = normalize_path(row[1])
+                preview = normalize_path(row[2])
+                category = row[3]
+
+                if category in ATTACHMENT_CATEGORIES:
+                    # Check if ANY of the variants (Original, Thumb, Preview) is marked as USED
+                    # Previous logic only checked 'path' (Original), causing deletion if MD referenced 'preview'
+                    is_referenced = (path in self.used_files) or (thumb in self.used_files) or (preview in self.used_files)
+                    
+                    if not is_referenced:
+                        # Log it for debugging (verbose)
+                        # print(f"  [Clean] Unreferenced attachment found: {path}")
+                        continue
+                    
+                    # If referenced, protect ALL variants
+                    self.used_files.add(path)
+                    self.used_files.add(thumb)
+                    self.used_files.add(preview)
+                else:
+                    # For other categories (e.g. Photography, Life, Covers), 
+                    # we treat Gallery DB as the source of truth (Standalone Album)
+                    self.used_files.add(path)
+                    self.used_files.add(thumb)
+                    self.used_files.add(preview)
             
             conn.close()
         except Exception as e:
@@ -166,6 +243,33 @@ class MaersJanitor:
                         except Exception as e:
                             self.warn(f"删除失败: {rel_path} ({e})")
 
+        # 新增: 正在清理物理 MD 文件 (data/模块/*.md)...
+        self.log("正在清理物理 MD 文档 (data/模块/*.md)...")
+        if os.path.exists(config.DATA_DIR):
+            for item in os.listdir(config.DATA_DIR):
+                sub_dir = os.path.join(config.DATA_DIR, item)
+                if os.path.isdir(sub_dir):
+                    for file in os.listdir(sub_dir):
+                        if file.endswith('.md'):
+                            full_path = os.path.join(sub_dir, file)
+                            # 转换成相对于 PROJECT_ROOT 的路径，例如 'data/notes/xxx.md'
+                            # 数据库里存的是 'notes/xxx.md'，但用于 clean-data 的 rel_path 逻辑通常包含完整相对路径
+                            # 我们的 to_rel_path 会返回 'data/notes/xxx.md'
+                            # 而我们数据库里存的是 'notes/xxx.md'。
+                            # 需要统一下格式。
+                            
+                            rel_path = to_rel_path(full_path) 
+                            # 如果 rel_path 是 "data/notes/xxx.md", 则数据库存的是 "notes/xxx.md"
+                            db_ref_path = rel_path.replace('data/', '', 1) if rel_path.startswith('data/') else rel_path
+
+                            if db_ref_path not in self.used_files:
+                                try:
+                                    os.remove(full_path)
+                                    self.log(f"已删除孤立文档: {db_ref_path}")
+                                    self.deleted_files_count += 1
+                                except Exception as e:
+                                    self.warn(f"删除文档失败: {db_ref_path} ({e})")
+
     def sanitize_databases(self):
         """清理数据库中的幽灵记录"""
         self.log("正在清理数据库无效记录...")
@@ -207,6 +311,19 @@ class MaersJanitor:
                     cursor.execute("UPDATE nodes SET coverImage = NULL WHERE id=?", (nid,))
                     self.db_fixes_count += 1
                 
+                # 新增: 检查 MD 文件
+                cursor.execute("SELECT id, content FROM nodes WHERE content LIKE '%.md'")
+                missing_docs = []
+                for row in cursor.fetchall():
+                    nid, rel_path = row[0], row[1]
+                    abs_path = os.path.join(config.DATA_DIR, rel_path.replace('/', os.sep))
+                    if not os.path.exists(abs_path):
+                        missing_docs.append(nid)
+                
+                for nid in missing_docs:
+                    cursor.execute("UPDATE nodes SET content = '' WHERE id=?", (nid,))
+                    self.db_fixes_count += 1
+                
                 conn.commit()
                 conn.close()
             except Exception as e:
@@ -220,6 +337,9 @@ class MaersJanitor:
             if not os.path.exists(base): continue
             
             for folder in os.listdir(base):
+                if folder in ['_notes', '_games', '_literature', '_record', 'default']:
+                    continue
+                
                 folder_path = os.path.join(base, folder)
                 if not os.path.isdir(folder_path): continue
                 
@@ -239,6 +359,7 @@ class MaersJanitor:
         self.collect_from_gallery()
         self.collect_from_music()
         self.collect_from_space()
+        # self.collect_from_games() # Removed: now covered by gallery/cms scanner
         
         total_refs = len(self.used_files)
         self.success(f"白名单构建完成，共计引用 {total_refs} 个有效路径")

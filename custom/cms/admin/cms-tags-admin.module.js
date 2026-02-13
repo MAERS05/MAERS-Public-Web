@@ -10,7 +10,6 @@ import { BatchItemManager, SaveButton } from '../../../data-manage/admin-base.mo
 let State = null;
 let Controller = null;
 
-// ...
 // Track which categories are expanded
 export const expandedCategories = new Set();
 // Track selected tags for batch operation
@@ -41,7 +40,6 @@ export function initManager(onUpdateCallback) {
         });
     }
 }
-
 
 export function getManager() {
     return categoryManager;
@@ -86,17 +84,26 @@ export async function handleMoveTags(tagNames, targetCategoryName, refreshCallba
     const categories = Controller.AppState.tagCategories || [];
 
     tagNames.forEach(tagName => {
+        // Remove from existing categories
         categories.forEach(c => {
             if (c.tags && c.tags.includes(tagName)) {
                 c.tags = c.tags.filter(t => t !== tagName);
             }
         });
 
+        // Add to target category
         if (targetCategoryName !== '_UNCATEGORIZED_') {
-            const target = categories.find(c => c.name === targetCategoryName);
+            // Trim target name to avoid whitespace mismatch
+            const cleanTargetName = targetCategoryName.trim();
+            const target = categories.find(c => c.name.trim() === cleanTargetName);
+
             if (target) {
                 if (!target.tags) target.tags = [];
                 if (!target.tags.includes(tagName)) target.tags.push(tagName);
+            } else {
+                console.warn(`[CMS Tags] Target category not found: "${targetCategoryName}"`);
+                // Fallback: Create it? Or just leave it uncategorized?
+                // For safety, warn and do nothing (tag becomes uncategorized effectively)
             }
         }
     });

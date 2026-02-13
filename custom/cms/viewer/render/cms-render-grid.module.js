@@ -22,13 +22,22 @@ export function initGrid(deps) {
     Events = deps.Events;
 }
 
-function getCoverUrl(node, isLitModule) {
-    if (!isLitModule) return null;
+function getCoverUrl(node, moduleName) {
     if (!node.coverImage) return null;
+
+    // Games Module: Map to previews/gamecovers/*.avif
+    if (moduleName === 'games') {
+        const pathParts = node.coverImage.split('/');
+        const filename = pathParts[pathParts.length - 1]; // 20260211_143001_01.jpg
+        const basename = filename.replace(/\.[^/.]+$/, ""); // 20260211_143001_01
+        return `photos/previews/gamecovers/${basename}.avif`;
+    }
+
+    // Literature Module: legacy logic (photos/previews/literaturecovers/....avif)
     const pathParts = node.coverImage.split('/');
     const filename = pathParts[pathParts.length - 1];
     const basename = filename.replace(/\.[^/.]+$/, "");
-    return `photos/previews/covers/${basename}.avif`;
+    return `photos/previews/literaturecovers/${basename}.avif`;
 }
 
 function createGridItem(node, State, index) {
@@ -59,7 +68,8 @@ function createGridItem(node, State, index) {
     // Admin Actions
     if (State.IS_ADMIN && Admin && AdminButtonHelper) {
         const isDeleted = manager ? manager.isDeleted(index) : false;
-        const isLitModule = (Controller?.CONFIG?.CURRENT_MODULE === 'literature') || (window.location.search.includes('module=literature'));
+        const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
+        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games'));
 
         const wrapper = document.createElement('div');
         wrapper.className = 'maers-admin-action-group';
@@ -99,12 +109,28 @@ function createGridItem(node, State, index) {
     el.setAttribute('data-type', node.type);
 
     // Cover/Icon
-    const isLit = Controller?.CONFIG?.CURRENT_MODULE === 'literature';
-    if (isLit) {
-        const coverUrl = getCoverUrl(node, true);
+    const currentModule = Controller?.CONFIG?.CURRENT_MODULE;
+    const showCover = currentModule === 'literature' || currentModule === 'games';
+
+    if (showCover) {
+        const coverUrl = getCoverUrl(node, currentModule);
         const coverDiv = document.createElement('div');
         coverDiv.className = coverUrl ? 'item-cover' : 'item-cover placeholder';
-        if (coverUrl) coverDiv.style.backgroundImage = `url('${coverUrl}')`;
+
+        if (coverUrl) {
+            const img = document.createElement('img');
+            img.src = coverUrl;
+            img.loading = 'lazy';
+            img.decoding = 'async';
+            img.className = 'item-cover-img';
+            img.onload = () => coverDiv.classList.add('loaded');
+            // Error fallback: hide image or show placeholder
+            img.onerror = () => {
+                img.style.display = 'none';
+                coverDiv.classList.add('placeholder');
+            };
+            coverDiv.appendChild(img);
+        }
         el.appendChild(coverDiv);
     }
 

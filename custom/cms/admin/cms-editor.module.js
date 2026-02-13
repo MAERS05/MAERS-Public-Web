@@ -17,9 +17,33 @@ let vditorInstance = null;
 let currentEditingId = null;
 
 // 打开阅读器/编辑器
-export function open(node) {
+export async function open(node) {
     const layer = document.getElementById('immersive-reader');
     if (!layer) return;
+
+    // Lazy Load Content if it's a file path
+    if (node.content && typeof node.content === 'string' && node.content.endsWith('.md')) {
+
+        try {
+            // Show loading state
+            layer.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-main);font-size:1.5rem;">⏳ Loading Content...</div>';
+            layer.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            // Allow relative path loading from data root
+            const path = 'data/' + node.content;
+            const res = await fetch(path + '?t=' + Date.now()); // Cache bust for safety or use versioning
+            if (res.ok) {
+                node.content = await res.text();
+            } else {
+                console.error("Failed to load md:", path);
+                node.content = "> ⚠️ Error: Content file not found at " + path;
+            }
+        } catch (e) {
+            console.error("Fetch error:", e);
+            node.content = "> ⚠️ Network Error loading content.";
+        }
+    }
 
     // Admin 模式记录 ID
     if (window.IS_ADMIN) currentEditingId = node.id;

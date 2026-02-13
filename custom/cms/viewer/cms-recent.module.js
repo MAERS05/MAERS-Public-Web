@@ -264,11 +264,6 @@ function renderItems(list, isPinned) {
 }
 
 async function openRecentFile(id) {
-    // We need to navigate to this file.
-    // If it's a folder, enterFolder.
-    // If it's a file, we need to find it and likely trigger 'uiPickNode' or similar.
-    // Since we only have ID, we need to find it in State.AppState.allNodes
-
     if (!State || !State.AppState) return;
 
     const node = State.AppState.allNodes.find(n => n.id === id);
@@ -277,26 +272,28 @@ async function openRecentFile(id) {
         toggleDrawer(); // Close drawer
 
         if (node.type === 'folder') {
-            // How to navigate to a folder by ID?
-            // Need to reconstruct path or just call enterFolder if logic allows arbitrary node interaction
-            // View.enterFolder(node); 
-            // Better: update pathStack.
-            // Actually, best to use Controller to navigate if possible, or View.
-            if (View && View.enterFolder) View.enterFolder(node);
+            if (View && View.enterFolder) {
+                View.enterFolder(node);
+            }
         } else {
             // It's a file (note)
             if (View && View.openFile) {
                 View.openFile(node);
-            } else if (View && View.uiPickNode) {
-                // Fallback for Admin
-                View.uiPickNode(new Event('click'), id);
             }
         }
     } else {
         alert('File not found (might be deleted)');
-        // Remove from history?
-        let history = getHistory().filter(i => i.id !== id);
+        // Remove from history
+        let history = getHistory();
+        history = history.filter(i => i.id !== id);
         localStorage.setItem(getStorageKey(), JSON.stringify(history));
+
+        let pinned = getPinned();
+        if (pinned.some(p => p.id === id)) {
+            pinned = pinned.filter(p => p.id !== id);
+            savePinned(pinned);
+        }
+
         renderList();
     }
 }

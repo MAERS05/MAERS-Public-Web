@@ -383,7 +383,9 @@ function openEditModal(node, index, isNew = false) {
                 await handleSave();
 
                 // If we reach here, save was successful
-                if (window.MAERS?.Toast) window.MAERS.Toast.success(isNew ? "Item created!" : "Item saved!");
+                if (window.MAERS?.Toast) {
+                    window.MAERS.Toast.success(isNew ? "网站收藏成功" : "Item saved!");
+                }
 
                 // Clean up manager state since we just saved everything
                 if (manager) manager.reset();
@@ -391,7 +393,9 @@ function openEditModal(node, index, isNew = false) {
                 return true; // Close modal
             } catch (err) {
                 console.error(err);
-                if (window.MAERS?.Toast) window.MAERS.Toast.error("Failed to save: " + err.message);
+                if (window.MAERS?.Toast) {
+                    window.MAERS.Toast.error(isNew ? "网站收藏失败" : "Save failed");
+                }
                 return false; // Keep modal open
             }
         }

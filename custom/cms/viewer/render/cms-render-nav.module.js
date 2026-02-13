@@ -44,6 +44,22 @@ export function renderBreadcrumb() {
     prefix.textContent = "Filter : ";
     prefix.style.marginRight = "8px";
     prefix.style.opacity = "0.6";
+    prefix.style.cursor = "pointer"; // Make it clickable
+    prefix.style.transition = "opacity 0.2s";
+
+    // Add interactions
+    prefix.onclick = (e) => {
+        e.stopPropagation();
+        handleFilterBack();
+    };
+    prefix.onmouseover = () => {
+        prefix.style.opacity = "1";
+        prefix.title = "Back / Clear";
+    };
+    prefix.onmouseout = () => {
+        prefix.style.opacity = "0.6";
+    };
+
     overlay.appendChild(prefix);
 
     const items = State.getFilterOrder();
@@ -113,6 +129,32 @@ export function renderBreadcrumb() {
                 if (idx === -1) navigateTo(-1);
                 else navigateTo(idx);
             });
+        }
+    }
+}
+
+function handleFilterBack() {
+    const currentOrder = State.getFilterOrder();
+
+    if (currentOrder.length > 1) {
+        // Step back one level (e.g. [A, B] -> Jump to A)
+        const targetItem = currentOrder[currentOrder.length - 2];
+        jumpToFilterItem(targetItem);
+    } else {
+        // Clear all filters if only one level or empty
+        State.clearFilters();
+        State.AppState.activeFilters.clear();
+
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) {
+            searchInput.value = "";
+            if (Search && Search.autoResizeInput) {
+                Search.autoResizeInput(searchInput);
+            }
+        }
+
+        if (Search && Search.applyFilter) {
+            Search.applyFilter();
         }
     }
 }
@@ -209,9 +251,10 @@ export function renderPageTitle() {
             notes: '<img src="ui/notes-icon.svg" style="height: 1.25em; vertical-align: middle;">',
             literature: '<img src="ui/literature-icon.svg" style="height: 1.25em; vertical-align: middle;">',
             record: '<img src="ui/record-icon.svg" style="height: 1.25em; vertical-align: middle;">',
-            album: '<img src="ui/album-icon.svg" style="height: 1.25em; vertical-align: middle;">'
+            album: '<img src="ui/album-icon.svg" style="height: 1.25em; vertical-align: middle;">',
+            games: '<img src="ui/games-icon.svg" style="height: 1.25em; vertical-align: middle;">'
         };
-        const titleMap = { notes: "Study Notes", literature: "Literature", record: "Records" };
+        const titleMap = { notes: "Study Notes", literature: "Literature", record: "Records", album: "Album", games: "Games" };
         const icon = iconMap[State.CONFIG.CURRENT_MODULE] || "📂";
         const text = titleMap[State.CONFIG.CURRENT_MODULE] || State.CONFIG.CURRENT_MODULE.toUpperCase();
         desiredHTML = `${icon} ${text}`;

@@ -7,7 +7,7 @@ from services import cms, photos, music, bili, album, space
 import config
 
 PAGE_TEMPLATE = """<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" class="fixed-layout-page">
 <head>
     <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
@@ -26,7 +26,7 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
     <div class="container">
-        <div class="main-card clean-layout">
+        <div class="main-card">
             <div class="placeholder-content">
                 <div style="font-size: 4rem;">✨</div>
                 <div class="placeholder-text">{title}</div>
@@ -93,6 +93,14 @@ def dispatch_post(path, query_params, body_data, file_data=None):
             return 200, {"status": "success"}
         else:
             return 500, {"error": "Failed to save tag categories"}
+
+    if path == '/api/cms/cleanup_tags':
+        module = query_params.get('module', ['cms'])[0]
+        result = cms.cleanup_unused_tags(module)
+        if result.get('success'):
+            return 200, result
+        else:
+            return 500, result
 
     # 1. CMS
     if path.startswith('/api/cms/'):

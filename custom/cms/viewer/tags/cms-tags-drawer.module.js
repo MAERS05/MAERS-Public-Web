@@ -98,10 +98,11 @@ export function refreshDrawerList(updateManagerCallback) {
     // 4. Render
     let html = '';
 
-    // Add Category Button
+    // Add Category Button + Cleanup Button
     if (State.IS_ADMIN) {
-        html += `<div style="padding: 5px 15px; margin-bottom: 5px;">
+        html += `<div style="padding: 5px 15px; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
                 <button class="add-cat-btn" style="background:none;color:#a0a0a5;border:none;cursor:pointer;">＋ 添加分类</button>
+                <button class="cleanup-tags-btn" title="清理未使用的标签" style="background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:0.5;transition:opacity 0.2s;">🗑️</button>
              </div>`;
     }
 
@@ -153,7 +154,7 @@ export function refreshDrawerList(updateManagerCallback) {
                   <div class="category-header" style="font-weight:bold;margin-bottom:5px;display:flex;align-items:center;cursor:pointer;gap:8px;">
                       <span class="cat-toggle-icon" style="transform:${iconRotation};flex-shrink:0;">▼</span>
                       <span class="category-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${State.escapeAttr(cat.name)}">${State.escapeHtml(cat.name)}</span>
-                      ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:rgba(120, 255, 214, 0.15); border:1px solid rgba(120, 255, 214, 0.4); border-radius:4px; color:#78ffd6; font-size:11px; padding:3px 8px; cursor:pointer; font-weight:normal; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
+                      ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:#78ffd6; border:none; border-radius:4px; color:#000; box-shadow:0 0 10px rgba(120, 255, 214, 0.6); font-size:11px; padding:3px 8px; cursor:pointer; font-weight:bold; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
                       ${adminButtonsPlaceholder}
                   </div>
                   <div class="list-anim-wrapper" style="display:grid;transition:all 0.3s ease;${gridStyle}">
@@ -174,7 +175,7 @@ export function refreshDrawerList(updateManagerCallback) {
                   <div class="category-header" style="font-weight:bold;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:8px;">
                       <span class="cat-toggle-icon" style="transform:${iconRotation};flex-shrink:0;">▼</span>
                       <span class="category-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="其他">其他</span>
-                      ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:rgba(120, 255, 214, 0.15); border:1px solid rgba(120, 255, 214, 0.4); border-radius:4px; color:#78ffd6; font-size:11px; padding:3px 8px; cursor:pointer; font-weight:normal; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
+                      ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:#78ffd6; border:none; border-radius:4px; color:#000; box-shadow:0 0 10px rgba(120, 255, 214, 0.6); font-size:11px; padding:3px 8px; cursor:pointer; font-weight:bold; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
                   </div>
                   <div class="list-anim-wrapper" style="display:grid;transition:all 0.3s ease;${gridStyle}">
                       <div class="category-tags-list" style="display:flex;flex-direction:column;gap:2px;overflow:hidden;min-height:0;">
@@ -214,6 +215,9 @@ function setupDrawerEventDelegation() {
     if (!listContainer) return;
 
     listContainer.addEventListener('click', (e) => {
+        // Stop propagation to prevent document-level click listeners (like zoom restore) from firing
+        e.stopPropagation();
+
         // 1. Handle tag selection dot clicks
         const dot = e.target.closest('.tag-select-dot');
         if (dot) {
@@ -309,5 +313,46 @@ function attachEvents(container) {
 
         const addBtn = container.querySelector('.add-cat-btn');
         if (addBtn) addBtn.onclick = createCategoryCallback;
+
+        // Cleanup button
+        const cleanupBtn = container.querySelector('.cleanup-tags-btn');
+        if (cleanupBtn) {
+            cleanupBtn.onmouseenter = () => { cleanupBtn.style.opacity = '1'; };
+            cleanupBtn.onmouseleave = () => { cleanupBtn.style.opacity = '0.5'; };
+            cleanupBtn.onclick = async () => {
+                const moduleName = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
+                if (!confirm(`确认清理 "${moduleName}" 中未使用的标签？`)) return;
+
+                cleanupBtn.style.pointerEvents = 'none';
+                cleanupBtn.textContent = '⏳';
+                try {
+                    const res = await fetch(`/api/cms/cleanup_tags?module=${moduleName}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                    const result = await res.json();
+
+                    if (res.ok && result.removed_count > 0) {
+                        // Reload categories
+                        const tagRes = await fetch(`/api/cms/tag_categories?module=${moduleName}`);
+                        if (tagRes.ok && Controller?.AppState) {
+                            Controller.AppState.tagCategories = await tagRes.json();
+                        }
+                        alert(`✅ 已清理 ${result.removed_count} 个标签:\n${result.removed_tags.join(', ')}`);
+                        refreshDrawerList(() => { });
+                    } else if (res.ok) {
+                        alert('✨ 没有需要清理的标签');
+                    } else {
+                        alert('❌ 清理失败: ' + (result.error || 'Unknown error'));
+                    }
+                } catch (e) {
+                    alert('❌ 清理失败: ' + e.message);
+                } finally {
+                    cleanupBtn.textContent = '🗑️';
+                    cleanupBtn.style.pointerEvents = '';
+                }
+            };
+        }
     }
 }

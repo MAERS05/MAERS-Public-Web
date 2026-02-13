@@ -210,10 +210,13 @@ export const AdminModal = {
                             }
                         }
 
-                        if (Toast) Toast.success("Info fetched!");
+                        if (Toast) Toast.success("同步成功");
+                    } else {
+                        if (Toast) Toast.error("同步失败");
                     }
                 } catch (e) {
                     console.error("Meta fetch error", e);
+                    if (Toast) Toast.error("同步失败");
                 } finally {
                     fetchBtn.classList.remove('loading');
                 }

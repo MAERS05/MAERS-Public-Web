@@ -8,11 +8,11 @@ def wipe_all_data():
     print("========================================================")
     print("   ⚠️  极度危险：MAERS 全量数据清空工具 ⚠️")
     print("========================================================")
-    print(" 此操作将执行以下动作：")
-    print(" 1. 清空 cms.db (笔记、文献、随笔)")
+    print(" 1. 清空 cms.db (笔记、文献、随记、作品)")
     print(" 2. 清空 gallery.db (相册数据库)")
     print(" 3. 重置所有 data/*.json 静态文件 (包括 Space 收藏)")
-    print(" 4. 删除 photos/ 下的所有物理图片 (原图、缩略图、预览图)")
+    print(" 4. 删除 data/ 各模块下的所有 .md 正文文件")
+    print(" 5. 删除 photos/ 下的所有物理图片 (原图、缩略图、预览图)")
     print("========================================================")
     
     confirm = input("确定要清空吗？此操作不可撤销！请输入 'YES' 确认: ")
@@ -45,10 +45,12 @@ def wipe_all_data():
                 print(f"❌ 清空数据库失败 {db_name}: {e}")
 
     # 2. 处理 JSON 和 JS 配置文件
+    # 统一将 Tree 类型文件重置为 {"root": []} 结构
     file_resets = [
-        (os.path.join(config.DATA_DIR, 'notes-tree.json'), [], 'json'),
-        (os.path.join(config.DATA_DIR, 'literature-tree.json'), [], 'json'),
-        (os.path.join(config.DATA_DIR, 'record-tree.json'), [], 'json'),
+        (os.path.join(config.DATA_DIR, 'notes-tree.json'), {"root": []}, 'json'),
+        (os.path.join(config.DATA_DIR, 'literature-tree.json'), {"root": []}, 'json'),
+        (os.path.join(config.DATA_DIR, 'record-tree.json'), {"root": []}, 'json'),
+        (os.path.join(config.DATA_DIR, 'games-tree.json'), {"root": []}, 'json'), # Added games
         (os.path.join(config.DATA_DIR, 'photos-data.json'), {}, 'json'),
         (config.MUSIC_DATA, [], 'json'),
         (os.path.join(config.DATA_DIR, 'search-index.json'), [], 'json'),
@@ -75,7 +77,34 @@ def wipe_all_data():
         except Exception as e:
             print(f"❌ 重置配置文件失败 {file_path}: {e}")
 
-    # 3. 处理物理图片
+    # 2.5 清理标签配置 (new version)
+    tags_dir = os.path.join(config.DATA_DIR, 'tags')
+    if os.path.exists(tags_dir):
+        try:
+            for f in os.listdir(tags_dir):
+                if f.endswith('.json'):
+                    os.remove(os.path.join(tags_dir, f))
+            print(f"✅ 标签配置已清空: data/tags/*.json")
+        except Exception as e:
+            print(f"❌ 清空标签配置失败: {e}")
+
+    # 3. 处理各模块下的 MD 文件
+    # 扫描 data/ 下的子目录 (notes, record, games 等)
+    if os.path.exists(config.DATA_DIR):
+        for item in os.listdir(config.DATA_DIR):
+            sub_dir = os.path.join(config.DATA_DIR, item)
+            if os.path.isdir(sub_dir):
+                # 如果目录里有 .md 文件，则清理
+                md_files = [f for f in os.listdir(sub_dir) if f.endswith('.md')]
+                if md_files:
+                    try:
+                        for md in md_files:
+                            os.remove(os.path.join(sub_dir, md))
+                        print(f"✅ 模块文档已清空: data/{item}/*.md ({len(md_files)} files)")
+                    except Exception as e:
+                        print(f"❌ 清理模块文档失败 {item}: {e}")
+
+    # 4. 处理物理图片
     image_dirs = ['images', 'thumbnails', 'previews']
     for sub in image_dirs:
         target_dir = os.path.join(config.PHOTOS_ROOT, sub)

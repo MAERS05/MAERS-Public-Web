@@ -67,7 +67,12 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, extra
         }
     };
 
-    const base = setupBaseAdapter('photos', applyFiltersCallback, finalConfig);
+    // Determine dynamic module name
+    // e.g. "photos-nature", "photos-gamecovers"
+    const currentCategory = (photosController?.State?.category) || 'default';
+    const dynamicModuleName = `photos-${currentCategory}`;
+
+    const base = setupBaseAdapter(dynamicModuleName, applyFiltersCallback, finalConfig);
     const { AppState, mockSearch } = base;
 
     // 3. 注入 Photos 特有的 Search 逻辑

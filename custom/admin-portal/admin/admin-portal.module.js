@@ -159,7 +159,8 @@ export const Admin = {
                     })
                         .then(res => res.json())
                         .then(data => {
-                            if (data.status === 'created') Feedback.notifySaveSuccess(`已自动创建页面: ${mod.url}`);
+                            if (data.status === 'created') Feedback.notifySaveSuccess(`HTML文件创建成功`);
+                            if (data.status === 'exists') Feedback.toast(`HTML文件已存在`, 'info');
                         });
                 }
 
@@ -196,16 +197,18 @@ export const Admin = {
             ],
             onSave: async (formData) => {
                 // Auto create page
+                let pageMsg = '';
                 if (formData.url.endsWith('.html') && !formData.url.startsWith('http') && !formData.url.includes('/')) {
-                    fetch('/api/ensure_page', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename: formData.url, title: formData.title })
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.status === 'created') Feedback.notifyAddSuccess(`已自动创建页面: ${formData.url}`);
+                    try {
+                        const pageRes = await fetch('/api/ensure_page', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filename: formData.url, title: formData.title })
                         });
+                        const pageData = await pageRes.json();
+                        if (pageData.status === 'created') pageMsg = ' (HTML文件创建成功)';
+                        if (pageData.status === 'exists') pageMsg = ' (HTML文件已存在)';
+                    } catch (e) { console.error(e); }
                 }
 
                 const finalModule = {
@@ -225,7 +228,7 @@ export const Admin = {
                     });
 
                     if (res.ok) {
-                        Feedback.notifyAddSuccess();
+                        Feedback.notifyAddSuccess(`管理模块创建成功${pageMsg}`);
                         await this.loadModules();
                         this.manager.setList(this.modules);
                         this.render();
@@ -236,7 +239,7 @@ export const Admin = {
                     }
                 } catch (e) {
                     console.error(e);
-                    Feedback.notifyAddFail(e.message);
+                    Feedback.notifyAddFail("管理模块创建失败");
                     this.modules.pop();
                     this.render();
                     return false;
@@ -262,7 +265,7 @@ export const Admin = {
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ filename: mod.url })
                         });
-                        Feedback.notifySuccess(`文件已彻底物理删除: ${mod.url}`);
+                        Feedback.notifySuccess(`HTML文件已同步删除`);
                     } catch (e) {
                         console.error(e);
                     }

@@ -50,6 +50,15 @@ const MODULE_CONFIG = {
         allowMove: false,
         allowContent: false,
         dataFile: 'data/music-data.json'
+    },
+    games: {
+        icon: 'ui/games-icon.svg',
+        title: 'Games',
+        displayTitle: '<img src="ui/games-icon.svg" alt="Games" onerror="this.src=\'ui/literature-icon.svg\'" style="height: 1.25em; width: auto; vertical-align: middle;"> Games',
+        allowTags: true,
+        allowMove: true,
+        allowContent: true,
+        dataFile: 'data/games-tree.json'
     }
 };
 

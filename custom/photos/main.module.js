@@ -44,7 +44,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 3. Initialize Shared CMS Components
     // Preload tag categories (for filtering logic)
-    preloadTagCategories(AppState, 'photos');
+    const currentCategory = (Controller?.State?.category) || 'nature';
+    const dynamicModuleName = `photos-${currentCategory}`;
+    await preloadTagCategories(AppState, dynamicModuleName);
 
     // Initialize Tags System (Filter Logic Only, no Admin features since IS_ADMIN is false/default)
     initTags(StateWrapper, mockController, mockSearch);
@@ -84,6 +86,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (overlay) {
         overlay.addEventListener('click', () => {
             if (Tags.toggleTagDrawer) Tags.toggleTagDrawer();
+        });
+    }
+
+    // Bind clear tags button
+    const clearBtn = document.querySelector('.btn-clear-tags');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            const input = document.getElementById('tag-drawer-search');
+            if (input) input.value = '';
+            if (Tags.clearTagFilter) Tags.clearTagFilter();
+            if (Tags.refreshDrawerList) Tags.refreshDrawerList();
+        });
+    }
+
+    // Bind tag search input
+    const tagSearchInput = document.getElementById('tag-drawer-search');
+    if (tagSearchInput) {
+        tagSearchInput.addEventListener('input', () => {
+            if (Tags.refreshDrawerList) Tags.refreshDrawerList();
         });
     }
 });

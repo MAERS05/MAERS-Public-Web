@@ -39,7 +39,7 @@ export function init(appState, config) {
     // Restore Dynamic Style Loading (Critical for specific modules like Literature)
     if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
-        const module = (config && config.CURRENT_MODULE) || params.get('module') || 'notes';
+        const module = window.CURRENT_MODULE || (config && config.CURRENT_MODULE) || params.get('module') || 'notes';
 
         // Load module-specific CSS if not already present
         if (!document.querySelector(`link[href*="custom/${module}/viewer/${module}.css"]`)) {

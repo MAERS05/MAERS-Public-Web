@@ -163,7 +163,7 @@ export async function preloadTagCategories(AppState, moduleName = 'cms') {
     // 2. 静态回退 (适用于 线上部署/纯静态 环境)
     if (!success) {
         try {
-            const staticFile = `data/${moduleName}-tag-categories.json`;
+            const staticFile = `data/tags/${moduleName}-tag-categories.json`;
             const res = await fetch(`${staticFile}?t=${Date.now()}`);
             if (res.ok) {
                 const data = await res.json();

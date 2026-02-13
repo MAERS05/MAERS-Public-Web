@@ -1,0 +1,29 @@
+/* ==========================================================================
+   Mobile Games Adaptation
+   ========================================================================== */
+
+/* Force 2-column grid on mobile, even for very small screens (<360px) */
+@media (max-width: 768px) {
+    .folder-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        padding: 10px !important;
+        justify-content: center !important;
+    }
+
+    .folder-grid .grid-item {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    /* Optimize font sizes for small cards */
+    .folder-grid .grid-item .item-title {
+        font-size: 0.85rem !important;
+        padding: 8px 8px 4px 8px !important;
+    }
+
+    .folder-grid .grid-item .item-tags {
+        padding: 0 8px 8px 8px !important;
+    }
+}

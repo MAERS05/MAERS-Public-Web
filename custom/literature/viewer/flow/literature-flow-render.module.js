@@ -260,7 +260,7 @@ export function startLoop(engine) {
                     if (data && data.coverImage && !data.isPlaceholder) {
                         const pathParts = data.coverImage.split('/');
                         const basename = pathParts[pathParts.length - 1].replace(/\.[^/.]+$/, "");
-                        const webpUrl = `photos/thumbnails/covers/${basename}.webp`;
+                        const webpUrl = `photos/thumbnails/literaturecovers/${basename}.webp`;
                         coverEl.style.backgroundImage = `url('${webpUrl}')`;
                     } else {
                         coverEl.style.backgroundImage = '';

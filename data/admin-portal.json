@@ -1,10 +1,5 @@
 [
   {
-    "title": "首页管理",
-    "icon": "ui/index.svg",
-    "url": "admin-index.html"
-  },
-  {
     "title": "图片管理",
     "icon": "ui/album-icon.svg",
     "url": "admin-album.html?type=photos",
@@ -35,8 +30,18 @@
     "style": "custom/record/viewer/record.css"
   },
   {
+    "title": "游戏管理",
+    "icon": "ui/games-icon.svg",
+    "url": "admin-games.html"
+  },
+  {
     "title": "空间管理",
     "icon": "ui/space-icon.svg",
     "url": "admin-space.html"
+  },
+  {
+    "title": "首页管理",
+    "icon": "ui/index.svg",
+    "url": "admin-index.html"
   }
 ]

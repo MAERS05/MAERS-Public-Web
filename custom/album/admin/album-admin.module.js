@@ -6,6 +6,7 @@
  */
 
 import { AdminModal } from '../../../data-manage/admin-modal.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin-base.module.js';
 
 // 依赖声明
 let AdminCore;
@@ -26,26 +27,26 @@ async function init() {
     await loadData();
 
     // Init Manager
-    if (!AdminCore?.BatchItemManager) {
-        console.error('AdminCore.BatchItemManager not found!');
+    if (!BatchItemManager) {
+        console.error('BatchItemManager not found!');
         return;
     }
 
-    manager = new AdminCore.BatchItemManager({
+    manager = new BatchItemManager({
         list: currentData,
         onUpdate: render
     });
 
     // Init Save Button
-    if (AdminCore?.SaveButton) {
-        AdminCore.SaveButton.init(
+    if (SaveButton) {
+        SaveButton.init(
             document.body,
             handleSave,
             async () => {
                 // On Cancel: Reset to initial snapshot
                 if (manager) {
                     manager.reset();
-                    if (AdminCore.Feedback) AdminCore.Feedback.notifyCancel();
+                    if (Feedback) Feedback.notifyCancel();
                 }
             }
         );
@@ -93,10 +94,10 @@ async function handleSave() {
 
             const deletePhysical = (confirmId === item.id);
             if (confirmId !== null && confirmId !== "" && confirmId !== item.id) {
-                if (AdminCore.Feedback) AdminCore.Feedback.notifyError("ID不匹配，物理目录已保留。");
+                if (Feedback) Feedback.notifyError("ID不匹配，物理目录已保留。");
             }
 
-            await fetch('/api/delete_category', {
+            const res = await fetch('/api/delete_category', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -104,20 +105,32 @@ async function handleSave() {
                     delete_physical: deletePhysical
                 })
             });
+            const data = await res.json();
 
-            if (deletePhysical && AdminCore.Feedback) {
-                AdminCore.Feedback.notifySuccess(`已删除关联目录: ${item.id}`);
+            if (deletePhysical && Feedback) {
+                Feedback.notifySuccess('图片存储文件夹已同步删除');
+            }
+
+            if (data.tag_file_deleted || deletePhysical) {
+                Feedback.notifySuccess("标签文件已同步删除");
             }
         }
 
-        // 2. Sync Metadata (Fix: ensure title/icon etc. are saved)
+        // 2. Sync Metadata
         const remaining = currentData.filter(c => !c._deleted);
+        const specialMsgs = new Set();
         for (let item of remaining) {
-            await fetch('/api/update_category', {
+            const res = await fetch('/api/update_category', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(item) // Send full item data to update
             });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.dirs_created) specialMsgs.add('图片存储文件夹创建成功');
+                if (data.tag_file_created) specialMsgs.add("标签文件创建成功");
+            }
         }
 
         // 3. Reorder 
@@ -133,12 +146,18 @@ async function handleSave() {
         render(); // Trigger view update
 
         // Hide SaveBar
-        if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
+        if (SaveButton) SaveButton.hide();
 
-        if (AdminCore.Feedback) AdminCore.Feedback.notifySaveSuccess();
+        if (Feedback) {
+            if (specialMsgs.size > 0) {
+                specialMsgs.forEach(msg => Feedback.notifySuccess(msg));
+            } else {
+                Feedback.notifySaveSuccess();
+            }
+        }
     } catch (e) {
         console.error(e);
-        if (AdminCore.Feedback) AdminCore.Feedback.notifySaveFail();
+        if (Feedback) Feedback.notifySaveFail();
         else alert("保存失败");
     }
 }
@@ -146,9 +165,6 @@ async function handleSave() {
 function render() {
     if (!grid) return;
     grid.innerHTML = '';
-
-
-
     currentData.forEach((cat, index) => {
         const card = document.createElement('div');
         // Get classes from manager
@@ -184,10 +200,10 @@ function render() {
         card.appendChild(bg);
 
         // Admin Buttons (Unified Style)
-        if (AdminCore?.AdminButtonHelper) {
+        if (AdminButtonHelper) {
             // 注意: 这里生成的按钮容器会使用 .maers-admin-action-group 类
             // 我们额外添加 'admin-actions' 类以兼容可能的定位样式
-            const adminEl = AdminCore.AdminButtonHelper.render({
+            const adminEl = AdminButtonHelper.render({
                 index: index,
                 isDeleted: cat._deleted,
                 onSort: (e) => uiToggleSelect(e, index),
@@ -219,9 +235,6 @@ function render() {
         textGroup.appendChild(titleDiv);
         textGroup.appendChild(subDiv);
         card.appendChild(textGroup);
-
-
-
         grid.appendChild(card);
     });
 
@@ -326,22 +339,24 @@ export async function addNewCategory() {
                     await loadData();
                     render();
 
-                    if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
+                    if (SaveButton) SaveButton.hide();
 
-                    if (AdminCore.Feedback) {
-                        if (data.dirs_created) {
-                            AdminCore.Feedback.notifyAddSuccess(`已自动创建物理目录: ${formData.id}`);
-                        } else {
-                            AdminCore.Feedback.notifyAddSuccess();
-                        }
+                    if (Feedback) {
+                        if (data.dirs_created) Feedback.notifySuccess('图片存储文件夹创建成功');
+                        else if (data.dirs_existed) Feedback.toast('图片存储文件夹已存在', 'info');
+
+                        Feedback.notifySuccess('分类创建成功');
+
+                        if (data.tag_file_created) Feedback.notifySuccess('标签文件创建成功');
+                        else if (data.tag_file_existed) Feedback.toast('标签文件已存在', 'info');
                     }
                     return true;
                 } else {
-                    if (AdminCore.Feedback) AdminCore.Feedback.notifyAddFail();
+                    if (Feedback) Feedback.notifyAddFail();
                     return false;
                 }
             } catch (e) {
-                if (AdminCore.Feedback) AdminCore.Feedback.notifyError("Error: " + e.message);
+                if (Feedback) Feedback.notifyError("Error: " + e.message);
                 return false;
             }
         }

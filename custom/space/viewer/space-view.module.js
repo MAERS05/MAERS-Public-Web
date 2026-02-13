@@ -182,6 +182,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Bind tag search input
+    const tagSearchInput = document.getElementById('tag-drawer-search');
+    if (tagSearchInput) {
+        tagSearchInput.addEventListener('input', () => {
+            if (Tags.refreshDrawerList) Tags.refreshDrawerList();
+        });
+    }
+
     // Standard Event Delegation (Clean & Robust)
     const galleryContent = document.body; // Use body for robust global delegation
     if (galleryContent) {

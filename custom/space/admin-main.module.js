@@ -15,9 +15,6 @@ initTheme();
 // 使用适配器设置 CMS 兼容层
 const { AppState, mockController, mockSearch, StateWrapper } = setupSpaceAdapter(applyFilters);
 
-// 预加载标签数据
-preloadTagCategories(AppState, 'space');
-
 const AdminCore = {
     BatchItemManager,
     SaveButton,
@@ -30,81 +27,109 @@ const AdminCore = {
     AppState
 };
 
-// 初始化 CMS 共享模块
-console.log("Initializing CMS Tags with StateWrapper", StateWrapper);
-initTags(StateWrapper, mockController, mockSearch);
+// DOM 为空或未就绪时推迟初始化
+const init = async () => {
+    // 预加载标签数据
+    await preloadTagCategories(AppState, 'space');
 
-const mockRender = {
-    renderBreadcrumb: () => {
-        if (Nav && Nav.renderBreadcrumb) {
-            Nav.renderBreadcrumb();
+    // 初始化 CMS 共享模块
+    console.log("Initializing CMS Tags with StateWrapper", StateWrapper);
+    initTags(StateWrapper, mockController, mockSearch);
+
+    const mockRender = {
+        renderBreadcrumb: () => {
+            if (Nav && Nav.renderBreadcrumb) {
+                Nav.renderBreadcrumb();
+            }
         }
+    };
+
+    initNav({
+        State: StateWrapper,
+        Search: mockSearch,
+        Drag: null,
+        renderGrid: null,
+        renderBreadcrumb: mockRender.renderBreadcrumb
+    });
+
+    initRecent(StateWrapper, mockController, {
+        renderList: () => { },
+        openFile: (node) => window.open(node.url, '_blank') // Fix View method name for Recent module
+    });
+
+    // 绑定搜索框
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const currentKeyword = e.target.value.trim();
+            AppState.searchQuery = currentKeyword;
+            mockSearch.performSearch();
+
+            if (typeof applyFilters === 'function') {
+                applyFilters();
+            }
+            if (Nav && Nav.renderBreadcrumb) {
+                Nav.renderBreadcrumb();
+            }
+        });
+    }
+
+    // 绑定标签按钮
+    const tagToggleBtn = document.getElementById('tag-toggle-btn');
+    if (tagToggleBtn) {
+        tagToggleBtn.addEventListener('click', () => {
+            Tags.toggleTagDrawer();
+        });
+    }
+    const tagCloseBtn = document.querySelector('.btn-close-drawer');
+    if (tagCloseBtn) {
+        tagCloseBtn.addEventListener('click', () => {
+            Tags.toggleTagDrawer();
+        });
+    }
+
+    // Bind Overlay Click
+    const overlay = document.getElementById('drawer-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            Tags.toggleTagDrawer();
+        });
+    }
+
+    // Bind Clear All button
+    const clearBtn = document.querySelector('.btn-clear-tags');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            const input = document.getElementById('tag-drawer-search');
+            if (input) input.value = '';
+            Tags.clearTagFilter();
+        });
+    }
+
+    // Bind tag search input
+    const tagSearchInput = document.getElementById('tag-drawer-search');
+    if (tagSearchInput) {
+        tagSearchInput.addEventListener('input', () => {
+            Tags.refreshDrawerList();
+        });
+    }
+
+    // 确保初始状态时清空 activeFilters
+    AppState.activeFilters = new Set();
+
+    // 初始化 Space 专属逻辑
+    initSpaceAdmin(AdminCore);
+
+    // Initialize Breadcrumb immediately (Fix "No Breadcrumb" issue)
+    if (Nav && Nav.renderBreadcrumb) {
+        Nav.renderBreadcrumb();
     }
 };
 
-initNav({
-    State: StateWrapper,
-    Search: mockSearch,
-    Drag: null,
-    renderGrid: null,
-    renderBreadcrumb: mockRender.renderBreadcrumb
-});
-
-initRecent(StateWrapper, mockController, {
-    renderList: () => { },
-    openFile: (node) => window.open(node.url, '_blank') // Fix View method name for Recent module
-});
-
-// 绑定搜索框
-// 绑定搜索框
-const searchInput = document.getElementById('search-input');
-if (searchInput) {
-    let lastKeyword = "";
-
-    searchInput.addEventListener('input', (e) => {
-        const currentKeyword = e.target.value.trim();
-
-        // Update Filter Badge Logic (Use search query directly, not as a tag filter)
-        // Correctly handle search query without adding it to activeFilters (which are strictly for tags)
-
-        lastKeyword = currentKeyword;
-
-        AppState.searchQuery = currentKeyword;
-        mockSearch.performSearch();
-
-        if (typeof applyFilters === 'function') {
-            applyFilters();
-        }
-        if (Nav && Nav.renderBreadcrumb) {
-            Nav.renderBreadcrumb();
-        }
-    });
-}
-
-// 绑定标签按钮
-const tagToggleBtn = document.getElementById('tag-toggle-btn');
-if (tagToggleBtn) {
-    tagToggleBtn.addEventListener('click', () => {
-        Tags.toggleTagDrawer();
-    });
-}
-const tagCloseBtn = document.querySelector('.btn-close-drawer');
-if (tagCloseBtn) {
-    tagCloseBtn.addEventListener('click', () => {
-        Tags.toggleTagDrawer();
-    });
-}
-
-// 确保初始状态时清空 activeFilters
-AppState.activeFilters = new Set();
-
-
-// 初始化 Space 专属逻辑
-initSpaceAdmin(AdminCore);
-
-// Initialize Breadcrumb immediately (Fix "No Breadcrumb" issue)
-if (Nav && Nav.renderBreadcrumb) {
-    Nav.renderBreadcrumb();
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
 }
 
 // -- Unified Save Logic (Space + Tags) --
