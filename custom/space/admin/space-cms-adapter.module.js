@@ -9,6 +9,7 @@
  */
 
 import { setupBaseAdapter, preloadTagCategories } from '../../cms/cms-adapter.module.js';
+import { tagFilterMode } from '../../cms/viewer/tags/cms-tags-filter.module.js';
 
 /**
  * 设置 Space-CMS 适配器
@@ -31,8 +32,15 @@ export function setupSpaceAdapter(applyFiltersCallback) {
                 node.title?.toLowerCase().includes(query);
 
             // 标签过滤
-            const matchesTags = AppState.activeFilters.size === 0 ||
-                Array.from(AppState.activeFilters).some(tag => node.tags?.includes(tag));
+            let matchesTags = true;
+            if (AppState.activeFilters.size > 0) {
+                const filterTags = Array.from(AppState.activeFilters);
+                if (tagFilterMode === 'AND') {
+                    matchesTags = filterTags.every(tag => node.tags?.includes(tag));
+                } else {
+                    matchesTags = filterTags.some(tag => node.tags?.includes(tag));
+                }
+            }
 
             return matchesSearch && matchesTags;
         });

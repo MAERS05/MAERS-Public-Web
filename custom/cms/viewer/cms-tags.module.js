@@ -44,7 +44,9 @@ export function refreshDrawerList() {
         uiSort: uiSortInternal,
         uiEdit: uiEditInternal,
         uiDelete: uiDeleteInternal,
-        createCategory: createCategoryInternal
+        createCategory: createCategoryInternal,
+        tagFilterMode: TagsFilter.tagFilterMode,
+        toggleFilterMode: toggleFilterModeInternal
     };
 
     TagsDrawer.initDrawer(deps);
@@ -72,6 +74,11 @@ function uiDeleteInternal(index, e) {
 
 function createCategoryInternal() {
     TagsAdmin.createCategory(refreshDrawerList);
+}
+
+function toggleFilterModeInternal() {
+    TagsFilter.toggleFilterMode();
+    refreshDrawerList();
 }
 
 export function filterByTag(e, tag) {

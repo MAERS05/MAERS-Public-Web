@@ -21,6 +21,8 @@ let uiSortCallback = null;
 let uiEditCallback = null;
 let uiDeleteCallback = null;
 let createCategoryCallback = null;
+let tagFilterMode = 'AND';
+let toggleFilterModeCallback = null;
 
 // Track if event delegation is set up
 let drawerEventDelegationSetup = false;
@@ -37,6 +39,8 @@ export function initDrawer(deps) {
     uiEditCallback = deps.uiEdit;
     uiDeleteCallback = deps.uiDelete;
     createCategoryCallback = deps.createCategory;
+    tagFilterMode = deps.tagFilterMode;
+    toggleFilterModeCallback = deps.toggleFilterMode;
 }
 
 export function toggleTagDrawer(initManagerCallback, refreshCallback) {
@@ -79,14 +83,16 @@ export function refreshDrawerList(updateManagerCallback) {
         {
             selectedTags,
             expandedCategories,
-            query
+            query,
+            tagFilterMode
         },
         {
             uiSort: uiSortCallback,
             uiEdit: uiEditCallback,
             uiDelete: uiDeleteCallback,
             createCategory: createCategoryCallback,
-            onCleanup: () => handleCleanup(refreshDrawerList)
+            onCleanup: () => handleCleanup(refreshDrawerList),
+            onToggleFilterMode: toggleFilterModeCallback
         }
     );
 
@@ -215,17 +221,28 @@ async function handleRename(oldName, refreshCallback) {
 
     const res = await TagsApi.renameTag(getModuleName(), oldName, newName.trim());
     if (res.success) {
-        // Update Local State for immediate feedback
+        // Update Local State for immediate feedback (with deduplication)
         if (Controller?.AppState?.allNodes) {
             Controller.AppState.allNodes.forEach(node => {
                 if (node.tags && node.tags.includes(oldName)) {
-                    node.tags = node.tags.map(t => t === oldName ? newName.trim() : t);
+                    // Replace then deduplicate (handles case where node has both old and new tag)
+                    const renamed = node.tags.map(t => t === oldName ? newName.trim() : t);
+                    node.tags = [...new Set(renamed)];
                 }
             });
         }
         if (selectedTags.has(oldName)) {
             selectedTags.delete(oldName);
             selectedTags.add(newName.trim());
+        }
+
+        // Update Active Filters and Filter Order if the renamed tag was active
+        if (State?.renameFilter) {
+            State.renameFilter(oldName, newName.trim());
+        } else if (Controller?.AppState?.activeFilters?.has(oldName)) {
+            // Fallback for non-StateWrapper environments
+            Controller.AppState.activeFilters.delete(oldName);
+            Controller.AppState.activeFilters.add(newName.trim());
         }
 
         // Reload categories
@@ -258,6 +275,14 @@ async function handleDelete(tagName, refreshCallback) {
             });
         }
         if (selectedTags.has(tagName)) selectedTags.delete(tagName);
+
+        // Update Active Filters and Filter Order if the deleted tag was active
+        if (State?.removeFilter) {
+            State.removeFilter(tagName);
+        } else if (Controller?.AppState?.activeFilters?.has(tagName)) {
+            // Fallback
+            Controller.AppState.activeFilters.delete(tagName);
+        }
 
         // Reload categories
         const categories = await TagsApi.getCategories(getModuleName());

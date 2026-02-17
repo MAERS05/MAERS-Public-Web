@@ -92,6 +92,17 @@ export const State = {
         }
     },
 
+    renameFilter(oldName, newName) {
+        const index = filterOrder.indexOf(oldName);
+        if (index !== -1) {
+            filterOrder[index] = newName;
+        }
+        if (AppState?.activeFilters?.has(oldName)) {
+            AppState.activeFilters.delete(oldName);
+            AppState.activeFilters.add(newName);
+        }
+    },
+
     jumpToFilter(filterItem) {
         const index = filterOrder.indexOf(filterItem);
         if (index !== -1) {

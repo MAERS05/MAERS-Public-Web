@@ -232,19 +232,28 @@ def rename_tag(module, old_name, new_name):
         print(f"  [ CMS ] ✎ 重命名标签 | Renaming tag: {old_name} → {new_name} (module: {module})")
         if not new_name or not new_name.strip(): return {"success": False, "error": "新标签名不能为空"}
         new_name = new_name.strip()
+        if old_name == new_name: return {"success": True, "updated_count": 0}
         
         strategy = get_strategy(module, get_context())
         
         # 1. Update source
         updated_count = strategy.rename_tag(module, old_name, new_name)
         
-        # 2. Update categories file
+        # 2. Update categories file (with deduplication)
         categories = strategy.get_categories(module)
         if categories:
             changed_cats = False
             for cat in categories:
                 if 'tags' in cat and isinstance(cat['tags'], list) and old_name in cat['tags']:
-                    cat['tags'] = [new_name if t == old_name else t for t in cat['tags']]
+                    # Replace old_name with new_name, then deduplicate while preserving order
+                    renamed = [new_name if t == old_name else t for t in cat['tags']]
+                    seen = set()
+                    deduped = []
+                    for t in renamed:
+                        if t not in seen:
+                            seen.add(t)
+                            deduped.append(t)
+                    cat['tags'] = deduped
                     changed_cats = True
             
             if changed_cats:

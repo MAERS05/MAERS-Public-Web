@@ -13,6 +13,14 @@ export function initFilter(deps) {
     Search = deps.Search;
 }
 
+export let tagFilterMode = 'AND'; // 'AND' or 'OR'
+
+export function toggleFilterMode() {
+    tagFilterMode = tagFilterMode === 'AND' ? 'OR' : 'AND';
+    if (Search?.applyFilter) Search.applyFilter();
+    return tagFilterMode;
+}
+
 export function filterByTag(e, tag) {
     if (e && (e.target.closest('.dragging') || e.target.classList.contains('dragging'))) return;
     if (e) e.stopPropagation();
@@ -30,6 +38,7 @@ export function filterByTag(e, tag) {
 
 export function clearTagFilter() {
     State.AppState.activeFilters.clear();
+    if (State.clearFilters) State.clearFilters();
     const mainInput = document.getElementById("search-input");
     if (mainInput) mainInput.value = "";
     if (Search?.applyFilter) Search.applyFilter();
@@ -38,6 +47,7 @@ export function clearTagFilter() {
 export function selectTagFromDrawer(tag) {
     if (!State.AppState.activeFilters.has(tag)) {
         State.AppState.activeFilters.add(tag);
+        if (State.addFilter) State.addFilter(tag);
         if (Search?.applyFilter) Search.applyFilter();
     }
 }

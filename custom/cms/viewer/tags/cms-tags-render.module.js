@@ -57,12 +57,36 @@ export const TagsRender = {
         let html = '';
 
         // Header Buttons (Admin Only)
+        // Header Buttons
+        const filterMode = uiState.tagFilterMode || 'AND';
+        const toggleBtnStyle = `
+            width: 28px; height: 28px; border-radius: 50%; border: 1px solid rgba(128,128,128,0.3); 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 10px; cursor: pointer; color: var(--text-main); background: rgba(255,255,255,0.05);
+            transition: all 0.2s; user-select: none;
+        `;
+
+        html += `<div style="padding: 5px 15px; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">`;
+
+        // Left controls (Add Category + Toggle)
+        html += `<div style="display:flex;align-items:center;gap:10px;">`;
+
+        // 1. Add Category (Admin only)
         if (State.IS_ADMIN) {
-            html += `<div style="padding: 5px 15px; margin-bottom: 5px; display: flex; align-items: center; justify-content: space-between;">
-                    <button class="add-cat-btn" style="background:none;color:#a0a0a5;border:none;cursor:pointer;">＋ 添加分类</button>
-                    <button class="cleanup-tags-btn" title="清理未使用的标签" style="background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:0.5;transition:opacity 0.2s;">🗑️</button>
-                 </div>`;
+            html += `<button class="add-cat-btn" style="background:none;color:#a0a0a5;border:none;cursor:pointer;">＋ 添加分类</button>`;
         }
+
+        // 2. Toggle Button
+        html += `<div class="tag-filter-toggle-btn" title="筛选逻辑: ${filterMode === 'AND' ? '所有标签 (AND)' : '任意标签 (OR)'}" style="${toggleBtnStyle}">${filterMode}</div>`;
+
+        html += `</div>`;
+
+        // Right controls (Cleanup)
+        html += `<div style="display:flex;align-items:center;gap:15px;">`;
+        if (State.IS_ADMIN) {
+            html += `<button class="cleanup-tags-btn" title="清理未使用的标签" style="background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:0.5;transition:opacity 0.2s;">🗑️</button>`;
+        }
+        html += `</div></div>`;
 
         // Helper: Render Single Tag
         const renderTag = (tag) => {
@@ -166,6 +190,17 @@ export const TagsRender = {
 
         // 6. Bind standard events (click to filter) are handled by Drawer via Delegation
         // But we need to bind specific buttons created here
+        // 6. Bind events
+        const toggleBtn = container.querySelector('.tag-filter-toggle-btn');
+        if (toggleBtn && callbacks.onToggleFilterMode) {
+            toggleBtn.onclick = (e) => {
+                e.stopPropagation();
+                callbacks.onToggleFilterMode();
+            };
+            toggleBtn.onmouseenter = () => { toggleBtn.style.background = 'rgba(120, 255, 214, 0.15)'; toggleBtn.style.borderColor = '#78ffd6'; };
+            toggleBtn.onmouseleave = () => { toggleBtn.style.background = 'rgba(255,255,255,0.05)'; toggleBtn.style.borderColor = 'rgba(128,128,128,0.3)'; };
+        }
+
         if (State.IS_ADMIN) {
             const addBtn = container.querySelector('.add-cat-btn');
             if (addBtn) addBtn.onclick = callbacks.createCategory; // Bind add callback

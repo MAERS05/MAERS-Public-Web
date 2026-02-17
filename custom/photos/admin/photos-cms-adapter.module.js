@@ -9,6 +9,7 @@
  */
 
 import { setupBaseAdapter, preloadTagCategories } from '../../cms/cms-adapter.module.js';
+import { tagFilterMode } from '../../cms/viewer/tags/cms-tags-filter.module.js';
 
 /**
  * 设置 Photos-CMS 适配器
@@ -75,6 +76,18 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, extra
     const base = setupBaseAdapter(dynamicModuleName, applyFiltersCallback, finalConfig);
     const { AppState, mockSearch } = base;
 
+    // 2.5 链接 allNodes 到 photos 数据源 (关键：确保标签抽屉的重命名/删除逻辑能更新到内存对象)
+    Object.defineProperty(AppState, 'allNodes', {
+        get: () => photosController?.State?.loadedData || [],
+        set: (val) => {
+            if (photosController?.State) {
+                photosController.State.loadedData = val;
+            }
+        },
+        configurable: true,
+        enumerable: true
+    });
+
     // 3. 注入 Photos 特有的 Search 逻辑
     mockSearch.performSearch = () => {
         const query = AppState.searchQuery.toLowerCase();
@@ -88,8 +101,15 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, extra
                 photo.path?.toLowerCase().includes(query);
 
             // 标签过滤
-            const matchesTags = AppState.activeFilters.size === 0 ||
-                Array.from(AppState.activeFilters).every(tag => photo.tags?.includes(tag));
+            let matchesTags = true;
+            if (AppState.activeFilters.size > 0) {
+                const filterTags = Array.from(AppState.activeFilters);
+                if (tagFilterMode === 'AND') {
+                    matchesTags = filterTags.every(tag => photo.tags?.includes(tag));
+                } else {
+                    matchesTags = filterTags.some(tag => photo.tags?.includes(tag));
+                }
+            }
 
             return matchesSearch && matchesTags;
         });

@@ -22,6 +22,12 @@ export function initGrid(deps) {
     Events = deps.Events;
 }
 
+// Helper: Check if currently filtering
+function isFiltering() {
+    if (!State || !State.AppState) return false;
+    return (State.AppState.searchQuery || (State.AppState.activeFilters && State.AppState.activeFilters.size > 0));
+}
+
 function getCoverUrl(node, moduleName) {
     if (!node.coverImage) return null;
 
@@ -70,6 +76,7 @@ function createGridItem(node, State, index) {
         const isDeleted = manager ? manager.isDeleted(index) : false;
         const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
         const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games'));
+        const filtering = isFiltering();
 
         const wrapper = document.createElement('div');
         wrapper.className = 'maers-admin-action-group';
@@ -84,9 +91,13 @@ function createGridItem(node, State, index) {
             return btn;
         };
 
-        wrapper.appendChild(createBtn('≡', 'Select', (e) => Admin.uiPickNode(e, node.id)));
+        // Hide Sort button when filtering (reordering doesn't apply to filtered results)
+        if (!filtering) {
+            wrapper.appendChild(createBtn('≡', 'Select', (e) => Admin.uiPickNode(e, node.id)));
+        }
         wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
 
+        // Delete button always visible (works in both normal and filtered mode)
         const delIcon = isDeleted ? '↺' : '✕';
         const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
         if (isDeleted) delBtn.classList.add('btn-delete-active');
@@ -184,7 +195,13 @@ function createGridItem(node, State, index) {
                     });
 
                     if (res.ok) {
-                        return true;
+                        // Refresh view to update filter bar and grid (matching photos/space behavior)
+                        if (typeof Controller?.refreshView === 'function') {
+                            Controller.refreshView(false, true);
+                        }
+                        // Return false: DOM will be rebuilt by refreshView, so tag-interactions
+                        // should NOT try to update now-stale DOM elements
+                        return false;
                     } else {
                         currentNode.tags = oldTags;
                         return false;
@@ -200,6 +217,189 @@ function createGridItem(node, State, index) {
     }
 
     return el;
+}
+
+/**
+ * Patch an existing grid-item element in-place.
+ * Updates class, title, tags, admin buttons — but preserves the cover <img> element
+ * to avoid image reload flicker.
+ */
+function patchGridItem(el, node, State, index) {
+    // 1. Update className (admin state: selected, deleted, etc.)
+    let className = `grid-item type-${node.type}`;
+    let manager = null;
+    if (State.IS_ADMIN && Admin) {
+        manager = Admin.getManager?.();
+        if (manager) {
+            const extraClass = manager.getItemClass(index);
+            className += ` ${extraClass}`;
+
+            if (manager.selectedIndices && manager.selectedIndices.includes(index)) {
+                const orderNum = manager.selectedIndices.indexOf(index) + 1;
+                el.setAttribute('data-order-num', orderNum);
+            } else {
+                el.removeAttribute('data-order-num');
+            }
+        }
+    }
+    el.className = className;
+
+    // 2. Update data attributes
+    el.setAttribute('data-tags', (node.tags || []).join(' '));
+    el.setAttribute('data-type', node.type);
+
+    // 3. Patch Admin Buttons (rebuild — these are tiny, no images)
+    if (State.IS_ADMIN && Admin && AdminButtonHelper) {
+        const oldWrapper = el.querySelector('.maers-admin-action-group');
+        const isDeleted = manager ? manager.isDeleted(index) : false;
+        const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
+        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games'));
+        const filtering = isFiltering();
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'maers-admin-action-group';
+        wrapper.style.cssText = "position: absolute; top: 5px; right: 5px; z-index: 10; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 140px;";
+
+        const createBtn = (icon, title, onClick) => {
+            const btn = document.createElement('span');
+            btn.className = 'maers-admin-btn';
+            btn.title = title;
+            btn.textContent = icon;
+            btn.addEventListener('click', onClick);
+            return btn;
+        };
+
+        // Hide Sort button when filtering (reordering doesn't apply to filtered results)
+        if (!filtering) {
+            wrapper.appendChild(createBtn('≡', 'Select', (e) => Admin.uiPickNode(e, node.id)));
+        }
+        wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
+
+        // Delete button always visible (works in both normal and filtered mode)
+        const delIcon = isDeleted ? '↺' : '✕';
+        const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
+        if (isDeleted) delBtn.classList.add('btn-delete-active');
+        wrapper.appendChild(delBtn);
+
+        wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
+
+        if (isLitModule) {
+            wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
+            if (node.coverImage) {
+                wrapper.appendChild(createBtn('🗑️', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
+            }
+        }
+
+        if (oldWrapper) {
+            oldWrapper.replaceWith(wrapper);
+        } else {
+            el.insertBefore(wrapper, el.firstChild);
+        }
+    }
+
+    // 4. Patch Cover Image — PRESERVE existing <img> if URL unchanged
+    const currentModule = Controller?.CONFIG?.CURRENT_MODULE;
+    const showCover = currentModule === 'literature' || currentModule === 'games';
+
+    if (showCover) {
+        const newCoverUrl = getCoverUrl(node, currentModule);
+        const existingCoverDiv = el.querySelector('.item-cover');
+
+        if (existingCoverDiv) {
+            const existingImg = existingCoverDiv.querySelector('.item-cover-img');
+            const existingUrl = existingImg ? existingImg.getAttribute('src') : null;
+
+            if (newCoverUrl !== existingUrl) {
+                // Cover changed — rebuild cover div
+                const coverDiv = document.createElement('div');
+                coverDiv.className = newCoverUrl ? 'item-cover' : 'item-cover placeholder';
+
+                if (newCoverUrl) {
+                    const img = document.createElement('img');
+                    img.src = newCoverUrl;
+                    img.loading = 'lazy';
+                    img.decoding = 'async';
+                    img.className = 'item-cover-img';
+                    img.onload = () => coverDiv.classList.add('loaded');
+                    img.onerror = () => {
+                        img.style.display = 'none';
+                        coverDiv.classList.add('placeholder');
+                    };
+                    coverDiv.appendChild(img);
+                }
+                existingCoverDiv.replaceWith(coverDiv);
+            }
+            // else: URL unchanged, do nothing — image stays loaded!
+        }
+    }
+
+    // 5. Patch Title
+    const titleEl = el.querySelector('.item-title');
+    if (titleEl && titleEl.textContent !== node.title) {
+        titleEl.textContent = node.title;
+    }
+
+    // 6. Patch Tags
+    const oldTagsDiv = el.querySelector('.item-tags');
+    if (oldTagsDiv) {
+        const tagsDiv = document.createElement('div');
+        tagsDiv.className = 'item-tags';
+        (node.tags || []).forEach(t => {
+            const span = document.createElement('span');
+            span.className = 'mini-tag';
+            if (State.AppState.activeFilters.has(t)) span.classList.add('active');
+            span.textContent = `#${t}`;
+            span.dataset.tag = t;
+            if (State.IS_ADMIN) span.dataset.nodeId = node.id;
+            tagsDiv.appendChild(span);
+        });
+        oldTagsDiv.replaceWith(tagsDiv);
+
+        // Re-setup tag interactions in admin mode
+        if (State.IS_ADMIN && Admin && tagsDiv.children.length > 0) {
+            setupTagDragAndMenu({
+                tagsContainer: tagsDiv,
+                getTags: () => {
+                    const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
+                    return currentNode?.tags || [];
+                },
+                onTagsUpdate: async (newTags) => {
+                    const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
+                    if (!currentNode) return false;
+
+                    const oldTags = [...(currentNode.tags || [])];
+                    currentNode.tags = newTags;
+
+                    const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
+                    try {
+                        const res = await fetch(`/api/cms/update_tags?module=${module}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: node.id, tags: newTags })
+                        });
+
+                        if (res.ok) {
+                            // Refresh view to update filter bar and grid (matching photos/space behavior)
+                            if (typeof Controller?.refreshView === 'function') {
+                                Controller.refreshView(false, true);
+                            }
+                            // Return false: DOM will be rebuilt by refreshView, so tag-interactions
+                            // should NOT try to update now-stale DOM elements
+                            return false;
+                        } else {
+                            currentNode.tags = oldTags;
+                            return false;
+                        }
+                    } catch (e) {
+                        console.error('Update tags failed', e);
+                        currentNode.tags = oldTags;
+                        if (window.MAERS?.Toast) window.MAERS.Toast.error('标签更新失败');
+                        return false;
+                    }
+                }
+            });
+        }
+    }
 }
 
 export function renderGrid(list, isSearch = false, shouldResetManager = false, skipSync = false) {
@@ -256,27 +456,33 @@ export function renderGrid(list, isSearch = false, shouldResetManager = false, s
         }
         renderBatch();
     } else {
-        // Diff Render (Scroll Preservation)
+        // Patch Render (Preserves cover images to avoid reload flicker)
         const existingNodes = new Map();
         Array.from(container.children).forEach(el => {
             if (el.dataset.id) existingNodes.set(el.dataset.id, el);
         });
 
         sortedList.forEach((item, index) => {
-            const newEl = createGridItem(item, State, index);
             const existingEl = existingNodes.get(item.id);
             const occupant = container.children[index];
 
             if (existingEl) {
-                existingEl.replaceWith(newEl);
-                if (newEl !== container.children[index]) {
-                    container.insertBefore(newEl, container.children[index]);
+                // Patch in-place: update only what changed, preserve cover <img>
+                patchGridItem(existingEl, item, State, index);
+
+                // Ensure correct position (reorder support)
+                if (existingEl !== container.children[index]) {
+                    container.insertBefore(existingEl, container.children[index]);
                 }
+                existingNodes.delete(item.id);
             } else {
+                // New item: create fresh
+                const newEl = createGridItem(item, State, index);
                 container.insertBefore(newEl, occupant || null);
             }
         });
 
+        // Remove cards that no longer exist in the list
         while (container.children.length > sortedList.length) {
             container.lastElementChild.remove();
         }

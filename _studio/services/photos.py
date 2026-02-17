@@ -237,6 +237,7 @@ def handle_upload(query, file_data):
 
     return {
         "status": "success",
+        "id": existing_row['id'] if is_restore else new_id,
         "path": rel_path,
         "name": safe_name,
         "thumb": rel_thumb,

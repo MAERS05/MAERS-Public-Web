@@ -62,8 +62,9 @@ export function init(appState, config) {
 
     // Initialize admin features if admin mode
     const IS_ADMIN = Controller?.CONFIG?.IS_ADMIN || false;
-    if (IS_ADMIN && Admin?.initAdminFeatures) {
-        Admin.initAdminFeatures();
+    if (IS_ADMIN && Admin?.initAdmin) {
+        Admin.initAdmin(State, Controller, Render, Search, Tags);
+        if (Admin.initAdminFeatures) Admin.initAdminFeatures();
     }
 }
 

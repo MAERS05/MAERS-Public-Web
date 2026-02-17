@@ -66,9 +66,16 @@ class CmsTagStrategy(TagStrategy):
             if row['tags']:
                 tags = json.loads(row['tags'])
                 if old_name in tags:
-                    tags = [new_name if t == old_name else t for t in tags]
+                    # Replace then deduplicate (handles case where node has both old and new tag)
+                    renamed = [new_name if t == old_name else t for t in tags]
+                    seen = set()
+                    deduped = []
+                    for t in renamed:
+                        if t not in seen:
+                            seen.add(t)
+                            deduped.append(t)
                     cursor.execute("UPDATE nodes SET tags=? WHERE id=?", 
-                                 (json.dumps(tags, ensure_ascii=False), row['id']))
+                                 (json.dumps(deduped, ensure_ascii=False), row['id']))
                     updated_count += 1
         
         conn.commit()

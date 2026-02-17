@@ -71,7 +71,22 @@ export async function saveChanges(deletePaths, newOrder) {
     }
 }
 
-export async function uploadFiles(files) {
+// Update tags helper
+async function updateTags(id, tags) {
+    try {
+        const res = await fetch('/api/photos/update_tags', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, tags: tags })
+        });
+        return res.ok;
+    } catch (e) {
+        console.error("Failed to update tags:", e);
+        return false;
+    }
+}
+
+export async function uploadFiles(files, tags = []) {
     try {
         if (!DataProvider) {
             throw new Error('DataProvider not initialized');
@@ -81,6 +96,16 @@ export async function uploadFiles(files) {
             const res = await DataProvider.uploadImage(State.category, f);
             if (res && res.msg === 'duplicate_found') {
                 dupCount++;
+            } else if (tags && tags.length > 0) {
+                // Apply tags to new image
+                // Use ID returned from server
+                if (res.id) {
+                    console.log(`[Upload] Trying to apply tags to ID: ${res.id}`, tags);
+                    const success = await updateTags(res.id, tags);
+                    console.log(`[Upload] Tag update result for ${res.id}: ${success}`);
+                } else {
+                    console.warn(`[Upload] Server did not return ID for ${f.name}, cannot apply tags.`);
+                }
             }
         }
         await reloadData();
@@ -104,5 +129,6 @@ export const Controller = {
     checkIsDirty,
     saveChanges,
     uploadFiles,
+    updateTags,
     fixPath
 };

@@ -357,7 +357,7 @@ export const Search = {
      * @param {string} keywordStr - 搜索关键词 (逗号分隔)
      * @returns {Array} 过滤后的节点数组
      */
-    filterNodes(rootList, filters, keywordStr) {
+    filterNodes(rootList, filters, keywordStr, filterMode = 'AND') {
         const results = [];
         const keywords = keywordStr ?
             keywordStr.toLowerCase().split(/[,，]/).map(s => s.trim()).filter(s => s) : [];
@@ -366,12 +366,20 @@ export const Search = {
             list.forEach(node => {
                 let match = true;
 
-                // 标签筛选 (AND)
+                // 标签筛选
                 if (filters && filters.size > 0) {
                     if (!node.tags) match = false;
                     else {
-                        for (let t of filters) {
-                            if (!node.tags.includes(t)) { match = false; break; }
+                        if (filterMode === 'AND') {
+                            for (let t of filters) {
+                                if (!node.tags.includes(t)) { match = false; break; }
+                            }
+                        } else { // OR
+                            let hasAny = false;
+                            for (let t of filters) {
+                                if (node.tags.includes(t)) { hasAny = true; break; }
+                            }
+                            if (!hasAny) match = false;
                         }
                     }
                 }

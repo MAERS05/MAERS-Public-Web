@@ -12,12 +12,14 @@ let State = null;
 let Controller = null;
 let Render = null;
 let Search = null;
+let Tags = null;
 
-export function initAdmin(state, controller, render, search = null) {
+export function initAdmin(state, controller, render, search = null, tags = null) {
     State = state;
     Controller = controller;
     Render = render;
     Search = search;
+    Tags = tags;
 }
 
 let manager = null;
@@ -30,8 +32,21 @@ export async function initAdminFeatures() {
         list: [],
         autoSaveBar: false,
         onUpdate: () => {
-            // skipSync=true 避免重新同步 Manager（防止循环依赖）
-            Render?.renderGrid(manager.list, false, false, true);
+            // When filtering, use refreshView to stay in filtered mode
+            const searchInput = document.getElementById("search-input");
+            const hasSearch = searchInput && searchInput.value.trim().length > 0;
+            const hasFilter = State.AppState.activeFilters.size > 0;
+
+            if (hasSearch || hasFilter) {
+                // Delegate to refreshView which calls Search.applyFilter()
+                // This keeps the filtered view while reflecting _deleted state
+                if (Search && Search.applyFilter) {
+                    Search.applyFilter();
+                }
+            } else {
+                // skipSync=true 避免重新同步 Manager（防止循环依赖）
+                Render?.renderGrid(manager.list, false, false, true);
+            }
         }
     });
 
@@ -41,18 +56,15 @@ export async function initAdminFeatures() {
     syncManagerList(null, true);
 
     // 4. Inject Create Buttons
-    const existingAddBtn = document.querySelector('.cms-add-btn-group');
-    if (!existingAddBtn) {
-        // Use a broader selector or State.SELECTORS if available, but assuming .header-right
-        const headerRight = document.querySelector('.header-right');
-        if (headerRight) {
-            // Find the correct container (.header-tools-row)
-            const toolsRow = headerRight.querySelector('.header-tools-row');
-            const targetContainer = toolsRow || headerRight;
-            const searchBox = targetContainer.querySelector('.search-box') || targetContainer.querySelector('input');
-            const insertRef = searchBox || targetContainer.firstChild;
+    const headerRight = document.querySelector('.header-right');
+    if (headerRight) {
+        const toolsRow = headerRight.querySelector('.header-tools-row');
+        const targetContainer = toolsRow || headerRight;
+        const searchBox = targetContainer.querySelector('.search-box') || targetContainer.querySelector('input');
+        const insertRef = searchBox || targetContainer.firstChild;
 
-            // Create Buttons using 'cms-create-btn' (Styles defined in cms-editor.css)
+        // Simple Injection
+        if (!document.querySelector('.cms-create-btn')) {
             const btnFolder = document.createElement('button');
             btnFolder.className = 'cms-create-btn';
             btnFolder.innerHTML = '＋ 文件';
@@ -64,13 +76,12 @@ export async function initAdminFeatures() {
             const btnText = document.createElement('button');
             btnText.className = 'cms-create-btn';
             btnText.innerHTML = '＋ 文本';
+            btnText.style.marginRight = '8px';
             btnText.onclick = (e) => {
                 e.stopPropagation();
                 uiCreateNode('text');
             };
-            btnText.style.marginRight = '12px'; // Extra spacing before search box
 
-            // Sequence: [Folder] -> [Text] -> [SearchBox]
             targetContainer.insertBefore(btnFolder, insertRef);
             targetContainer.insertBefore(btnText, insertRef);
         }
@@ -141,10 +152,10 @@ export async function performSave() {
 
     // 3. Finalize
     if (success) {
-        if (Feedback) {
-            if (deletedItems.length > 0) {
-                Feedback.notifyDeleteSuccess('MD 文档及其子节点已删除');
-            }
+        if (Feedback && deletedItems.length > 0) {
+            const hasFolder = deletedItems.some(item => item.type === 'folder');
+            const label = hasFolder ? 'MD 文档及其子节点' : (deletedItems.length > 1 ? '多个 MD 文档' : 'MD 文档');
+            Feedback.notifyDeleteSuccess(`${label}已删除`);
         }
 
         // Show cover deletion notice if applicable
@@ -380,25 +391,35 @@ export async function uiAddTag(e, id) {
     const node = State.AppState.allNodes.find((n) => n.id === id);
     if (!node) return;
 
-    const tag = prompt("Enter tag name (without #):");
-    if (tag) {
-        const cleanTag = tag.trim();
-        if (cleanTag) {
-            const currentTags = node.tags || [];
-            if (!currentTags.includes(cleanTag)) {
-                const newTags = [...currentTags, cleanTag];
+    const input = prompt("添加标签 (可使用 , 或 ， 分隔多个):");
+    if (input) {
+        const rawTags = input.split(/[,，]/);
+        const cleanTags = rawTags
+            .map(t => t.trim())
+            .filter(t => t.length > 0);
 
+        if (cleanTags.length > 0) {
+            const oldTags = [...(node.tags || [])];
+            node.tags = [...oldTags];
+            let changed = false;
+
+            for (const tag of cleanTags) {
+                if (!node.tags.includes(tag)) {
+                    node.tags.push(tag);
+                    changed = true;
+                }
+            }
+
+            if (changed) {
                 // Optimistic update
-                node.tags = newTags;
-
-                // Call granular API
-                const res = await performUpdateTags(id, newTags);
+                const res = await performUpdateTags(id, node.tags);
                 if (res.success) {
                     // Success - UI already updated optimistically
                     refreshView();
+                    if (Tags?.refreshDrawerList) Tags.refreshDrawerList();
                 } else {
                     // Revert on failure
-                    node.tags = currentTags;
+                    node.tags = oldTags;
                     refreshView();
                 }
             }
@@ -427,6 +448,7 @@ export async function uiRemoveTag(e, id, tag) {
     if (res.success) {
         // Success - UI already updated optimistically
         refreshView();
+        if (Tags?.refreshDrawerList) Tags.refreshDrawerList();
     } else {
         // Revert on failure
         node.tags = oldTags;
@@ -435,6 +457,7 @@ export async function uiRemoveTag(e, id, tag) {
 }
 
 export const Admin = {
+    initAdmin,
     initAdminFeatures,
     getManager,
     syncManagerList,

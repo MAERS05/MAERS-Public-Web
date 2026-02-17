@@ -79,7 +79,9 @@ function showContextMenu(e, tagText, tagIndex, tagEl, tagsContainer, getTags, on
         if (newName?.trim() && newName.trim() !== tagText) {
             const tags = [...getTags()];
             tags[tagIndex] = newName.trim();
-            if (await onTagsUpdate(tags)) {
+            // Deduplicate (handles case where new name already exists in tags)
+            const deduped = [...new Set(tags)];
+            if (await onTagsUpdate(deduped)) {
                 tagEl.textContent = (tagEl.textContent.startsWith('#') ? '#' : '') + newName.trim();
             }
         }

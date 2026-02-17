@@ -22,7 +22,11 @@ if (!document.getElementById('tag-drawer-context-menu-styles')) {
     document.head.appendChild(style);
 }
 
-let tagReorderMode = { active: false };
+let tagReorderMode = {
+    active: false,
+    reorderClickHandler: null,
+    cancelHandler: null
+};
 
 export const TagsUI = {
 
@@ -141,30 +145,45 @@ export const TagsUI = {
 
             // Cleanup
             this.cancelTagReorder();
-            document.removeEventListener('click', reorderClickHandler, true);
 
             // Execute
             if (onReorderComplete) onReorderComplete(tagName, targetTag);
         };
 
-        setTimeout(() => {
-            document.addEventListener('click', reorderClickHandler, true);
-        }, 100);
-
         // Cancel handler
         const cancelHandler = (e) => {
             if (e.key === 'Escape' || !e.target.closest('.drawer-item')) {
                 this.cancelTagReorder();
-                document.removeEventListener('click', reorderClickHandler, true);
-                document.removeEventListener('keydown', cancelHandler);
             }
         };
+
+        tagReorderMode.reorderClickHandler = reorderClickHandler;
+        tagReorderMode.cancelHandler = cancelHandler;
+
+        // Keydown listener can be added immediately
         document.addEventListener('keydown', cancelHandler);
+
+        // Click listener uses timeout to avoid capturing the triggering click
+        setTimeout(() => {
+            if (tagReorderMode.active && tagReorderMode.reorderClickHandler === reorderClickHandler) {
+                document.addEventListener('click', reorderClickHandler, true);
+            }
+        }, 100);
     },
 
     cancelTagReorder() {
         if (!tagReorderMode.active) return;
         tagReorderMode.active = false;
+
+        // Remove event listeners
+        if (tagReorderMode.reorderClickHandler) {
+            document.removeEventListener('click', tagReorderMode.reorderClickHandler, true);
+            tagReorderMode.reorderClickHandler = null;
+        }
+        if (tagReorderMode.cancelHandler) {
+            document.removeEventListener('keydown', tagReorderMode.cancelHandler);
+            tagReorderMode.cancelHandler = null;
+        }
 
         const listContainer = document.getElementById('drawer-list');
         if (!listContainer) return;

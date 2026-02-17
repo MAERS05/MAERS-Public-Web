@@ -40,6 +40,12 @@ const SortMode = {
     TIME_ASC: 2
 };
 
+// Helper: Check if currently filtering
+function isFiltering() {
+    if (!AdminCore || !AdminCore.AppState) return false;
+    return (AdminCore.AppState.searchQuery || (AdminCore.AppState.activeFilters && AdminCore.AppState.activeFilters.size > 0));
+}
+
 let container = null;
 let saveBtn = null;
 
@@ -307,13 +313,19 @@ export function render(list = null) {
 
         // Apply manager styling
         if (manager) {
-            const extraClasses = manager.getItemClass(idx);
-            div.className = `photo-item ${extraClasses}`;
-            if (manager.selectedIndices.includes(idx)) {
-                const orderNum = manager.selectedIndices.indexOf(idx) + 1;
-                div.setAttribute('data-order-num', orderNum);
+            const filtering = isFiltering();
+            if (filtering) {
+                // When filtering, indices don't match manager list — check _deleted directly
+                div.className = `photo-item ${img._deleted ? 'is-deleted' : ''}`;
             } else {
-                div.removeAttribute('data-order-num');
+                const extraClasses = manager.getItemClass(idx);
+                div.className = `photo-item ${extraClasses}`;
+                if (manager.selectedIndices.includes(idx)) {
+                    const orderNum = manager.selectedIndices.indexOf(idx) + 1;
+                    div.setAttribute('data-order-num', orderNum);
+                } else {
+                    div.removeAttribute('data-order-num');
+                }
             }
         }
 
@@ -363,9 +375,11 @@ export function render(list = null) {
         const shouldHaveBtns = Controller.State.isAdmin && Admin && AdminCore?.AdminButtonHelper;
 
         if (shouldHaveBtns) {
+            const filtering = isFiltering();
+
             const adminEl = AdminCore.AdminButtonHelper.render({
                 index: idx,
-                onSort: (e) => {
+                onSort: filtering ? null : (e) => {
                     e.stopPropagation();
                     Admin.togglePick(img.path);
                 },

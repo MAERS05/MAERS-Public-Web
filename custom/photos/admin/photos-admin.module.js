@@ -51,7 +51,10 @@ export function initManager(dataList) {
                 Controller.State.loadedData = manager.list;
             }
 
-            if (View?.render) {
+            // When filtering, re-apply filters to stay in filtered view
+            if (AdminCore?.AppState?.activeFilters?.size > 0 && AdminCore.applyFilters) {
+                AdminCore.applyFilters();
+            } else if (View?.render) {
                 View.render();
             }
         }
@@ -141,7 +144,9 @@ async function handleSave() {
                 manager.setList(Controller.State.loadedData);
             }
 
-            if (View?.render) {
+            if (AdminCore?.applyFilters) {
+                AdminCore.applyFilters();
+            } else if (View?.render) {
                 View.render();
             }
             return true;
@@ -169,23 +174,34 @@ function bindAdminEvents() {
 
     if (fileInput) {
         Utils.bindEvent(fileInput, 'change', async (e) => {
-            const res = await Controller.uploadFiles(e.target.files);
+            // Get active tags to inherit
+            const activeTags = AdminCore?.AppState?.activeFilters ? Array.from(AdminCore.AppState.activeFilters) : [];
+
+            const res = await Controller.uploadFiles(e.target.files, activeTags);
             const totalCount = e.target.files.length;
             const successCount = totalCount - res.dupCount;
 
             if (successCount > 0) {
-                showToast(`成功上传 ${successCount} 张图片`, 'success');
+                showToast(`成功上传 ${successCount} 张图片` + (activeTags.length > 0 ? ` (已应用 ${activeTags.length} 个标签)` : ''), 'success');
             }
             if (res.dupCount > 0) {
                 showToast(`发现 ${res.dupCount} 张重复图片`, 'warning');
             }
-            await Controller.reloadData();
+
+            // Reload is already called in uploadFiles, but we need to ensure UI update
+            // Note: Controller.reloadData() in uploadFiles triggers the override in admin-main which updates AppState
+
             if (manager && manager.setList) {
                 manager.setList(Controller.State.loadedData);
             }
-            if (View?.render) {
+
+            // Render (Preserve Filters)
+            if (AdminCore?.applyFilters) {
+                AdminCore.applyFilters();
+            } else if (View?.render) {
                 View.render();
             }
+
             // Explicitly hide SaveBar as upload is auto-saved
             if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
         });
@@ -229,18 +245,30 @@ export const Admin = {
 
 async function addTag(photo) {
     if (!photo) return;
-    const tag = prompt("添加标签 (Add Tag):");
-    if (!tag || !tag.trim()) return;
+    const input = prompt("添加标签 (可使用 , 或 ， 分隔多个):");
+    if (!input || !input.trim()) return;
 
-    const cleanTag = tag.trim();
+    const rawTags = input.split(/[,，]/);
+    const cleanTags = rawTags
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
 
-    // Optimistic update
+    if (cleanTags.length === 0) return;
+
     if (!photo.tags) photo.tags = [];
-    if (photo.tags.includes(cleanTag)) return;
+    const updatedTags = [...photo.tags];
+    let changed = false;
 
-    const newTags = [...photo.tags, cleanTag];
+    for (const tag of cleanTags) {
+        if (!updatedTags.includes(tag)) {
+            updatedTags.push(tag);
+            changed = true;
+        }
+    }
 
-    await updateTagsAPI(photo, newTags, true); // Silent add
+    if (!changed) return;
+
+    await updateTagsAPI(photo, updatedTags, true); // Silent add
 }
 
 function bindTagEvents(span, photo, tag) {
@@ -273,8 +301,18 @@ async function updateTagsAPI(photo, newTags, silent = false) {
 
         if (data.status === 'success') {
             photo.tags = newTags;
-            // Refresh View to show new state
-            if (View?.render) View.render();
+            // Refresh View/Filters to show new state
+            if (AdminCore?.applyFilters) {
+                AdminCore.applyFilters();
+            } else if (View?.render) {
+                View.render();
+            }
+
+            // Refresh counts in drawer
+            if (AdminCore?.Tags?.refreshDrawerList) {
+                AdminCore.Tags.refreshDrawerList();
+            }
+
             if (!silent && window.MAERS?.Toast) window.MAERS.Toast.success("标签已更新");
         } else {
             alert("Error: " + (data.error || "Unknown"));

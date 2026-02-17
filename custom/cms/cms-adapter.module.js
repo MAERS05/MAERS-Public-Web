@@ -33,6 +33,11 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
                 applyFiltersCallback();
             }
         },
+        refreshView: (isSearch = false, shouldResetManager = false) => {
+            if (typeof applyFiltersCallback === 'function') {
+                applyFiltersCallback();
+            }
+        },
         // 统一的标签保存逻辑
         saveTagCategories: async (categories) => {
             try {
@@ -106,6 +111,17 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
             if (index !== -1) {
                 filterOrder.splice(index, 1);
                 AppState.activeFilters.delete(filterItem);
+            }
+        },
+
+        renameFilter(oldName, newName) {
+            const index = filterOrder.indexOf(oldName);
+            if (index !== -1) {
+                filterOrder[index] = newName;
+            }
+            if (AppState.activeFilters.has(oldName)) {
+                AppState.activeFilters.delete(oldName);
+                AppState.activeFilters.add(newName);
             }
         },
 

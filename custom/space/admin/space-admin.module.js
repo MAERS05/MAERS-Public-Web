@@ -34,9 +34,12 @@ async function init() {
         manager = new AdminCore.BatchItemManager({
             list: currentLevelNodes,
             onUpdate: () => {
-                // When manager updates (selection/deletion state), just re-render
-                // Manager handles SaveButton visibility internally via updateSaveState()
-                render();
+                // When filtering, re-apply filters to stay in filtered view
+                if (isFiltering() && applyFilters) {
+                    applyFilters();
+                } else {
+                    render();
+                }
             }
         });
     }
@@ -138,15 +141,76 @@ function uiMoveTo(e, index) {
 
 function uiToggleDelete(e, index) {
     e.stopPropagation();
-    if (manager) manager.toggleDelete(index);
+    if (!manager) return;
+
+    if (isFiltering()) {
+        const filteredNodes = getRenderNodes();
+        const node = filteredNodes[index];
+        if (!node) return;
+
+        const managerIndex = manager.list.findIndex(n => n.id === node.id);
+        if (managerIndex !== -1) {
+            // Delegate logic to Manager (handles toggling, save state, selection)
+            manager.toggleDelete(managerIndex);
+
+            // Sync visual state if references differ (fix for stale UI in search view)
+            const managerItem = manager.list[managerIndex];
+            if (node !== managerItem) {
+                // Ensure the UI node matches the Manager node state
+                if (managerItem._deleted) node._deleted = true;
+                else delete node._deleted;
+            }
+
+            // Re-render
+            if (AdminCore.applyFilters) AdminCore.applyFilters();
+            else render();
+
+        } else {
+            // Deep node (not in current manager list)
+            // Just toggle local property and force dirty state
+            if (node._deleted) delete node._deleted;
+            else node._deleted = true;
+
+            if (AdminCore.SaveButton) AdminCore.SaveButton.show();
+
+            if (AdminCore.applyFilters) AdminCore.applyFilters();
+            else render();
+        }
+    } else {
+        manager.toggleDelete(index);
+    }
 }
 
 function uiEdit(e, index) {
     e.stopPropagation();
     // Use the node from the *rendered* list
     const nodes = getRenderNodes();
-    const node = nodes[index];
+    let node = nodes[index];
     if (!node) return;
+
+    // [FIX] In filtering mode, filteredNodes might have stale references.
+    // Always use the live object from treeData.
+    if (isFiltering()) {
+        // Recursively search in treeData
+        function findInTree(nodes, id) {
+            for (let n of nodes) {
+                if (n.id === id) return n;
+                if (n.children) {
+                    const found = findInTree(n.children, id);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
+
+        const liveNode = findInTree(treeData.root, node.id);
+        if (liveNode) {
+            node = liveNode;
+        } else {
+            console.error('[SPACE] Node not found in treeData:', node.id);
+            return;
+        }
+    }
 
     // We need to find the node in 'currentLevelNodes' if we want to support BatchManager saving correctly
     // But if we are in Filter mode, 'index' might not match 'currentLevelNodes'.
@@ -184,9 +248,12 @@ function render() {
         const card = document.createElement('div');
 
         let extraClasses = '';
-        // Only apply Manager classes if NOT filtering (indexes match)
         if (!filtering && manager) {
+            // Normal mode: use manager index directly
             extraClasses = manager.getItemClass(index);
+        } else if (filtering && node._deleted) {
+            // Filtered mode: check _deleted flag directly (set by toggleDelete on the actual node object)
+            extraClasses = 'is-deleted';
         }
 
         card.className = `space-card ${node.type === 'directory' ? 'folder-card' : 'link-card'} ${extraClasses}`;
@@ -232,7 +299,7 @@ function render() {
                 isDeleted: node._deleted,
                 onSort: filtering ? null : (e) => uiToggleSelect(e, index),
                 onEdit: (e) => uiEdit(e, index),
-                onDelete: filtering ? null : (e) => uiToggleDelete(e, index),
+                onDelete: (e) => uiToggleDelete(e, index),
                 containerClass: 'admin-actions' // This might need adjustment if using specific styles
             });
 
@@ -243,23 +310,35 @@ function render() {
             addTagBtn.title = 'Add Tag';
             addTagBtn.onclick = async (e) => {
                 e.stopPropagation();
-                const newTag = prompt("Add Tag:");
-                if (newTag) {
-                    const cleanTag = newTag.trim();
-                    if (cleanTag) {
+                const input = prompt("添加标签 (可使用 , 或 ， 分隔多个):");
+                if (input) {
+                    const rawTags = input.split(/[,，]/);
+                    const cleanTags = rawTags
+                        .map(t => t.trim())
+                        .filter(t => t.length > 0);
+
+                    if (cleanTags.length > 0) {
+                        const oldTags = [...(node.tags || [])];
                         if (!node.tags) node.tags = [];
-                        if (!node.tags.includes(cleanTag)) {
-                            const newTags = [...node.tags, cleanTag];
+                        let changed = false;
+
+                        for (const tag of cleanTags) {
+                            if (!node.tags.includes(tag)) {
+                                node.tags.push(tag);
+                                changed = true;
+                            }
+                        }
+
+                        if (changed) {
                             // Optimistic update
-                            node.tags = newTags;
                             syncToAppState();
 
                             // Call Granular API
-                            if (await performUpdateTags(node.id, newTags)) {
+                            if (await performUpdateTags(node.id, node.tags)) {
                                 // Success - UI already optimistic
                             } else {
                                 // Revert on failure
-                                node.tags = node.tags.filter(t => t !== cleanTag);
+                                node.tags = oldTags;
                                 render();
                             }
                         }
@@ -384,7 +463,7 @@ function openEditModal(node, index, isNew = false) {
 
                 // If we reach here, save was successful
                 if (window.MAERS?.Toast) {
-                    window.MAERS.Toast.success(isNew ? "网站收藏成功" : "Item saved!");
+                    window.MAERS.Toast.success(isNew ? "网站收藏成功" : "保存成功!");
                 }
 
                 // Clean up manager state since we just saved everything
@@ -394,7 +473,7 @@ function openEditModal(node, index, isNew = false) {
             } catch (err) {
                 console.error(err);
                 if (window.MAERS?.Toast) {
-                    window.MAERS.Toast.error(isNew ? "网站收藏失败" : "Save failed");
+                    window.MAERS.Toast.error(isNew ? "网站收藏失败" : "保存失败");
                 }
                 return false; // Keep modal open
             }
@@ -423,7 +502,6 @@ function handleAdd() {
 }
 
 async function handleSave() {
-    console.log("Saving data...", treeData);
     function pruneDeleted(nodes) {
         if (!nodes) return [];
         return nodes.filter(n => !n._deleted).map(n => {
@@ -494,8 +572,18 @@ async function performUpdateTags(nodeId, tags) {
             body: JSON.stringify({ id: nodeId, tags: tags })
         });
         if (res.ok) {
-            // No need to reload whole tree if successful
-            render();
+            // Success - apply filters to update view and breadcrumb
+            if (typeof applyFilters === 'function') {
+                applyFilters();
+            } else {
+                render();
+            }
+
+            // Refresh counts in drawer
+            if (AdminCore?.Tags?.refreshDrawerList) {
+                AdminCore.Tags.refreshDrawerList();
+            }
+
             return true;
         }
         throw new Error(res.status);

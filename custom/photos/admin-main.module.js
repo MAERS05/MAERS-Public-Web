@@ -24,7 +24,10 @@ const AdminCore = {
     // SaveButton removed to use initUnified pattern
     AdminButtonHelper,
     Feedback,
-    Tags
+    Tags,
+    Search: null,
+    Nav: null,
+    applyFilters: null
 };
 
 // Module-level variables to ensure access across scopes
@@ -73,6 +76,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderGrid: () => { },
             renderBreadcrumb: Nav.renderBreadcrumb
         });
+
+        AdminCore.Search = mockSearch;
+        AdminCore.Nav = Nav;
+        AdminCore.applyFilters = applyTagFilters;
+
         Nav.renderBreadcrumb?.();
     }
 

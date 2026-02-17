@@ -5,6 +5,7 @@
  */
 
 import { Search as SearchUtils } from '../../../shared/utils.module.js';
+import { tagFilterMode } from './tags/cms-tags-filter.module.js';
 
 // Dependency injection
 let State = null;
@@ -97,10 +98,18 @@ export function applyFilter(shouldResetManager = false) {
 
         results = searchScope.filter(node => {
             if (!node.tags) return false;
-            for (let tag of State.AppState.activeFilters) {
-                if (!node.tags.includes(tag)) return false;
+
+            if (tagFilterMode === 'AND') {
+                for (let tag of State.AppState.activeFilters) {
+                    if (!node.tags.includes(tag)) return false;
+                }
+                return true;
+            } else { // OR
+                for (let tag of State.AppState.activeFilters) {
+                    if (node.tags.includes(tag)) return true;
+                }
+                return false;
             }
-            return true;
         });
     } else {
         // Keyword search or combined: use recursive search
@@ -108,6 +117,7 @@ export function applyFilter(shouldResetManager = false) {
             searchScope,
             State.AppState.activeFilters,
             keywordStr,
+            tagFilterMode
         );
     }
 
