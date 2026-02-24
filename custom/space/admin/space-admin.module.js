@@ -566,29 +566,24 @@ async function performCancel() {
 
 async function performUpdateTags(nodeId, tags) {
     try {
-        const res = await fetch('/api/space/update_tags', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: nodeId, tags: tags })
-        });
-        if (res.ok) {
-            // Success - apply filters to update view and breadcrumb
-            if (typeof applyFilters === 'function') {
-                applyFilters();
-            } else {
-                render();
-            }
+        const res = await (window.MAERS?.ApiClient || { post: (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }) })
+            .post('/api/space/update_tags', { id: nodeId, tags: tags });
 
-            // Refresh counts in drawer
-            if (AdminCore?.Tags?.refreshDrawerList) {
-                AdminCore.Tags.refreshDrawerList();
-            }
-
-            return true;
+        // Success - apply filters to update view and breadcrumb
+        if (typeof applyFilters === 'function') {
+            applyFilters();
+        } else {
+            render();
         }
-        throw new Error(res.status);
+
+        // Refresh counts in drawer
+        if (AdminCore?.Tags?.refreshDrawerList) {
+            AdminCore.Tags.refreshDrawerList();
+        }
+
+        return true;
     } catch (e) {
-        console.error("Update tags failed", e);
+        console.error("[SPACE] Update tags failed", e);
         if (window.MAERS?.Toast) window.MAERS.Toast.error("Update tags failed");
         return false;
     }

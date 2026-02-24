@@ -138,17 +138,7 @@ export async function performSave() {
         }
     }
 
-    // 2. Persist Reorder
-    if (success && manager.list && manager.list.length > 0) {
-        try {
-            const currentOrderIds = manager.list.map(n => n.id);
-            // Reorder usually not needed after delete unless we want to save remaining order
-            // which BatchManager handles implicitly by list state. 
-            // Skipping reorder call for deleted items to save bandwidth/time
-        } catch (e) {
-            console.error('[CMS] Reorder Exception:', e);
-        }
-    }
+    // 2. Persist Reorder (handled implicitly by list state)
 
     // 3. Finalize
     if (success) {
@@ -197,19 +187,10 @@ export async function performCancel() {
 
 async function performUpdateTags(nodeId, tags) {
     try {
-        const module = Controller.CONFIG.CURRENT_MODULE;
-        const res = await fetch(`/api/cms/update_tags?module=${module}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: nodeId, tags: tags })
-        });
-
-        if (res.ok) {
-            return { success: true };
-        }
-        throw new Error(res.status);
+        const res = await Controller.updateTags(nodeId, tags);
+        return res || { success: true };
     } catch (e) {
-        console.error("Update tags failed", e);
+        console.error("[CMS] Update tags failed", e);
         if (window.MAERS?.Toast) window.MAERS.Toast.error("Update tags failed");
         return { success: false };
     }

@@ -92,4 +92,4 @@ if __name__ == '__main__':
         print(f"⚠️ [Server] Init Sync Failed: {e}")
         
     try: httpd = socketserver.TCPServer(("", PORT), Handler); httpd.serve_forever()
-    except: pass
+    except KeyboardInterrupt: pass

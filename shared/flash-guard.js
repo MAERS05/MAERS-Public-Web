@@ -108,7 +108,6 @@
     // 4. 解除遮罩 (Remove Guard)
     // ---------------------------------------------------------
     // 页面内容基本就绪后移除遮罩
-    // 页面内容基本就绪后移除遮罩
     function removeGuard() {
         // 1. 移除全局伪元素遮罩
         document.documentElement.classList.remove('js-loading');

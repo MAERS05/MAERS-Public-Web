@@ -6,7 +6,8 @@
 
 window.MAERS = window.MAERS || {};
 window.MAERS.Config = {
-    // API 基础路径 (用于开发环境)
+    // API 基础路径 (仅本地管理模式使用)
+    // 线上静态部署时，所有 API 请求均由 IS_ADMIN 拦截，此值不会被触发
     API_BASE: 'http://localhost:8000',
 
     // 动画延迟配置 (ms)
