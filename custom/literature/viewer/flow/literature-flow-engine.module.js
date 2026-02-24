@@ -18,6 +18,7 @@ export class FlowEngine {
     constructor() {
         this.container = document.getElementById('path-container');
         this.viewport = document.getElementById('viewport') || document.body;
+        this.breadcrumb = document.getElementById('breadcrumb');
         this.modeBtn = document.getElementById('btn-toggle-mode');
         this.modeText = document.getElementById('mode-text');
 
@@ -118,10 +119,12 @@ export class FlowEngine {
             this.viewport.classList.remove('gallery-mode');
             this.viewport.classList.add('grid-mode');
             this.state.isPaused = true;
+            if (this.breadcrumb) this.breadcrumb.style.display = '';
         } else {
             this.viewport.classList.remove('grid-mode');
             this.viewport.classList.add('gallery-mode');
             this.state.isPaused = false;
+            if (this.breadcrumb) this.breadcrumb.style.display = 'none';
 
             this.viewport.style.display = '';
             this.viewport.style.height = 'calc(100vh - 200px)';
@@ -207,6 +210,9 @@ export class FlowEngine {
                 this.viewport.style.opacity = '1';
                 this.viewport.style.visibility = 'visible';
             }
+
+            // Flow mode is default: hide breadcrumb
+            if (this.breadcrumb) this.breadcrumb.style.display = 'none';
         } catch (e) {
             console.error('[FlowEngine] Init failed:', e);
         }

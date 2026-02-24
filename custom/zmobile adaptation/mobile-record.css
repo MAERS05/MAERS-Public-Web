@@ -1,0 +1,30 @@
+/* ==========================================================================
+   📱 Mobile Record Styles
+   ========================================================================== */
+
+@media (max-width: 900px) {
+
+    /* Records 页面标题字号使用 clamp 随屏幕宽度自适应，避免溢出 */
+    body .header-title {
+        font-size: clamp(1.4rem, 6vw, 3rem) !important;
+    }
+
+    /* 取消固定宽高比，让卡片高度跟随内容自适应 */
+    .folder-grid .grid-item {
+        aspect-ratio: unset !important;
+        min-height: 120px;
+        overflow: visible !important;
+        padding: 16px !important;
+    }
+
+    /* 取消行数截断，允许长标题完整显示 */
+    .grid-item .item-title {
+        font-size: 1.4rem !important;
+        line-height: 1.1 !important;
+        overflow: visible !important;
+        display: block !important;
+        -webkit-line-clamp: unset !important;
+        line-clamp: unset !important;
+        word-break: break-all !important;
+    }
+}

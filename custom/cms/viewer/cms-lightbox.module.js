@@ -48,7 +48,8 @@ export function initLightbox() {
                 target.closest(".header-title") ||
                 target.closest(".brand-logo") ||
                 target.closest("button") ||  // [Fix] Ignore images inside buttons (e.g. History/Quick Access)
-                target.closest(".tag-toggle-btn") // Specific explicit check just in case
+                target.closest(".tag-toggle-btn") || // Specific explicit check just in case
+                target.closest(".spatial-card") // [Fix] Ignore nav icon images in spatial nav cards
             ) {
                 return;
             }

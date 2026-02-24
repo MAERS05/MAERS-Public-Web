@@ -77,7 +77,7 @@ export const TagsRender = {
         }
 
         // 2. Toggle Button
-        html += `<div class="tag-filter-toggle-btn" title="筛选逻辑: ${filterMode === 'AND' ? '所有标签 (AND)' : '任意标签 (OR)'}" style="${toggleBtnStyle}">${filterMode}</div>`;
+        html += `<div class="tag-filter-toggle-btn" title="筛选逻辑: ${filterMode === 'AND' ? '关联标签 (AND)' : '任意标签 (OR)'}" style="${toggleBtnStyle}">${filterMode}</div>`;
 
         html += `</div>`;
 

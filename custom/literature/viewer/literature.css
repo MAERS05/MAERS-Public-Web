@@ -17,6 +17,7 @@
 
 .viewport.gallery-mode {
     display: block;
+    margin-top: 30px;
 }
 
 .path-container {

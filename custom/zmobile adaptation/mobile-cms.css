@@ -26,6 +26,14 @@
     body .header-left {
         width: 100%;
         justify-content: space-between;
+        min-width: 0;
+    }
+
+    /* header-title 是 flex 容器，text-overflow 无效；改用 clamp() 字号自适应 + flex 收缩 */
+    body .header-title {
+        flex: 1;
+        min-width: 0;
+        font-size: clamp(1.2rem, 4.5vw, 1.8rem);
     }
 
     body .header-right {
@@ -48,7 +56,7 @@
 
     /* Grid Layout Optimization */
     body .folder-grid {
-        grid-template-columns: repeat(auto-fill, minmax(145px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         gap: 10px;
     }
 
