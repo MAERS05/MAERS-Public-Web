@@ -185,7 +185,7 @@ function bindAdminEvents() {
                 showToast(`成功上传 ${successCount} 张图片` + (activeTags.length > 0 ? ` (已应用 ${activeTags.length} 个标签)` : ''), 'success');
             }
             if (res.dupCount > 0) {
-                showToast(`发现 ${res.dupCount} 张重复图片`, 'warning');
+                showToast(`跳过 ${res.dupCount} 张重复图片的上传`, 'warning');
             }
 
             // Reload is already called in uploadFiles, but we need to ensure UI update
@@ -204,6 +204,9 @@ function bindAdminEvents() {
 
             // Explicitly hide SaveBar as upload is auto-saved
             if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
+
+            // Reset file input so re-selecting the same files triggers change again
+            fileInput.value = '';
         });
     }
 }
