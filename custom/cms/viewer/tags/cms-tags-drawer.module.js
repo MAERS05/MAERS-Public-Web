@@ -301,28 +301,39 @@ async function handleDelete(tagName, refreshCallback) {
 }
 
 function handleSort(tagName, categoryName, refreshCallback) {
-    TagsUI.startTagReorder(tagName, categoryName, async (startTag, targetTag) => {
-        // Reordering Logic
-        const categories = State.AppState.tagCategories || [];
-        const category = categories.find(cat => cat.name === categoryName);
+    const categories = State.AppState.tagCategories || [];
+    const category = categories.find(cat => cat.name === categoryName);
+    if (!category || !category.tags) return;
 
-        if (!category || !category.tags) return;
+    // Batch: if selectedTags contains the right-clicked tag, include all same-category selected tags
+    let sourceTags = [tagName];
+    if (selectedTags.size > 0 && selectedTags.has(tagName)) {
+        const categoryTagSet = new Set(category.tags);
+        const batch = Array.from(selectedTags).filter(t => categoryTagSet.has(t));
+        if (batch.length > 0) sourceTags = batch;
+    }
 
+    TagsUI.startTagReorder(sourceTags, categoryName, async (movedTags, targetTag) => {
         const tags = [...category.tags];
-        const sourceIndex = tags.indexOf(startTag);
-        const targetIndex = tags.indexOf(targetTag);
+        const movedSet = new Set(movedTags);
 
-        if (sourceIndex === -1 || targetIndex === -1) return;
+        // Keep original relative order of moved tags
+        const orderedMoved = tags.filter(t => movedSet.has(t));
+        // Remove all moved tags
+        const remaining = tags.filter(t => !movedSet.has(t));
+        // Insert after target
+        const targetIndex = remaining.indexOf(targetTag);
+        if (targetIndex === -1) return;
 
-        // Move
-        const [moved] = tags.splice(sourceIndex, 1);
-        tags.splice(targetIndex > sourceIndex ? targetIndex : targetIndex + 1, 0, moved);
-        category.tags = tags;
+        remaining.splice(targetIndex + 1, 0, ...orderedMoved);
+        category.tags = remaining;
 
         // Save
         const success = await TagsApi.saveCategories(getModuleName(), categories);
         if (success) {
             Controller.AppState.tagCategories = categories;
+            // Clear selection after sort
+            selectedTags.clear();
             if (refreshCallback) refreshCallback();
             categoryManager?.setList(categories);
             if (SaveButton) SaveButton.hide();

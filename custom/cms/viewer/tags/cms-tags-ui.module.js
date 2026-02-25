@@ -104,17 +104,20 @@ export const TagsUI = {
     },
 
     /**
-     * 开始标签排序模式
-     * @param {string} tagName 源标签
+     * 开始标签排序模式 (支持批量)
+     * @param {string|string[]} tagNames 源标签（单个字符串或数组）
      * @param {string} categoryName 分类名
-     * @param {Function} onReorderComplete 回调(sourceTag, targetTag)
+     * @param {Function} onReorderComplete 回调(sourceTags: string[], targetTag: string)
      */
-    startTagReorder(tagName, categoryName, onReorderComplete) {
+    startTagReorder(tagNames, categoryName, onReorderComplete) {
         this.cancelTagReorder();
         if (categoryName === '_UNCATEGORIZED_') {
             alert('未分类的标签无法排序');
             return;
         }
+
+        // Normalize: accept string or array
+        const sourceTagNames = Array.isArray(tagNames) ? tagNames : [tagNames];
 
         tagReorderMode.active = true;
 
@@ -122,7 +125,7 @@ export const TagsUI = {
         const listContainer = document.getElementById('drawer-list');
         const items = listContainer.querySelectorAll('.drawer-item');
         items.forEach(item => {
-            if (item.dataset.tag === tagName) {
+            if (sourceTagNames.includes(item.dataset.tag)) {
                 item.style.outline = '2px solid #78ffd6';
                 item.style.outlineOffset = '2px';
             } else if (item.closest('.tag-category-group')?.dataset.category === categoryName) {
@@ -146,8 +149,8 @@ export const TagsUI = {
             // Cleanup
             this.cancelTagReorder();
 
-            // Execute
-            if (onReorderComplete) onReorderComplete(tagName, targetTag);
+            // Execute — pass array of source tags
+            if (onReorderComplete) onReorderComplete(sourceTagNames, targetTag);
         };
 
         // Cancel handler

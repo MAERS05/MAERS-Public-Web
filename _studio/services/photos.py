@@ -87,6 +87,27 @@ def sync_gallery_js():
 def to_web_path(path):
     return path.replace('\\', '/')
 
+def get_exif_datetime(file_data):
+    """从图片二进制数据中读取 EXIF 拍摄时间，返回 (time_struct, timestamp) 或 None"""
+    if not HAS_PIL:
+        return None
+    try:
+        import io
+        img = Image.open(io.BytesIO(file_data))
+        exif_data = img._getexif()
+        if not exif_data:
+            return None
+        # Tag 36867 = DateTimeOriginal, 36868 = DateTimeDigitized, 306 = DateTime
+        for tag_id in (36867, 36868, 306):
+            raw = exif_data.get(tag_id)
+            if raw:
+                t_struct = time.strptime(raw, '%Y:%m:%d %H:%M:%S')
+                timestamp = time.mktime(t_struct)
+                return (t_struct, timestamp)
+    except Exception as e:
+        print(f"  [ PHOTOS ] ⚠️  EXIF 读取失败，使用当前时间: {e}")
+    return None
+
 def handle_upload(query, file_data):
     """处理图片上传请求"""
     category = os.path.basename(query.get('category', ['default'])[0])
@@ -134,8 +155,18 @@ def handle_upload(query, file_data):
     # 2. 生成新文件 (如果不是修复模式)
     if not is_restore:
         print(f"  [ PHOTOS ] 📤 上传图片中 | Uploading to category: {category}")
-        t_struct = time.localtime()
-        base_time_str = time.strftime('%Y%m%d_%H%M%S', t_struct)
+        
+        # 优先使用 EXIF 拍摄时间，降级使用当前系统时间
+        exif_result = get_exif_datetime(file_data)
+        if exif_result:
+            t_struct, exif_timestamp = exif_result
+            base_time_str = time.strftime('%Y%m%d_%H%M%S', t_struct)
+            print(f"  [ PHOTOS ] 📅 使用 EXIF 拍摄时间: {base_time_str}")
+        else:
+            t_struct = time.localtime()
+            exif_timestamp = None
+            base_time_str = time.strftime('%Y%m%d_%H%M%S', t_struct)
+            print(f"  [ PHOTOS ] 📅 EXIF 不可用，使用当前时间: {base_time_str}")
         
         counter = 1
         while True:
@@ -223,7 +254,8 @@ def handle_upload(query, file_data):
         cursor.execute("UPDATE photos SET sort_order=? WHERE id=?", (new_order, existing_row['id']))
     else:
         new_id = str(uuid.uuid4())
-        created_at = time.time()
+        # 优先用 EXIF 时间作为 created_at，降级用当前时间
+        created_at = exif_timestamp if exif_timestamp else time.time()
         cursor.execute('''
             INSERT INTO photos (id, category, name, path, thumb, preview, hash, created_at, sort_order)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
