@@ -560,7 +560,6 @@ function escapeAttr(str) {
 async function performCancel() {
     // Revert changes by reloading original data
     await loadData();
-    if (manager) manager.reset();
     render();
 }
 

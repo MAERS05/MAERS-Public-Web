@@ -48,11 +48,9 @@ export function getManager() {
 export function updateManagerReference() {
     if (categoryManager && Controller) {
         if (categoryManager.list !== Controller.AppState.tagCategories) {
-            if (categoryManager.updateListReference) {
-                categoryManager.updateListReference(Controller.AppState.tagCategories);
-            } else {
-                categoryManager.setList(Controller.AppState.tagCategories);
-            }
+            // Always use setList (updates snapshot) instead of updateListReference (does not).
+            // This ensures reset() reverts to the correct saved state, not a stale snapshot.
+            categoryManager.setList(Controller.AppState.tagCategories);
         }
     }
 }

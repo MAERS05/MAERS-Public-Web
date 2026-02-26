@@ -118,19 +118,12 @@ async function handleSave() {
 
         // 2. Sync Metadata
         const remaining = currentData.filter(c => !c._deleted);
-        const specialMsgs = new Set();
         for (let item of remaining) {
-            const res = await fetch('/api/update_category', {
+            await fetch('/api/update_category', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(item) // Send full item data to update
+                body: JSON.stringify(item)
             });
-
-            if (res.ok) {
-                const data = await res.json();
-                if (data.dirs_created) specialMsgs.add('图片存储文件夹创建成功');
-                if (data.tag_file_created) specialMsgs.add("标签文件创建成功");
-            }
         }
 
         // 3. Reorder 
@@ -148,13 +141,7 @@ async function handleSave() {
         // Hide SaveBar
         if (SaveButton) SaveButton.hide();
 
-        if (Feedback) {
-            if (specialMsgs.size > 0) {
-                specialMsgs.forEach(msg => Feedback.notifySuccess(msg));
-            } else {
-                Feedback.notifySaveSuccess();
-            }
-        }
+        if (Feedback) Feedback.notifySaveSuccess();
     } catch (e) {
         console.error(e);
         if (Feedback) Feedback.notifySaveFail();

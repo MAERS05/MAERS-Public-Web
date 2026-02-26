@@ -34,6 +34,7 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
             }
         },
         refreshView: (isSearch = false, shouldResetManager = false) => {
+            if (mockSearch?.performSearch) mockSearch.performSearch();
             if (typeof applyFiltersCallback === 'function') {
                 applyFiltersCallback();
             }

@@ -139,6 +139,10 @@ async function handleSave() {
         const res = await Controller.saveChanges(dels, newOrder);
         if (res.success) {
             await Controller.reloadData();
+            // Update the "default" baseline so the sort dropdown restores the newly saved order
+            if (View?.setOriginalData) {
+                View.setOriginalData(Controller.State.loadedData);
+            }
             // Sync manager with fresh data after save to clear _deleted flags and update indices
             if (manager && manager.setList) {
                 manager.setList(Controller.State.loadedData);
@@ -304,6 +308,10 @@ async function updateTagsAPI(photo, newTags, silent = false) {
 
         if (data.status === 'success') {
             photo.tags = newTags;
+
+            // Update manager snapshot so joint-cancel won't revert this instant-save
+            if (manager) manager.setList(manager.list);
+
             // Refresh View/Filters to show new state
             if (AdminCore?.applyFilters) {
                 AdminCore.applyFilters();

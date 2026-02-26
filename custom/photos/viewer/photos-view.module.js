@@ -612,9 +612,14 @@ function bindLightbox() {
 
 
 // 导出 View 对象（向后兼容）
+export function setOriginalData(list) {
+    ViewState.originalData = [...list];
+}
+
 export const View = {
     render,
-    openLightbox
+    openLightbox,
+    setOriginalData
 };
 
 // DOM Ready 初始化

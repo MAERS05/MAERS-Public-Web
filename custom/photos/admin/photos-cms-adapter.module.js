@@ -18,7 +18,7 @@ import { tagFilterMode } from '../../cms/viewer/tags/cms-tags-filter.module.js';
  * @param {Object} [extraConfig] - Optional configuration overrides (e.g. initialState)
  * @returns {Object} 包含 AppState, mockController, mockSearch, StateWrapper 的对象
  */
-export function setupPhotosAdapter(applyFiltersCallback, photosController, extraConfig = {}) {
+export function setupPhotosAdapter(applyFiltersCallback, photosController, PhotosAdminModule, extraConfig = {}) {
     // 1. 定义 Controller 覆盖项
     const controllerOverrides = {
         updateNodeTags: async (nodeId, tags) => {
@@ -35,6 +35,10 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, extra
                     if (localNode) {
                         localNode.tags = tags;
                     }
+
+                    const m = PhotosAdminModule?.getManager?.();
+                    if (m) m.setList(photosController.State.loadedData);
+
                     return true;
                 }
                 return false;
