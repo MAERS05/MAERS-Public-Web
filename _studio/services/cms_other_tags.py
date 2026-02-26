@@ -59,6 +59,26 @@ class PhotosTagStrategy(TagStrategy):
                     updated_count += 1
         conn.commit()
         conn.close()
+
+        # Also rename the tag inside the tag-categories JSON file
+        cats_file = self._get_tags_file(module)
+        if os.path.exists(cats_file):
+            try:
+                with open(cats_file, 'r', encoding='utf-8') as f:
+                    categories = json.load(f)
+                changed = False
+                for cat in categories:
+                    if old_name in cat.get('tags', []):
+                        cat['tags'] = [new_name if t == old_name else t for t in cat['tags']]
+                        # Deduplicate in case new_name already existed
+                        seen = set()
+                        cat['tags'] = [t for t in cat['tags'] if not (t in seen or seen.add(t))]
+                        changed = True
+                if changed:
+                    with open(cats_file, 'w', encoding='utf-8') as f:
+                        json.dump(categories, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f"  [ CMS ] ⚠️ Failed to update tag categories file on rename: {e}")
         
         from . import photos
         photos.sync_gallery_js()

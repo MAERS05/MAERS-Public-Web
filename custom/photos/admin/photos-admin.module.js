@@ -167,7 +167,17 @@ export async function performSave() {
 }
 
 export async function performCancel() {
-    if (manager) manager.reset();
+    // Reload fresh data from server instead of resetting from a potentially stale
+    // snapshot. rename/delete tag operations mutate allNodes in place without
+    // updating the manager snapshot, so reset() would undo those changes.
+    if (Controller?.reloadData) {
+        await Controller.reloadData();
+        if (manager?.setList) {
+            manager.setList(Controller.State.loadedData);
+        }
+    } else if (manager) {
+        manager.reset();
+    }
 }
 
 function bindAdminEvents() {
