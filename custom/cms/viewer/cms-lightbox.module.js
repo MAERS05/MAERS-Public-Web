@@ -47,7 +47,7 @@ export function initLightbox() {
             if (e.target === lightbox) closeLightbox();
         });
 
-        // 鼠标滚轮切换（400ms 冷却防连跳）
+        // 鼠标滚轮切换（250ms 冷却防连跳）
         lightbox.addEventListener("wheel", (e) => {
             e.preventDefault();
             if (_imageList.length <= 1 || _wheelCooldown) return;
@@ -56,6 +56,31 @@ export function initLightbox() {
             if (e.deltaY > 0) _switchTo(_currentIndex + 1);
             else _switchTo(_currentIndex - 1);
         }, { passive: false });
+
+        // 移动端 Touch 滑动支持
+        let touchStartX = 0;
+        let touchEndX = 0;
+        lightbox.addEventListener("touchstart", (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        lightbox.addEventListener("touchend", (e) => {
+            if (_imageList.length <= 1) return;
+            touchEndX = e.changedTouches[0].screenX;
+            handleGesture();
+        }, { passive: true });
+
+        function handleGesture() {
+            const swipeThreshold = 50; // 最小滑动距离 50px
+            if (touchEndX < touchStartX - swipeThreshold) {
+                // 向左滑动 -> 下一张
+                _switchTo(_currentIndex + 1);
+            }
+            if (touchEndX > touchStartX + swipeThreshold) {
+                // 向右滑动 -> 上一张
+                _switchTo(_currentIndex - 1);
+            }
+        }
     }
 
     if (closeBtn) {

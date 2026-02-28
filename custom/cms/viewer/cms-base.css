@@ -283,6 +283,12 @@
   opacity: 0.95;
 }
 
+@media (max-width: 768px) {
+  .markdown-body img {
+    max-height: 100px;
+  }
+}
+
 /* ==================== 8. Immersive Layer ==================== */
 .immersive-layer {
   position: fixed;
