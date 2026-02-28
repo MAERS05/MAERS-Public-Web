@@ -154,7 +154,7 @@ function _renderAdminEditor(layer, node) {
     }
 
     vditorInstance = new Vditor('vditor-container', {
-        height: '100%',
+        height: 'calc(100vh - 61px)',
         mode: 'ir',
         value: node.content || '',
         theme: themeMode,
@@ -175,7 +175,7 @@ function _renderAdminEditor(layer, node) {
         ],
         upload: {
             accept: 'image/*',
-            multiple: false,
+            multiple: true,
             handler: async (files) => {
                 return _handleImageUpload(files);
             }
@@ -190,7 +190,7 @@ function _renderVisitorReader(layer, node) {
 
     let htmlContent = "> No content.";
     if (window.marked) {
-        htmlContent = marked.parse(node.content || "> No content.");
+        htmlContent = marked.parse(node.content || "> No content.", { breaks: true });
     }
 
     if (window.DOMPurify) {
@@ -215,28 +215,31 @@ function _renderVisitorReader(layer, node) {
 }
 
 async function _handleImageUpload(files) {
-    const file = files[0];
-    const now = new Date();
-    const YYYY = now.getFullYear();
-    const MM = String(now.getMonth() + 1).padStart(2, '0');
-    const DD = String(now.getDate()).padStart(2, '0');
-    const HH = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    const ss = String(now.getSeconds()).padStart(2, '0');
-    const suffix = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
-    const newFileName = `${YYYY}${MM}${DD}_${HH}${mm}${ss}_${suffix}.avif`;
+    if (!Controller?.uploadImage) return 'Upload Failed';
 
-    vditorInstance.insertValue(`![Uploading...](${newFileName})`);
+    for (const file of files) {
+        const now = new Date();
+        const YYYY = now.getFullYear();
+        const MM = String(now.getMonth() + 1).padStart(2, '0');
+        const DD = String(now.getDate()).padStart(2, '0');
+        const HH = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const ss = String(now.getSeconds()).padStart(2, '0');
+        const suffix = String(Math.floor(Math.random() * 99) + 1).padStart(2, '0');
+        const placeholder = `placeholder_${YYYY}${MM}${DD}_${HH}${mm}${ss}_${suffix}`;
 
-    if (Controller?.uploadImage) {
+        vditorInstance.insertValue(`![Uploading...](${placeholder})\n`);
+
         const res = await Controller.uploadImage(file);
         if (res.success) {
             const content = vditorInstance.getValue();
-            vditorInstance.setValue(content.replace(`![Uploading...](${newFileName})`, `![](${res.path})`));
-            return null;
+            vditorInstance.setValue(content.replace(`![Uploading...](${placeholder})`, `![](${res.path})`));
+        } else {
+            const content = vditorInstance.getValue();
+            vditorInstance.setValue(content.replace(`![Uploading...](${placeholder})`, `> ⚠️ Upload failed: ${file.name}`));
         }
     }
-    return "Upload Failed";
+    return null;
 }
 
 function _escapeHtml(input) {

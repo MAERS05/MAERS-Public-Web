@@ -138,7 +138,29 @@ export async function performSave() {
         }
     }
 
-    // 2. Persist Reorder (handled implicitly by list state)
+    // 2. Persist Reorder
+    const currentListNodes = manager.list.filter(item => !item._deleted);
+    const originalListNodes = JSON.parse(manager.initialSnapshot).filter(item => !item._deleted);
+
+    let orderChanged = false;
+    if (currentListNodes.length === originalListNodes.length) {
+        for (let i = 0; i < currentListNodes.length; i++) {
+            if (currentListNodes[i].id !== originalListNodes[i].id) {
+                orderChanged = true;
+                break;
+            }
+        }
+    } else {
+        orderChanged = true;
+    }
+
+    if (orderChanged && currentListNodes.length > 0) {
+        const orderedIds = currentListNodes.map(item => item.id);
+        const reorderRes = await Controller.reorderNodes(orderedIds);
+        if (!reorderRes.success) {
+            success = false;
+        }
+    }
 
     // 3. Finalize
     if (success) {
