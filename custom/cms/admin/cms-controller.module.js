@@ -202,7 +202,7 @@ export async function uploadImage(file) {
 
     const ext = file.name.split('.').pop() || 'png';
     const newFileName = `paste_${Date.now()}.${ext}`;
-    const res = await fetch(`/upload?category=${category}&name=${newFileName}`, {
+    const res = await fetch(`/upload?category=${category}&name=${newFileName}&convert=avif`, {
         method: 'POST',
         body: file
     });

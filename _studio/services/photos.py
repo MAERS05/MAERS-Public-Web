@@ -146,7 +146,14 @@ def handle_upload(query, file_data):
             conn.close()
             
             sync_gallery_js()
-            return {"status": "success", "msg": "duplicate_found", "path": existing_row['path']}
+            
+            return_path = existing_row['path']
+            # 如果要求使用 avif，但数据库原图不是 avif，则直接返回早就作为 preview 生成并落地的 avif 路径。
+            if need_convert and not return_path.endswith('.avif'):
+                if existing_row['preview'] and existing_row['preview'].endswith('.avif'):
+                    return_path = existing_row['preview']
+                    
+            return {"status": "success", "msg": "duplicate_found", "path": return_path}
         else:
             print(f"  [ PHOTOS ] ⚠️  数据库记录存在但物理文件丢失 | DB record exists but file missing, repairing: {existing_row['path']}")
             safe_name = existing_row['name']
