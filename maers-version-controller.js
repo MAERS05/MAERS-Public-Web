@@ -38,7 +38,7 @@ const VERSION_CONFIG = {
     // 📅 全局默认版本（兜底，优先级最低）
     // 大版本发布时修改这里
     // ════════════════════════════════════════════
-    default: '2026.0226-2000',
+    default: '2026.0228-0000',
 
     // ════════════════════════════════════════════
     // 📦 分组版本（推荐日常使用 ⭐）
@@ -51,11 +51,30 @@ const VERSION_CONFIG = {
             version: '1',   // ← 改了 CSS？把这个数字 +1
             paths: ['static-style/', 'custom/zmobile adaptation/']
         },
-        // 📝 CMS 内容管理 (笔记/文学/记录)
+        // 📝 CMS 核心内容管理
         cms: {
             version: '1',   // ← 改了 CMS？把这个数字 +1
-            paths: ['custom/cms/', 'custom/literature/', 'custom/notes/', 'custom/record/',
-                'data/notes-tree.json', 'data/literature-tree.json', 'data/record-tree.json']
+            paths: ['custom/cms/']
+        },
+        // 📚 文学模块
+        literature: {
+            version: '1',
+            paths: ['custom/literature/', 'data/literature-tree.json']
+        },
+        // 📓 笔记模块
+        notes: {
+            version: '1',
+            paths: ['custom/notes/', 'data/notes-tree.json']
+        },
+        // 📅 记录模块
+        record: {
+            version: '1',
+            paths: ['custom/record/', 'data/record-tree.json']
+        },
+        // 🎮 游戏模块
+        games: {
+            version: '1',
+            paths: ['custom/games/', 'data/games-tree.json']
         },
         // 🎵 音乐模块
         music: {
@@ -81,11 +100,6 @@ const VERSION_CONFIG = {
         index: {
             version: '1',
             paths: ['custom/index/', 'data/index-cards.json']
-        },
-        // 🎮 游戏模块
-        games: {
-            version: '1',
-            paths: ['custom/games/', 'data/games-tree.json']
         }
     },
 
