@@ -33,7 +33,7 @@
 
         // 我们只关心明显的水平滑动，且水平位移明显大于垂直位移
         if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-            e.preventDefault(); // 阻止浏览器翻页或滚动
+            if (e.cancelable) e.preventDefault(); // 阻止浏览器翻页或滚动（仅当事件可取消时）
 
             // 映射逻辑:
             // 左滑 (deltaX < 0) -> 下一张 -> 对应 Wheel deltaY > 0

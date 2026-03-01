@@ -104,9 +104,15 @@
 
 
     /* --- 2. Card Internal Layout Fix (No overlapping) --- */
+    /* 768px 以上保持双列，768px 以下才折叠为单列 */
     .grid-layout {
-        grid-template-columns: 1fr !important;
         gap: 15px !important;
+    }
+
+    @media (max-width: 767px) {
+        .grid-layout {
+            grid-template-columns: 1fr !important;
+        }
     }
 
     /* 

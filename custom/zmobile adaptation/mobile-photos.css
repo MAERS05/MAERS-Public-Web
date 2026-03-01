@@ -120,16 +120,7 @@
     }
 
     body .lb-nav {
-        width: 60px;
-        /* Wider hit area */
-        background: rgba(0, 0, 0, 0.2);
-    }
-
-    body .lb-prev {
-        left: 0;
-    }
-
-    body .lb-next {
-        right: 0;
+        display: none;
+        /* Hidden on mobile: use swipe gestures instead */
     }
 }
