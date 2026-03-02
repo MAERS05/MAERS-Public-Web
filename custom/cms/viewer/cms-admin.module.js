@@ -367,7 +367,8 @@ export async function uiUploadCover(e, id) {
                 if (window.MAERS?.Toast) {
                     window.MAERS.Toast.success("封面上传成功");
                 }
-                refreshView();
+                await refreshView(false, true);
+                if (SaveButton) SaveButton.hide();
             }
         }
     };
@@ -384,7 +385,8 @@ export async function uiRemoveCover(e, id) {
                 window.MAERS.Toast.success("封面删除成功");
             }
         }
-        refreshView();
+        await refreshView(false, true);
+        if (SaveButton) SaveButton.hide();
     }
 }
 
@@ -418,12 +420,14 @@ export async function uiAddTag(e, id) {
                 const res = await performUpdateTags(id, node.tags);
                 if (res.success) {
                     // Success - UI already updated optimistically
-                    refreshView();
+                    await refreshView(false, true);
+                    if (SaveButton) SaveButton.hide();
                     if (Tags?.refreshDrawerList) Tags.refreshDrawerList();
                 } else {
                     // Revert on failure
                     node.tags = oldTags;
-                    refreshView();
+                    await refreshView(false, true);
+                    if (SaveButton) SaveButton.hide();
                 }
             }
         }
@@ -450,12 +454,14 @@ export async function uiRemoveTag(e, id, tag) {
     const res = await performUpdateTags(id, newTags);
     if (res.success) {
         // Success - UI already updated optimistically
-        refreshView();
+        await refreshView(false, true);
+        if (SaveButton) SaveButton.hide();
         if (Tags?.refreshDrawerList) Tags.refreshDrawerList();
     } else {
         // Revert on failure
         node.tags = oldTags;
-        refreshView();
+        await refreshView(false, true);
+        if (SaveButton) SaveButton.hide();
     }
 }
 
