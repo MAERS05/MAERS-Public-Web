@@ -106,8 +106,9 @@ function createGridItem(node, State, index) {
         wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
 
         if (isLitModule) {
-            wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
-            if (node.coverImage) {
+            if (!node.coverImage) {
+                wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
+            } else {
                 wrapper.appendChild(createBtn('🗑️', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
             }
         }
@@ -284,8 +285,9 @@ function patchGridItem(el, node, State, index) {
         wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
 
         if (isLitModule) {
-            wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
-            if (node.coverImage) {
+            if (!node.coverImage) {
+                wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
+            } else {
                 wrapper.appendChild(createBtn('🗑️', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
             }
         }
