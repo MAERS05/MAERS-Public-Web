@@ -48,6 +48,13 @@ initView({
 
 document.addEventListener('DOMContentLoaded', async () => {
     await bootstrap(View);
+
+    // Expose refreshView to Controller for cross-module updates (e.g. tag rename in grid cards)
+    // Without this, Controller.refreshView is undefined and tag updates on cards won't refresh the view.
+    if (State.IS_ADMIN) {
+        Controller.refreshView = View.refreshView;
+    }
+
     setupViewEventListeners();
     initRecent(State, Controller, View);
 

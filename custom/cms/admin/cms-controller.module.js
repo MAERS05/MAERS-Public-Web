@@ -202,7 +202,7 @@ export async function uploadImage(file) {
 
     const ext = file.name.split('.').pop() || 'png';
     const newFileName = `paste_${Date.now()}.${ext}`;
-    const res = await fetch(`/upload?category=${category}&name=${newFileName}&convert=avif`, {
+    const res = await fetch(`/upload?category=${category}&name=${newFileName}`, {
         method: 'POST',
         body: file
     });
@@ -251,7 +251,7 @@ export async function uploadCover(formData) {
     const newName = `cover_${nodeId}_${Date.now()}.${ext}`;
 
     try {
-        const res = await fetch(`/upload?category=${category}&name=${newName}&convert=avif`, {
+        const res = await fetch(`/upload?category=${category}&name=${newName}`, {
             method: 'POST',
             body: file // Body acts as file binary for this specific backend endpoint
         });

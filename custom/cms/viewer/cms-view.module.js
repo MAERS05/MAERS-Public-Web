@@ -111,7 +111,7 @@ export const View = {
     uiRemoveTag: (e, id, tag) => Admin?.uiRemoveTag(e, id, tag),
     uiUploadCover: (e, id) => Admin?.uiUploadCover(e, id),
     uiRemoveCover: (e, id) => Admin?.uiRemoveCover(e, id),
-    refreshView: () => Admin?.refreshView(),
+    refreshView: (...args) => Admin?.refreshView(...args),
 
     // Editor / Viewer
     openFile: (node) => {
