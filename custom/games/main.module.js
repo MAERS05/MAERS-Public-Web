@@ -2,6 +2,9 @@
  * MAERS Games - Main Entry Point
  */
 
+// 5. Games Specific View
+import { GamesView } from './viewer/games-view.module.js';
+
 import { initLayout } from '../../shared/layout.module.js';
 import { initTheme } from '../../shared/theme.module.js';
 
@@ -46,8 +49,14 @@ initView({
     CustomView: null
 });
 
+
 document.addEventListener('DOMContentLoaded', async () => {
     await bootstrap(View);
+
+    // Initialize Games View toggle (Playing / Played) ONLY for frontend (like Literature)
+    if (!State.IS_ADMIN) {
+        GamesView.init();
+    }
 
     // Expose refreshView to Controller for cross-module updates (e.g. tag rename in grid cards)
     // Without this, Controller.refreshView is undefined and tag updates on cards won't refresh the view.

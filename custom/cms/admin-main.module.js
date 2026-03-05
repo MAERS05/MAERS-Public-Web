@@ -16,6 +16,7 @@ import { Render, initRender } from './viewer/cms-render.module.js';
 import { Admin, initAdmin } from './viewer/cms-admin.module.js';
 import { Recent, initRecent } from './viewer/cms-recent.module.js';
 import { LiteratureView } from '../literature/viewer/literature-view.module.js';
+import { GamesView } from '../games/viewer/games-view.module.js';
 import { Controller, AppState, CONFIG, bootstrap } from './admin/cms-controller.module.js';
 import { Drag, initDrag } from './admin/cms-drag.module.js';
 import { Editor, initEditor } from './admin/cms-editor.module.js';
@@ -32,12 +33,15 @@ injectModuleStyle(Controller.CONFIG.CURRENT_MODULE);
 initLayout();
 initTheme();
 initStateModule(Controller);
-initSearch(State, Render, Tags, LiteratureView);
+const currentMod = Controller.CONFIG.CURRENT_MODULE;
+const CustomView = currentMod === 'literature' ? LiteratureView : (currentMod === 'games' ? GamesView : null);
+
+initSearch(State, Render, Tags, CustomView);
 initAdmin(State, Controller, Render, Search);
-initEvents(State, Render, Admin, Tags, Editor, LiteratureView, Recent);
+initEvents(State, Render, Admin, Tags, Editor, CustomView, Recent);
 initTags(State, Controller, Search);
 initDrag(Admin, Controller, State);
-initRender(State, Admin, Controller, Events, Drag, LiteratureView, Search);
+initRender(State, Admin, Controller, Events, Drag, CustomView, Search);
 initViewModule({
     State,
     Search,
@@ -47,7 +51,8 @@ initViewModule({
     Lightbox,
     Admin,
     Controller,
-    Editor
+    Editor,
+    CustomView
 });
 initEditor(Controller);
 // Bootstrap on DOMContentLoaded with Error Handling

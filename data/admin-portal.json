@@ -32,7 +32,8 @@
   {
     "title": "游戏管理",
     "icon": "ui/games-icon.svg",
-    "url": "admin-games.html"
+    "url": "admin-cms.html?module=games",
+    "style": "custom/games/viewer/games.css"
   },
   {
     "title": "空间管理",

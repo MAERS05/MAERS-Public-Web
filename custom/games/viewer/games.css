@@ -1,6 +1,40 @@
 @import "../../zmobile adaptation/mobile-games.css";
 
-/* Games Custom Style - Grid Only */
+/* Games Custom Style */
+
+/* ==================== 1. Mode Toggle Button ==================== */
+
+/* Single clickable mode label in header title, like Literature's FLOW/GRID */
+.games-mode-btn {
+    cursor: pointer;
+    font-weight: 800;
+    transition: opacity 0.2s ease;
+}
+
+.games-mode-btn:hover {
+    opacity: 0.7;
+    text-decoration: underline;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* ==================== 2. Playing View Placeholder ==================== */
+
+.playing-view {
+    display: none;
+    flex: 1;
+    min-height: 300px;
+    padding: 40px;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.4s ease;
+}
+
+
 
 .folder-grid .grid-item {
     aspect-ratio: 2 / 3 !important;
