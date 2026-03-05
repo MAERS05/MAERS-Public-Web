@@ -20,8 +20,9 @@
     will-change: transform;
 }
 
-/* Note: ::before is reserved for hover gradient overlay */
-.grid-item::after {
+
+.grid-item::after,
+.grid-item:not(.is-selected)::before {
     display: none !important;
 }
 
@@ -43,7 +44,7 @@
     padding: 10px 10px 5px 10px;
     margin: 0 !important;
 
-    /* Font Styling */
+
     font-size: 14px;
     font-weight: 700;
     text-align: left !important;
@@ -102,7 +103,7 @@
     z-index: 10;
 }
 
-/* Hover Reveal: Title & Tags hidden by default, shown on hover */
+
 .folder-grid .grid-item .item-title,
 .folder-grid .grid-item .item-tags {
     opacity: 0;
@@ -116,8 +117,8 @@
     transform: translateY(0);
 }
 
-/* Bottom gradient overlay for readability on hover */
-.folder-grid .grid-item::before {
+
+.folder-grid .grid-item .item-cover::after {
     content: "" !important;
     display: block !important;
     position: absolute !important;
@@ -133,7 +134,7 @@
     border-radius: 0 0 8px 8px;
 }
 
-.folder-grid .grid-item:hover::before {
+.folder-grid .grid-item:hover .item-cover::after {
     opacity: 1 !important;
 }
 
@@ -170,9 +171,11 @@
     transform: none !important;
 }
 
-/* Note: ::before is reserved for hover gradient overlay */
+
 .folder-grid .grid-item::after,
-.folder-grid .type-note::after {
+.folder-grid .type-note::after,
+.folder-grid .grid-item:not(.is-selected)::before,
+.folder-grid .type-note:not(.is-selected)::before {
     display: none !important;
 }
 
