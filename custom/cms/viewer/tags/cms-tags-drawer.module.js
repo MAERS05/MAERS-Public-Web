@@ -317,8 +317,8 @@ function handleSort(tagName, categoryName, refreshCallback) {
         const tags = [...category.tags];
         const movedSet = new Set(movedTags);
 
-        // Keep original relative order of moved tags
-        const orderedMoved = tags.filter(t => movedSet.has(t));
+        // Use the click sequence provided by movedTags, overriding the previous list sequence behavior
+        const orderedMoved = [...movedTags];
         // Remove all moved tags
         const remaining = tags.filter(t => !movedSet.has(t));
         // Insert after target

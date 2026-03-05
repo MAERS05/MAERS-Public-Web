@@ -89,16 +89,21 @@ export const TagsRender = {
         html += `</div></div>`;
 
         // Helper: Render Single Tag
+        const selectedArray = Array.from(selectedTags);
         const renderTag = (tag) => {
             const count = tagCounts[tag];
             const active = State.AppState.activeFilters.has(tag) ? "active" : "";
-            const selected = selectedTags.has(tag) ? "is-picked" : "";
+            
+            const seqIndex = selectedArray.indexOf(tag);
+            const selected = seqIndex >= 0 ? "is-picked" : "";
+            const seqNum = seqIndex >= 0 ? (seqIndex + 1) : "";
+
             const safeTag = State.escapeAttr(tag);
             const encTag = State.escapeHtml(tag);
 
             return `<div class="drawer-item ${active} ${selected}" data-tag="${safeTag}" style="width: 100%; display: flex; align-items: center; justify-content: space-between; min-width: 0;">
                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-                       ${State.IS_ADMIN ? `<span class="tag-select-dot"></span>` : ''}
+                       ${State.IS_ADMIN ? `<span class="tag-select-dot">${seqNum}</span>` : ''}
                        <span class="tag-name" title="#${encTag}">#${encTag}</span>
                    </div>
                    <span class="tag-count-badge">${count}</span>
