@@ -69,7 +69,7 @@ function getCoverUrl(node, moduleName) {
     return `photos/previews/literaturecovers/${basename}.avif`;
 }
 
-function createGridItem(node, State, index) {
+export function createGridItem(node, State, index) {
     const el = document.createElement("div");
     let className = `grid-item type-${node.type}`;
 

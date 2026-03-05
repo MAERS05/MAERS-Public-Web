@@ -32,9 +32,70 @@
     align-items: center;
     justify-content: center;
     animation: fadeIn 0.4s ease;
+    animation: fadeIn 0.4s ease;
 }
 
+.playing-sandbox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: calc(100vh - 200px);
+    padding-bottom: 12vh;
+    /* bias visual center upward */
+}
 
+.playing-card-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.playing-grid {
+    display: flex !important;
+    justify-content: center;
+    align-items: flex-start;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.playing-grid .grid-item {
+    /* Explicit width to match normal grid column (auto-fill minmax 190px) */
+    width: 190px;
+    pointer-events: auto;
+}
+
+.btn-draw-game {
+    font-size: 1.1rem;
+    padding: 10px 30px;
+    border-radius: 30px;
+    box-shadow: 0 6px 20px rgba(120, 255, 214, 0.3);
+    border: none;
+    background: linear-gradient(135deg, #78ffd6 0%, #a8ff78 100%);
+    color: #000;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-family: var(--font-primary);
+    font-weight: 800;
+}
+
+.btn-draw-game:hover:not(:disabled) {
+    transform: translateY(-4px) scale(1.05);
+    box-shadow: 0 10px 30px rgba(120, 255, 214, 0.5);
+}
+
+.btn-draw-game:active:not(:disabled) {
+    transform: translateY(2px) scale(0.95);
+    box-shadow: 0 2px 10px rgba(120, 255, 214, 0.2);
+}
+
+.btn-draw-game:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(100%);
+}
 
 .folder-grid .grid-item {
     aspect-ratio: 2 / 3 !important;

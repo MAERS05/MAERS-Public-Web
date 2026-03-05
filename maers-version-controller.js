@@ -53,7 +53,7 @@ const VERSION_CONFIG = {
         },
         // 📝 CMS 核心内容管理
         cms: {
-            version: '1',   // ← 改了 CMS？把这个数字 +1
+            version: '1.1',   // ← 改了 CMS？把这个数字 +1
             paths: ['custom/cms/']
         },
         // 📚 文学模块
@@ -73,7 +73,7 @@ const VERSION_CONFIG = {
         },
         // 🎮 游戏模块
         games: {
-            version: '1',
+            version: '1.1',
             paths: ['custom/games/', 'data/games-tree.json']
         },
         // 🎵 音乐模块
