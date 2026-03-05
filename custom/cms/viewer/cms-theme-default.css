@@ -289,57 +289,29 @@
 }
 
 /* ==================== 12. Light Mode Overrides ==================== */
+
 .light-mode .grid-item {
-  background: rgba(255, 255, 255, 0.6);
-  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
 }
 
 .light-mode .grid-item:hover {
-  background: #fff;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-}
-
-.light-mode .grid-item:not(.is-selected)::before {
-  opacity: 1;
-  background: linear-gradient(0deg, #8e9eab 0%, #eef2f3 100%);
-  box-shadow: none;
+  background: rgba(0, 0, 0, 0.03);
 }
 
 .light-mode .type-folder {
-  background: transparent;
-  box-shadow: none;
-  color: #333;
-  filter:
-    drop-shadow(1px 0 0 rgba(0, 0, 0, 0.1)) drop-shadow(0 1px 0 rgba(0, 0, 0, 0.1)) drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.03));
-}
-
-.light-mode .type-folder:hover {
-  background: transparent;
-  box-shadow: none;
+  background: transparent !important;
 }
 
 .light-mode .type-folder::after {
-  background: #fff;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.025), rgba(0, 0, 0, 0.012));
 }
 
 .light-mode .type-note {
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.08);
-  color: #333;
+  background: rgba(255, 255, 255, 0.8) !important;
 }
 
 .light-mode .type-note::after {
-  background: linear-gradient(to top left,
-      transparent 50%,
-      rgba(0, 0, 0, 0.1) 50%,
-      #fff 51%,
-      #f4f4f4);
-  box-shadow: -1.5px -1.5px 3px rgba(0, 0, 0, 0.15);
-}
-
-.light-mode .mini-tag {
-  background: rgba(0, 0, 0, 0.06);
-  color: #666;
+  background: linear-gradient(to top left, transparent 50%, rgba(0, 0, 0, 0.04) 50%, rgba(0, 0, 0, 0.08));
 }
 
 .light-mode .search-input {

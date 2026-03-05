@@ -106,7 +106,8 @@ export function initLightbox() {
                 target.closest(".brand-logo") ||
                 target.closest("button") ||
                 target.closest(".tag-toggle-btn") ||
-                target.closest(".spatial-card")
+                target.closest(".spatial-card") ||
+                target.closest(".theme-switch-wrapper")
             ) {
                 return;
             }

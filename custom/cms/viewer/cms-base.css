@@ -186,9 +186,9 @@
   flex-direction: column;
   justify-content: space-between;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   position: relative;
-  /* Background removed to allow specific module overrides */
+  transform: translateZ(0);
 }
 
 /* ==================== 6. Grid Item Content ==================== */
@@ -228,7 +228,7 @@
   border-radius: 6px;
   cursor: pointer;
   display: inline-block;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   -webkit-user-select: none;
   user-select: none;
 }
