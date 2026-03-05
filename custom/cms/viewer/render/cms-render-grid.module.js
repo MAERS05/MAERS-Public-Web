@@ -14,12 +14,35 @@ let Controller = null;
 let Drag = null;
 let Events = null;
 
+// Global Intersection Observer for Lazy Loading
+let lazyObserver = null;
+
 export function initGrid(deps) {
     State = deps.State;
     Admin = deps.Admin;
     Controller = deps.Controller;
     Drag = deps.Drag;
     Events = deps.Events;
+
+    // Initialize IntersectionObserver
+    if ('IntersectionObserver' in window && !lazyObserver) {
+        lazyObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const img = entry.target;
+                    const src = img.getAttribute('data-src');
+                    if (src) {
+                        img.src = src;
+                        img.removeAttribute('data-src');
+                    }
+                    observer.unobserve(img);
+                }
+            });
+        }, {
+            rootMargin: '200px 0px', // ~1 row ahead
+            threshold: 0.01
+        });
+    }
 }
 
 // Helper: Check if currently filtering
@@ -131,8 +154,14 @@ function createGridItem(node, State, index) {
 
         if (coverUrl) {
             const img = document.createElement('img');
-            img.src = coverUrl;
-            img.loading = 'lazy';
+            // Use IntersectionObserver logic instead of just loading='lazy'
+            if (lazyObserver) {
+                img.setAttribute('data-src', coverUrl); // Hold the URL
+                lazyObserver.observe(img); // Observe real visibility
+            } else {
+                img.src = coverUrl; // Fallback
+            }
+            img.loading = 'lazy'; // Still keep native lazy for extra browser support
             img.decoding = 'async';
             img.className = 'item-cover-img';
             img.onload = () => coverDiv.classList.add('loaded');
@@ -318,7 +347,12 @@ function patchGridItem(el, node, State, index) {
 
                 if (newCoverUrl) {
                     const img = document.createElement('img');
-                    img.src = newCoverUrl;
+                    if (lazyObserver) {
+                        img.setAttribute('data-src', newCoverUrl);
+                        lazyObserver.observe(img);
+                    } else {
+                        img.src = newCoverUrl;
+                    }
                     img.loading = 'lazy';
                     img.decoding = 'async';
                     img.className = 'item-cover-img';

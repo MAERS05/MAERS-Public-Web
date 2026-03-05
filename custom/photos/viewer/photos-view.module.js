@@ -19,6 +19,27 @@ const WHEEL_DELAY = 250;
 // Album Config (loaded dynamically)
 let CATEGORY_CONFIG = [];
 
+// IntersectionObserver for real lazy loading
+let lazyObserver = null;
+if ('IntersectionObserver' in window) {
+    lazyObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const img = entry.target;
+                const src = img.getAttribute('data-src');
+                if (src) {
+                    img.src = src;
+                    img.removeAttribute('data-src');
+                }
+                observer.unobserve(img);
+            }
+        });
+    }, {
+        rootMargin: '200px 0px', // ~1 row ahead
+        threshold: 0.01
+    });
+}
+
 // 依赖注入
 export function initView(controller, admin = null, adminCore = null) {
     Controller = controller;
@@ -286,7 +307,20 @@ export function render(list = null) {
             const fullRawPath = Controller.fixPath(img.path);
             const thumbSrc = Controller.fixPath(img.thumb, null, 'thumbnails') || fullRawPath;
 
-            div.innerHTML = `<img src="${thumbSrc}" loading="lazy" decoding="async" onload="this.classList.add('loaded')" onerror="this.onerror=null; this.src='${fullRawPath}'">`;
+            // Use real lazy loading via IntersectionObserver
+            const imgEl = document.createElement('img');
+            imgEl.decoding = 'async';
+            imgEl.loading = 'lazy';
+            imgEl.onload = function () { this.classList.add('loaded'); };
+            imgEl.onerror = function () { this.onerror = null; this.src = fullRawPath; };
+
+            if (lazyObserver) {
+                imgEl.setAttribute('data-src', thumbSrc);
+                lazyObserver.observe(imgEl);
+            } else {
+                imgEl.src = thumbSrc;
+            }
+            div.appendChild(imgEl);
         } else {
             // Remove from map so we know it's kept
             existingMap.delete(img.path);
