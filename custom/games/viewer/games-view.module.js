@@ -213,18 +213,24 @@ export const GamesView = {
 
         const tick = () => {
             if (frameCount >= 10) {
-                // Done — restore UI and reveal winner
-                this._isAnimating = false;
-
-                this._btnDraw.disabled = false;
-                this._btnDraw.textContent = '随机抽取';
+                // Remove the animation stack immediately and render an empty placeholder card
                 if (this._animContainer) this._animContainer.style.opacity = '0';
+                this._renderCard(null);
 
-                this._renderCard(winner);
-                try { localStorage.setItem('maers_playing_game_id', winner.id); } catch { }
+                // Wait 0.2s showing the blank placeholder before "snapping" the final winner into place
+                setTimeout(() => {
+                    this._isAnimating = false;
 
-                // Refresh frame pool silently for next draw
-                this._preloadCovers();
+                    this._btnDraw.disabled = false;
+                    this._btnDraw.textContent = '随机抽取';
+
+                    this._renderCard(winner);
+                    try { localStorage.setItem('maers_playing_game_id', winner.id); } catch { }
+
+                    // Refresh frame pool silently for next draw
+                    this._preloadCovers();
+                }, 200);
+
                 return;
             }
 
