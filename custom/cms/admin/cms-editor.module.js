@@ -91,7 +91,12 @@ export async function save() {
     }
 
     if (btn) {
-        if (result.success) { btn.textContent = '✅ Saved'; btn.style.background = '#2ed573'; }
+        if (result.success) {
+            if (Controller?.refreshView) {
+                Controller.refreshView(false, true);
+            }
+            btn.textContent = '✅ Saved'; btn.style.background = '#2ed573';
+        }
         else { btn.textContent = '❌ Error'; btn.style.background = '#ff4757'; }
         setTimeout(() => {
             btn.textContent = '💾 Save'; btn.disabled = false;

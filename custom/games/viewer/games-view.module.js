@@ -217,7 +217,7 @@ export const GamesView = {
                 if (this._animContainer) this._animContainer.style.opacity = '0';
                 this._renderCard(null);
 
-                // Wait 0.2s showing the blank placeholder before "snapping" the final winner into place
+                // Wait 0.5s showing the blank placeholder before "snapping" the final winner into place
                 setTimeout(() => {
                     this._isAnimating = false;
 
@@ -229,7 +229,7 @@ export const GamesView = {
 
                     // Refresh frame pool silently for next draw
                     this._preloadCovers();
-                }, 200);
+                }, 500);
 
                 return;
             }
