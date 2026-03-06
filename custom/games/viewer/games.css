@@ -192,7 +192,7 @@
     pointer-events: auto;
 }
 
-.folder-grid .grid-item:hover {
+.folder-grid .grid-item:not(.is-animating):hover {
     transform: translateY(-4px) translateZ(0);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
     z-index: 10;
@@ -206,8 +206,8 @@
     transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
-.folder-grid .grid-item:hover .item-title,
-.folder-grid .grid-item:hover .item-tags {
+.folder-grid .grid-item:not(.is-animating):hover .item-title,
+.folder-grid .grid-item:not(.is-animating):hover .item-tags {
     opacity: 1;
     transform: translateY(0);
 }
@@ -229,7 +229,7 @@
     border-radius: 0 0 8px 8px;
 }
 
-.folder-grid .grid-item:hover .item-cover::after {
+.folder-grid .grid-item:not(.is-animating):hover .item-cover::after {
     opacity: 1 !important;
 }
 

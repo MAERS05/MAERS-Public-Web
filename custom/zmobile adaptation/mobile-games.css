@@ -5,7 +5,7 @@
 /* Force 2-column grid on mobile, even for very small screens (<360px) */
 @media (max-width: 768px) {
     .folder-grid {
-        display: grid !important;
+        display: grid;
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 10px !important;
         padding: 10px !important;
