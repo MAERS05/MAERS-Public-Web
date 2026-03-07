@@ -1,104 +1,23 @@
-@import "../../zmobile adaptation/mobile-games.css";
-
-/* Games Custom Style */
-
-/* ==================== 1. Mode Toggle Button ==================== */
-
-/* Single clickable mode label in header title, like Literature's FLOW/GRID */
-.games-mode-btn {
+/* Video Custom Style - Based on Literature/Games Grid Mode */
+.music-mode-btn {
     cursor: pointer;
     font-weight: 800;
     transition: opacity 0.2s ease;
 }
 
-.games-mode-btn:hover {
+.music-mode-btn:hover {
     opacity: 0.7;
     text-decoration: underline;
 }
 
-.header-title {
-    display: flex;
-    align-items: center;
-    gap: 2px;
+.music-mode-btn.active {
+    text-decoration: underline;
 }
 
-/* ==================== 2. Playing View Placeholder ==================== */
-
-.playing-view {
-    display: none;
-    flex: 1;
-    min-height: 300px;
-    padding: 40px;
-    align-items: center;
-    justify-content: center;
-    animation: fadeIn 0.4s ease;
-    animation: fadeIn 0.4s ease;
-}
-
-.playing-sandbox {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-height: calc(100vh - 200px);
-    padding-bottom: 12vh;
-    /* bias visual center upward */
-}
-
-.playing-card-group {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-}
-
-.playing-grid {
-    display: flex !important;
-    justify-content: center;
-    align-items: flex-start;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.playing-grid .grid-item {
-    /* Explicit width to match normal grid column (auto-fill minmax 190px) */
-    width: 190px;
-    pointer-events: auto;
-}
-
-.btn-draw-game {
-    font-size: 1.1rem;
-    padding: 10px 30px;
-    border-radius: 30px;
-    box-shadow: 0 6px 20px rgba(120, 255, 214, 0.3);
-    border: none;
-    background: linear-gradient(135deg, #78ffd6 0%, #a8ff78 100%);
-    color: #000;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    font-family: var(--font-primary);
-    font-weight: 800;
-}
-
-.btn-draw-game:hover:not(:disabled) {
-    transform: translateY(-4px) scale(1.05);
-    box-shadow: 0 10px 30px rgba(120, 255, 214, 0.5);
-}
-
-.btn-draw-game:active:not(:disabled) {
-    transform: translateY(2px) scale(0.95);
-    box-shadow: 0 2px 10px rgba(120, 255, 214, 0.2);
-}
-
-.btn-draw-game:disabled {
-    opacity: 0.5;
-    pointer-events: none;
-    filter: grayscale(100%);
-}
 
 .folder-grid .grid-item {
     aspect-ratio: 2 / 3 !important;
+    /* Portrait aspect ratio (2:3) to match Literature and Movie posters */
     height: auto !important;
     border-radius: 8px !important;
     padding: 0;
@@ -114,7 +33,6 @@
     contain-intrinsic-size: 140px 210px;
     will-change: transform;
 }
-
 
 .grid-item::after,
 .grid-item:not(.is-selected)::before {
@@ -138,7 +56,6 @@
     background: none !important;
     padding: 10px 10px 5px 10px;
     margin: 0 !important;
-
 
     font-size: 14px;
     font-weight: 700;
@@ -198,12 +115,11 @@
     pointer-events: auto;
 }
 
-.folder-grid .grid-item:not(.is-animating):hover {
+.folder-grid .grid-item:hover {
     transform: translateY(-4px) translateZ(0);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
     z-index: 10;
 }
-
 
 .folder-grid .grid-item .item-title,
 .folder-grid .grid-item .item-tags {
@@ -212,12 +128,11 @@
     transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
-.folder-grid .grid-item:not(.is-animating):hover .item-title,
-.folder-grid .grid-item:not(.is-animating):hover .item-tags {
+.folder-grid .grid-item:hover .item-title,
+.folder-grid .grid-item:hover .item-tags {
     opacity: 1;
     transform: translateY(0);
 }
-
 
 .folder-grid .grid-item .item-cover::after {
     content: "" !important;
@@ -235,7 +150,7 @@
     border-radius: 0 0 8px 8px;
 }
 
-.folder-grid .grid-item:not(.is-animating):hover .item-cover::after {
+.folder-grid .grid-item:hover .item-cover::after {
     opacity: 1 !important;
 }
 
@@ -272,7 +187,6 @@
     transform: none !important;
 }
 
-
 .folder-grid .grid-item::after,
 .folder-grid .type-note::after,
 .folder-grid .grid-item:not(.is-selected)::before,
@@ -283,12 +197,12 @@
 @media (min-width: 769px) {
     .folder-grid {
         grid-template-columns: repeat(auto-fill, 140px) !important;
+        /* Matches Literature card width */
         justify-content: center;
         gap: 30px !important;
         padding: 25px 40px !important;
     }
 }
-
 
 html.light-mode .theme-switch-label {
     background-color: rgba(0, 0, 0, 0.1) !important;

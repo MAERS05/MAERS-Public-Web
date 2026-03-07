@@ -32,15 +32,18 @@
 
     .folder-grid .grid-item .item-tags {
         padding: 0 8px 8px 8px !important;
-        gap: 3px !important;
+        gap: 2px !important;
         margin: 0 !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
 
     /* 迷你标签调整 */
     .folder-grid .grid-item .mini-tag {
         font-size: 0.6rem !important;
-        padding: 1px 5px !important;
+        padding: 1px 3px !important;
         background: rgba(0, 0, 0, 0.7) !important;
+        box-sizing: border-box !important;
     }
 
     /* 4. 头部工具栏适配 - 简化修复 */
