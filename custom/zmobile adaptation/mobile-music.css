@@ -234,7 +234,7 @@ body .playlist-container {
         z-index: 10 !important;
     }
 
-    /* 📱 极窄屏（500px以下）下移耳机图标到 30px 位置 */
+    /* 📱 极窄屏（500px以下）下移耳机图标到 35px 位置 */
     @media (max-width: 500px) {
         body .right-icon {
             position: absolute !important;
