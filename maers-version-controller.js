@@ -38,7 +38,7 @@ const VERSION_CONFIG = {
     // 📅 全局默认版本（兜底，优先级最低）
     // 大版本发布时修改这里
     // ════════════════════════════════════════════
-    default: '2026.0228-0000',
+    default: '2026.0307-2030',
 
     // ════════════════════════════════════════════
     // 📦 分组版本（推荐日常使用 ⭐）
@@ -78,8 +78,13 @@ const VERSION_CONFIG = {
         },
         // 🎵 音乐模块
         music: {
-            version: '1',
+            version: '1.2',
             paths: ['custom/music/', 'data/music-data.json']
+        },
+        // 🎬 影视模块
+        videos: {
+            version: '1.0',
+            paths: ['custom/videos/', 'data/videos-tree.json']
         },
         // 🖼️ 相册模块
         photos: {
@@ -98,7 +103,7 @@ const VERSION_CONFIG = {
         },
         // 🏠 首页
         index: {
-            version: '1',
+            version: '1.2',
             paths: ['custom/index/', 'data/index-cards.json']
         }
     },
