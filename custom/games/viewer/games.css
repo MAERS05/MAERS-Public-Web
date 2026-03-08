@@ -56,11 +56,10 @@
 .playing-label {
     font-size: 1.2rem;
     font-weight: 800;
-    color: #fff;
+    color: var(--text-main);
     margin-bottom: -4px;
     /* Tighten gap to card slightly */
     letter-spacing: 1px;
-    text-shadow: 0 0 10px rgba(120, 255, 214, 0.4);
 }
 
 .playing-grid {
