@@ -11,7 +11,7 @@
     "id": "nav-music",
     "bgText": "REEL",
     "icon": "ui/music-icon.svg",
-    "title": "M & V",
+    "title": "M&V",
     "description": "Personal playlist and cinematic archives.",
     "url": "music.html"
   },
