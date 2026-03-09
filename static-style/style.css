@@ -169,7 +169,7 @@ html.shrink-view .home-container {
     transform-origin: center center;
     border-radius: 40px;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
-    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.5s, box-shadow 0.5s;
+    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.5s, box-shadow 0.5s, background-color 0.5s ease, border-color 0.5s ease;
     cursor: auto;
     pointer-events: auto;
 }
