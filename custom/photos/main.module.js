@@ -13,11 +13,13 @@ import { View, initView, render, openLightbox } from './viewer/photos-view.modul
 // CMS Integration (Directly imitating Backend logic)
 import { initTags, Tags } from '../cms/viewer/cms-tags.module.js';
 import { setupPhotosAdapter, preloadTagCategories } from './admin/photos-cms-adapter.module.js';
+import { setupImmersiveBackground } from '../cms/viewer/cms-events.module.js';
 import { initNav, Nav } from '../cms/viewer/render/cms-render-nav.module.js';
 
 // 初始化核心 UI
 initLayout();
 initTheme();
+setupImmersiveBackground();
 
 // 初始化依赖关系
 initController(DataProvider);

@@ -23,10 +23,11 @@ export function initEvents(state, render, admin = null, tags = null, editor = nu
     Recent = recent;
 }
 
-export function setupGridEventDelegation() {
-    if (State.gridEventsDelegated) return;
-    const container = document.getElementById("grid-container");
-    if (!container) return;
+let immersiveBgDelegated = false;
+
+export function setupImmersiveBackground() {
+    if (immersiveBgDelegated) return;
+    immersiveBgDelegated = true;
 
     // --- Immersive Background (cross-fade two-layer) ---
     let hoverTimeout = null;
@@ -34,11 +35,11 @@ export function setupGridEventDelegation() {
     let activeLayerId = 'a';
 
     document.body.addEventListener("mouseover", (e) => {
-        const card = e.target.closest(".grid-item, .book-card");
+        const card = e.target.closest(".grid-item, .book-card, .photo-item, .category-card");
         if (!card) return;
 
         let imgUrl = null;
-        const imgEl = card.querySelector('.item-cover-img');
+        const imgEl = card.querySelector('.item-cover-img') || card.querySelector('img:not(.card-icon):not(.nav-icon-img)');
         if (imgEl) {
             imgUrl = imgEl.src || imgEl.getAttribute('data-src');
         } else {
@@ -49,7 +50,7 @@ export function setupGridEventDelegation() {
             }
         }
 
-        const pickedId = State.AppState ? State.AppState.pickedId : null;
+        const pickedId = State?.AppState?.pickedId || null;
         const manager = typeof Admin?.getManager === 'function' ? Admin.getManager() : null;
         const hasSelection = manager && manager.selectedIndices && manager.selectedIndices.length > 0;
         if (!imgUrl || pickedId || hasSelection) return;
@@ -89,7 +90,7 @@ export function setupGridEventDelegation() {
     });
 
     document.body.addEventListener("mouseout", (e) => {
-        const card = e.target.closest(".grid-item, .book-card");
+        const card = e.target.closest(".grid-item, .book-card, .photo-item, .category-card");
         if (!card) return;
         if (e.relatedTarget && card.contains(e.relatedTarget)) return;
 
@@ -109,6 +110,14 @@ export function setupGridEventDelegation() {
             document.body.classList.remove('immersive-active');
         }, 300);
     });
+}
+
+export function setupGridEventDelegation() {
+    setupImmersiveBackground();
+
+    if (State?.gridEventsDelegated) return;
+    const container = document.getElementById("grid-container");
+    if (!container) return;
 
     container.addEventListener("click", (e) => {
         // ... (existing code for tags, actions, create buttons)
