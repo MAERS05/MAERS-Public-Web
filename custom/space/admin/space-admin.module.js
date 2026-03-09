@@ -466,8 +466,7 @@ function openEditModal(node, index, isNew = false) {
                     window.MAERS.Toast.success(isNew ? "网站收藏成功" : "保存成功!");
                 }
 
-                // Clean up manager state since we just saved everything
-                if (manager) manager.reset();
+                if (manager) manager.setList(currentLevelNodes);
 
                 return true; // Close modal
             } catch (err) {
