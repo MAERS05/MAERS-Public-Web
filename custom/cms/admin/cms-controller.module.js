@@ -198,6 +198,7 @@ export async function uploadImage(file) {
     if (module === 'games') category = '_games';
     else if (module === 'literature') category = '_literature';
     else if (module === 'record') category = '_record';
+    else if (module === 'videos') category = '_videos';
     else category = '_notes';
 
     const ext = file.name.split('.').pop() || 'png';
@@ -245,6 +246,8 @@ export async function uploadCover(formData) {
     const currentModule = CONFIG.CURRENT_MODULE;
     if (currentModule === 'games') {
         category = 'gamecovers';
+    } else if (currentModule === 'videos') {
+        category = 'videocovers';
     }
 
     const ext = file.name.split('.').pop();

@@ -189,9 +189,11 @@
 
     display: flex !important;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 2px;
     justify-content: flex-start !important;
     background: none !important;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 
@@ -201,8 +203,13 @@
     color: rgba(255, 255, 255, 0.9) !important;
     background: rgba(0, 0, 0, 0.6) !important;
     border: none !important;
-    padding: 2px 6px !important;
+    padding: 2px 4px !important;
     border-radius: 6px !important;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 

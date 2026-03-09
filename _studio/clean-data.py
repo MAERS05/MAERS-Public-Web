@@ -130,7 +130,7 @@ class MaersJanitor:
         self.log("正在扫描 gallery.db...")
         # Strict Cleanup Categories: These are considered "Attachment Folders"
         # If an image in these categories is NOT referenced in text/CMS, it should be deleted.
-        ATTACHMENT_CATEGORIES = {'_notes', '_games', '_literature', '_record', 'default'}
+        ATTACHMENT_CATEGORIES = {'_notes', '_games', '_literature', '_record', 'default', '_videos'}
 
         try:
             conn = sqlite3.connect(config.GALLERY_DB)
@@ -337,7 +337,7 @@ class MaersJanitor:
             if not os.path.exists(base): continue
             
             for folder in os.listdir(base):
-                if folder in ['_notes', '_games', '_literature', '_record', 'default']:
+                if folder in ['_notes', '_games', '_literature', '_record', 'default', '_videos', 'videocovers']:
                     continue
                 
                 folder_path = os.path.join(base, folder)
