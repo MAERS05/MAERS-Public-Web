@@ -1,0 +1,234 @@
+/* ==========================================================================
+   📱 Mobile Music Styles (Extracted from music.css)
+   ========================================================================== */
+
+/* Base Layout for Playlist (Restored) */
+body .playlist-container {
+    display: flex;
+    flex-direction: column;
+    align-self: center;
+}
+
+@media (min-width: 1281px) {
+    body .playlist-container {
+        width: 420px;
+        margin-top: -100px;
+    }
+}
+
+@media (max-width: 1280px) {
+    body .content-wrapper {
+        flex-direction: column;
+        align-items: center;
+        overflow-y: visible;
+    }
+
+    body .monitor-section {
+        padding-left: 0;
+        width: 100%;
+        max-width: 850px;
+    }
+
+    /* 修复进度条和控制条样式 - 防止溢出 */
+    body .custom-control-bar {
+        padding: 8px 8px !important;
+        gap: 5px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        margin: 10px 0 !important;
+    }
+
+    body .control-btns {
+        gap: 12px !important;
+        margin-bottom: 3px;
+        flex-shrink: 0;
+    }
+
+    body .ctrl-btn {
+        font-size: 1.1rem !important;
+        padding: 0 !important;
+    }
+
+    body .master-play-btn-large {
+        font-size: 1.8rem !important;
+    }
+
+    body #master-play-btn {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    /* 播放进度条行容器 - 强制覆盖内联样式 */
+    body .custom-control-bar>div:last-child {
+        gap: 6px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        flex-shrink: 1 !important;
+        min-width: 0 !important;
+    }
+
+    body .time-label {
+        font-size: 0.7rem !important;
+        min-width: 32px !important;
+        max-width: 32px !important;
+        text-align: center;
+        flex-shrink: 0 !important;
+    }
+
+    body .pure-slider {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+
+    body .playlist-container {
+        width: 100%;
+        max-width: 850px;
+        margin-top: 30px;
+    }
+
+    /* 修复搜索框截断问题 */
+    body .search-box-wrapper {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    body #search-input {
+        width: 100%;
+        max-width: none;
+        box-sizing: border-box;
+        /* 确保 padding 包含在宽度内 */
+    }
+
+    body #search-input:focus {
+        width: 100%;
+    }
+
+    body .search-results {
+        width: 100%;
+        left: 0;
+    }
+}
+
+@media (max-width: 1024px) {
+    #video-shield {
+        display: none !important;
+    }
+}
+
+@media (max-width: 900px) {
+    body .content-wrapper {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+
+    body .monitor-section {
+        flex: none;
+        width: 100%;
+    }
+
+    body .playlist-window {
+        width: 100%;
+        height: 400px;
+        flex: none;
+    }
+}
+
+/* 移动端音乐面包屑与跑马灯适配 */
+@media (max-width: 768px) {
+
+    /* 允许头部高度自适应，支持换行 */
+    body .view-header {
+        height: auto !important;
+        min-height: 50px;
+        padding: 8px 12px !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+
+    /* 左侧面包屑：允许压缩，但尽量保持在一行 */
+    body .header-left-group {
+        gap: 8px !important;
+        /* 减小间距 */
+        flex: 1 1 auto;
+        /* 允许伸缩 */
+        min-width: 0;
+        /* 允许内容被压缩（显示省略号） */
+        overflow: hidden;
+    }
+
+    body .nav-back {
+        white-space: nowrap;
+        font-size: 0.9rem !important;
+    }
+
+    body .title-level {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-size: 0.9rem !important;
+    }
+
+    /* 跑马灯：在窄屏下可能换行显示，或者缩短宽度 */
+    body .header-playing-info {
+        margin-left: 0 !important;
+        /* 取消自动左边距 */
+        margin-right: 0 !important;
+        width: 100% !important;
+        /* 独占一行 */
+        order: 2;
+        /* 强制排到下面 */
+        margin-top: 4px;
+        height: 18px !important;
+    }
+
+    /* 如果屏幕稍微宽一点（比如在大屏手机横屏），可以尝试并排 */
+    @media (min-width: 400px) {
+        body .header-playing-info {
+            width: 120px !important;
+            order: unset;
+            /* 恢复默认顺序 */
+            margin-left: auto !important;
+            margin-top: 0;
+        }
+    }
+
+
+    /* 修复顶部标题栏重叠问题 */
+    body .music-header-bar {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        height: auto !important;
+        min-height: 50px !important;
+        padding: 5px 8px !important;
+    }
+
+    body .center-title {
+        position: static !important;
+        transform: none !important;
+        font-size: 1.15rem !important;
+        flex: 1 1 auto !important;
+        text-align: center !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        padding: 0 8px !important;
+        min-width: 0 !important;
+    }
+
+    body .back-btn {
+        font-size: 0.85rem !important;
+        padding: 6px 10px !important;
+        flex-shrink: 0 !important;
+        z-index: 10 !important;
+    }
+
+    body .right-icon {
+        font-size: 1.5rem !important;
+        flex-shrink: 0 !important;
+        z-index: 10 !important;
+    }
+}

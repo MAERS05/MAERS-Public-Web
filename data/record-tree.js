@@ -1,1 +1,0 @@
-window.MAERS_DATA = {"root": []};

@@ -1,304 +1,124 @@
-# MAERS AI 开发指南 (AI Development Guide)
+# MAERS AI 辅助开发指南
 
-本文档为 AI 辅助开发提供项目上下文投喂清单，帮助 AI 快速理解项目结构并生成准确的代码。
-
-### 📖 本文目录
-
-- [📋 项目核心信息](#-项目核心信息)
-- [🗂️ 项目结构（2026-01-17 最新）](#-项目结构2026-01-17-最新)
-- [🔑 关键概念](#-关键概念)
-- [📝 常见开发场景](#-常见开发场景)
-- [🔍 搜索功能架构](#-搜索功能架构)
-- [🎯 给 AI 的关键提示](#-给-ai-的关键提示)
-- [📌 重要约定](#-重要约定)
-- [🚀 快速上手 AI 提示词模板](#-快速上手-ai-提示词模板)
+本文档即是为人类开发者准备的，也是为 AI 助手（如你）准备的。请严格遵守以下规则。
 
 ---
 
-## 📋 项目核心信息
+## 📋 目录 (Table of Contents)
 
-### 基本信息
-
-- **项目名称**: MAERS Personal Web
-- **技术栈**:
-  - 前端: 原生 HTML/CSS/JavaScript (无框架)
-  - 后端: Python 3.8+ (标准库 + SQLite)
-- **架构模式**: 静态优先 + 动态管理
-- **命名空间**: 所有功能挂载到 `window.MAERS.*`
-
-### 核心理念
-
-1. **无框架依赖** - 不使用 React/Vue/Angular
-2. **零构建工具** - 不使用 Webpack/Vite
-3. **JS封装JSON** - 数据以 `.js` 文件形式提供，而非 `.json`
-4. **本地可运行** - 双击 HTML 即可打开（file:// 协议）
+- [1. 角色认知](#1-角色认知)
+- [2. 关键守则 (Do's & Don'ts)](#2-关键守则-dos--donts)
+- [3. 代码生成规范](#3-代码生成规范)
+- [4. 修改现有代码](#4-修改现有代码)
 
 ---
 
-## 🗂️ 项目结构（2026-01-17 最新）
+## 1. 角色认知
 
-```
-MAERS-Personal-Web/
-├── _说明/              # 📚 项目文档
-├── _studio/            # ⚙️ Python 后端
-│   ├── server.py       # HTTP 服务入口
-│   ├── routes.py       # 路由分发
-│   └── services/       # 业务逻辑层
-│       ├── cms.py      # 笔记/文学/记录
-│       ├── album.py    # 相册管理
-│       ├── music.py    # 音乐管理
-│       └── bili.py     # B站视频信息获取
-├── data/               # 💾 数据存储
-│   ├── cms.db          # SQLite - 笔记数据
-│   ├── gallery.db      # SQLite - 相册数据
-│   ├── music-data.json # JSON - 音乐数据
-│   ├── notes-tree.js   # 自动生成的静态数据
-│   └── photos-data.js  # 自动生成的静态数据
-├── custom/             # 🎨 模块化业务逻辑
-│   ├── album/          # 相册模块
-│   │   ├── admin/      # 管理端
-│   │   │   ├── album-admin.js
-│   │   │   ├── admin-album.css
-│   │   │   └── album-config.json
-│   │   └── viewer/     # 访问端
-│   │       ├── album-view.js
-│   │       ├── album-viewer.css
-│   │       └── album-config.js
-│   ├── cms/            # 笔记模块
-│   │   ├── admin/
-│   │   │   ├── cms-editor.js
-│   │   │   ├── cms-drag.js
-│   │   │   └── admin-cms.css
-│   │   └── viewer/
-│   │       ├── cms-view.js
-│   │       └── cms-common.css
-│   ├── music/          # 音乐模块
-│   │   ├── admin/
-│   │   │   ├── music-admin.js
-│   │   │   ├── music-drag.js
-│   │   │   └── admin-music.css
-│   │   └── viewer/
-│   │       ├── music-ui.js
-│   │       ├── music-player.js
-│   │       ├── music-render.js
-│   │       ├── music-control.js
-│   │       ├── music-state.js
-│   │       └── music.css
-│   └── index/          # 首页模块
-│       ├── admin/
-│       │   ├── admin-core.js
-│       │   ├── admin.css
-│       │   └── modules.json
-│       └── viewer/
-│           └── index.css
-├── data-manage/        # 📊 数据控制器
-│   ├── api-client.js
-│   ├── data-provider.js
-│   ├── cms-controller.js
-│   ├── album-controller.js
-│   ├── admin-core.js
-│   └── music-admin.js
-├── shared/             # 🔧 通用工具
-│   ├── utils.js        # 工具函数（含搜索、拼音匹配）
-│   ├── namespace.js    # 命名空间定义
-│   ├── templates.js    # HTML 模板
-│   └── toast.js        # 提示框
-├── static-style/       # 🎨 CSS 样式系统
-│   ├── theme.css       # 主题变量
-│   ├── components.css  # 通用组件
-│   ├── responsive.css  # 响应式布局
-│   └── splash.css      # 开场动画
-├── dynamic-style/      # ⚡ 动态配置
-│   ├── style-injector.js # 样式注入
-│   ├── layout.js       # 布局计算
-│   └── script.js       # 核心交互
-└── *.html              # 📄 页面入口
-```
+你正在维护的是一个**高度原生化**、**模块化**且**极其注重性能**的 Web 项目。
+-   不要试图引入 React/Vue/jQuery。
+-   不要引入 Webpack/Vite/Babel。
+-   尊重现有的 HTML/CSS/JS 架构。
 
 ---
 
-## 🔑 关键概念
+## 2. 关键守则 (Do's & Don'ts)
 
-### 1. 命名空间模式
+### ✅ Do's (必须做)
+-   **必须**阅读文件功能说明书。
+-   **必须**使用 ES6 Modules (`import/export`)。
+-   **必须**检查文件后缀，确认为 `.module.js`。
+-   **必须**遵循“基础设施扁平化”原则：共享 UI 逻辑置于 `shared/`，通用管理中台置于 `data-manage/`。
+-   **必须**在修改 HTML 时检查是否破坏了关键渲染路径 (Flash Guard 路径为 `shared/flash-guard.js`)。
+-   **必须**在修改后端 Python 服务时，使用标准化的**双语日志格式**进行回显：`print(f"  [ MODULE ] 图标 描述 | Description")`。
+-   **必须**在实现复杂子管理模块时（如 CMS 标签），使用 `autoSaveBar: false` 将保存条控制权移交给中央调度器，避免 UI 冲突。
+-   **必须**使用 `fetch` 替代 XHR。
+-   **必须**使用 `querySelector` 和 `addEventListener`。
+-   **必须**通过 `shared/namespace.module.js` 统一管理全局命名空间初始化，严禁散落挂载。
+-   **必须**使用 `shared/templates.module.js` 构建复杂 DOM，替代 `innerHTML` 拼接，以防止 XSS 和提升可读性。
+-   **必须**在复用 CMS 适配器（如 Photos Viewer, Space Viewer）时，**显式设定** `{ initialState: { IS_ADMIN: false } }`，防止管理 UI 泄露。
+-   **必须**确保在 CMS 模块中执行增删改操作时，同步执行 `_studio/services/cms.py` 中的物理文件操作逻辑（如创建 `.md`、同步重命名）。
+-   **必须**在查询 CMS 内容时，首先检查 `content` 字段是否以 `.md` 结尾。如果是，前端必须执行异步 `fetch` 获取内容，而不是直接使用数据库字段。
+-   **必须**严格遵守 `data/<module>/<filename>.md` 的物理存放规则，禁止跨模块混放。
+-   **必须**通过 `/api/cms/get_categories?module=xxx` 和 `/api/cms/save_categories` 接口管理标签分类，严禁试图在 `nodes` 表中查找 `_TAG_CONFIG` 节点。
+-   **必须**在执行“出厂重置”或“清空数据”逻辑时，确保 `data/tags/` 目录下的 JSON 配置文件也被同步重置，并保持目录树 JSON 的 `{"root": []}` 初始结构。
+-   **必须**使用 `loading="lazy"` 属性替代 `InteractionObserver` 方案来实现图片懒加载。
+-   **必须**遵循 ADR-032 命名规范创建标签配置文件：`cms-{module}-tag-categories.json`。
+
+### ❌ Don'ts (禁止做)
+-   **禁止**写入 HTML 内联事件 (`onclick="..."`)。
+-   **禁止**使用 `var` 声明变量（全部使用 `const/let`）。
+-   **禁止**向全局 `window` 对象挂载新变量（除非是 Explicit Debugging Interface）。
+-   **禁止**删除 `shared/flash-guard.js` 的同步引用。
+-   **禁止**在业务模块的主 CSS 文件中编写 `max-width` 媒体查询（必须去 `zmobile adaptation` 目录）。
+-   **禁止**滥用 `!important`。**尽量**通过 CSS 权重管理（如 `body` 前缀策略）解决冲突，仅在覆盖行内样式或第三方库强样式等必要场景下使用。
+-   **禁止**保留“僵尸代码”或无用注释。修改功能时，**必须删除**旧逻辑，绝不允许采取“保留旧代码但在下方通过新代码覆盖”的增量式写法。
+-   **禁止**编写无意义的占位代码（如无效的 `0` 或 `none`）。每一行代码都必须有明确的运行时价值。
+-   **禁止**随意猜测！不清楚就自己找具体文件或问我！。
+---
+
+## 3. 代码生成规范
+
+### 3.1 模块模板
+生成新 JS 模块时，请遵循以下模板：
 
 ```javascript
-// 所有功能都挂载到 MAERS 命名空间下
-window.MAERS = window.MAERS || {};
+/**
+ * @module custom/example/example.module.js
+ * @description 简要描述模块功能
+ */
 
-// 模块组织
-MAERS.Utils = {}; // 通用工具
-MAERS.CMS = {}; // CMS 模块
-MAERS.Music = {}; // 音乐模块
-MAERS.Album = {}; // 相册模块
-MAERS.Admin = {}; // 管理功能
+import { api } from '../../data-manage/api-client.module.js';
 
-// 调用示例
-MAERS.Utils.Search.filterNodes(tree, "关键词");
-MAERS.Admin.exportModules();
+// 私有常量
+const DEFAULT_CONFIG = { ... };
+
+// 导出函数
+export function init() {
+    const el = document.querySelector('#example');
+    if (el) {
+        bindEvents(el);
+    }
+}
+
+// 私有函数
+function bindEvents(el) {
+    el.addEventListener('click', () => { ... });
+}
 ```
 
-### 2. JS封装JSON模式
-
-```javascript
-// 后端生成的数据文件格式
-// data/notes-tree.js
-window.MAERS_DATA = {
-  "root": [
-    {"id": "1", "title": "笔记1", "children": []}
-  ]
-};
-
-// 前端直接使用
-<script src="data/notes-tree.js"></script>
-<script>
-  const data = window.MAERS_DATA;
-</script>
+### 3.2 CSS 模板
+```css
+/* custom/example/viewer/example.css */
+.example-container {
+    /* 使用全局变量 */
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+}
 ```
 
-### 3. 双环境架构
+### 3.3 移动端适配 CSS 模板
+任何移动端 (`@media`) 样式**必须**写在 `custom/zmobile adaptation/` 对应的文件中。
+**关键规则**：必须在模块的主 CSS 文件头部使用 `@import` 引入适配文件，**禁止**在 HTML 中直接使用 `<link>` 标签引入。
 
-- **本地环境** (`localhost`): 可以调用 Python API 进行管理
-- **静态部署**: 仅读取预生成的 JS 文件
+```css
+/* custom/example/viewer/example.css - 头两行 */
+@import "../../zmobile adaptation/mobile-example.css";
 
-```javascript
-// data-provider.js 中的环境判断
-const isLocal = window.location.hostname === "localhost";
-if (isLocal && window.IS_ADMIN) {
-  // 调用 API
-} else {
-  // 读取静态 JS
+.example-container { ... }
+```
+
+```css
+/* custom/zmobile adaptation/mobile-example.css */
+/* 必须加 body 前缀提升权重 */
+body .example-container {
+    flex-direction: column;
 }
 ```
 
 ---
 
-## 📝 常见开发场景
+## 4. 修改现有代码
 
-### 场景1: 添加新的 CMS 功能
-
-**需要修改的文件：**
-
-1. `custom/cms/cms-view.js` - UI 渲染逻辑
-2. `data-manage/cms-controller.js` - 数据控制
-3. `_studio/services/cms.py` - 后端逻辑
-
-**命名空间：** `MAERS.CMS.*`
-
-### 场景2: 修改样式
-
-**需要修改的文件：**
-
-1. `static-style/theme.css` - 全局变量（颜色、字体）
-2. `static-style/html/*.css` - 页面特定样式
-3. `static-style/components.css` - 组件样式
-
-### 场景3: 添加新的 API 接口
-
-**需要修改的文件：**
-
-1. `_studio/routes.py` - 添加路由
-2. `_studio/services/*.py` - 实现业务逻辑
-3. `data-manage/*-controller.js` - 前端调用
-
----
-
-## 🔍 搜索功能架构
-
-**位置**: `shared/utils.js` 中的 `MAERS.Utils.Search`
-
-**核心功能：**
-
-- 拼音搜索 (`getPinyinInitials`)
-- 节点查找 (`findNode`, `findPath`)
-- 树过滤 (`filterNodes`)
-- 标签筛选 (`collectTags`)
-
-**使用示例：**
-
-```javascript
-// 拼音搜索
-const pinyin = MAERS.Utils.Search.getPinyinInitials("中文");
-
-// 过滤树
-const filtered = MAERS.Utils.Search.filterNodes(tree, "关键词");
-```
-
----
-
-## 🎯 给 AI 的关键提示
-
-### 代码风格
-
-1. **使用命名空间** - 不直接定义全局函数
-2. **参数化配置** - 使用 CSS 变量和 JSON 配置
-3. **防御性编程** - 添加参数校验和错误处理
-
-### 文件路径
-
-- ✅ 正确: `custom/cms/viewer/cms-view.js`
-- ❌ 错误: `custom/cms/cms-view.js` (旧结构)
-
-### HTML 事件处理
-
-```html
-<!-- 正确：使用命名空间 -->
-<button onclick="MAERS.Admin.exportModules()">导出</button>
-
-<!-- 错误：直接调用全局函数 -->
-<button onclick="exportModules()">导出</button>
-```
-
-### 数据管理层
-
-- `data-manage/` 目录包含所有控制器逻辑
-- `admin-core.js` - 后台核心管理
-- `music-admin.js` - 音乐管理
-- `cms-controller.js` - CMS 控制
-- `album-controller.js` - 相册控制
-
----
-
-## 📌 重要约定
-
-### 1. 数据同步机制
-
-```python
-# 后端每次修改数据后，都要重新生成静态 JS
-def sync_js_file(module_name, data):
-    js_content = f"window.MAERS_DATA = {json.dumps(data)};"
-    with open(f"data/{module_name}-tree.js", "w", encoding="utf-8") as f:
-        f.write(js_content)
-```
-
-### 2. 安全性
-
-- 前端使用 `escapeHtml()` 转义输入
-- 后端使用参数化查询防止 SQL 注入
-- 后台功能仅在 `localhost` 可用
-
-### 3. 性能优化
-
-- 图片自动压缩为 AVIF/WebP
-- 使用 `defer` 加载非关键脚本
-- 瀑布流使用虚拟滚动（计划中）
-
----
-
-## 🚀 快速上手 AI 提示词模板
-
-```
-我在开发 MAERS 项目，这是一个基于原生 JS 和 Python 的个人网站。
-
-项目使用命名空间模式，所有功能挂载到 window.MAERS.*。
-目录结构：custom/ 下按模块分组（custom/album/admin, custom/album/viewer...）。
-
-请帮我 [具体需求]，注意：
-1. 使用 MAERS.* 命名空间
-2. 明确文件是在 admin/ 还是 viewer/ 目录下
-3. 遵循项目的代码风格
-```
-
----
-
-**最后更新**: 2026-01-18  
-**版本**: v2.8（目录结构重构后）
+在修改现有文件前，务必先**阅读文件的头部注释**和**导入部分**，理解其依赖关系。
+如果发现旧代码（如 `MAERS.xxx = ...`），请优先建议重构为 ES6 模块，而不是继续沿用旧模式（除非用户明确要求最小化修改）。

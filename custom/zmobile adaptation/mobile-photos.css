@@ -1,0 +1,126 @@
+/* ==========================================================================
+   📱 Mobile Photos & Album Styles
+   ========================================================================== */
+
+@media (max-width: 900px) {
+
+    /* 1. Reset Global Container for Full Width Experience */
+    /* 解决首页或全局 padding 导致的挤压 */
+    body .container {
+        padding: 0 !important;
+        height: 100vh;
+        overflow: hidden;
+        /* 内部滚动 */
+    }
+
+    body .main-card.content-mode {
+        border-radius: 0;
+        height: 100vh;
+        width: 100vw;
+        margin: 0;
+    }
+
+    /* 2. Grid Layout Adjustment: Single/Dual Column */
+    body .photo-grid {
+        /* Force 2 columns on mobile instead of masonry auto-fill */
+        display: grid;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px !important;
+        padding: 10px !important;
+        padding-bottom: 80px !important;
+        /* Space for bottom safe area */
+
+        /* Ensure independent scrolling */
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        height: 100%;
+    }
+
+
+
+    /* 3. Photo Item Optimization */
+    body .photo-item {
+        border-radius: 4px !important;
+        margin-bottom: 0 !important;
+        /* Grid gap handles spacing */
+        box-shadow: none !important;
+        /* Reduce GPU load */
+        width: 100% !important;
+        flex: none !important;
+        /* Disable flex behavior to prevent grid conflicts */
+    }
+
+    /* Selector fix: JS generates <img> inside .photo-item without specific class */
+    body .photo-item img {
+        height: 200px !important;
+        /* Constraint height for uniform grid look */
+        object-fit: cover;
+        width: 100%;
+        display: block;
+    }
+
+    /* Fix: Hide the flexbox alignment helper in grid mode to prevent gaps */
+    body .photo-grid::after {
+        display: none !important;
+    }
+
+    /* 4. Header Compact Mode */
+    body .page-header-bar {
+        padding: 10px 15px;
+        height: 60px;
+        position: sticky;
+        top: 0;
+        z-index: 50;
+    }
+
+    body .header-title {
+        font-size: 0 !important;
+        /* Hide text */
+        margin-left: auto !important;
+        /* Push to right */
+        margin-right: 0 !important;
+        text-align: right !important;
+        width: auto !important;
+        flex: 1;
+        /* Allow to take available space */
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    body .header-title svg,
+    body .header-title img {
+        font-size: 1.5rem !important;
+        /* Restore icon size */
+        width: 30px;
+        height: 30px;
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    /* 5. Lightbox Touch Optimization (Critical) */
+    body .lightbox {
+        padding: 0;
+        background: #000;
+        /* Deep black for immersion */
+    }
+
+    body .lightbox img {
+        max-width: 100%;
+        max-height: 80vh;
+        /* Leave room for gestures */
+    }
+
+    /* Touch Controls: Make buttons bigger/easier to hit */
+    body .lightbox-close {
+        top: 20px;
+        right: 20px;
+        padding: 15px;
+        font-size: 2rem;
+        color: #fff;
+    }
+
+    body .lb-nav {
+        display: none;
+        /* Hidden on mobile: use swipe gestures instead */
+    }
+}

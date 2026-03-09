@@ -1,26 +1,15 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
 
     <link rel="stylesheet" href="static-style/splash.css">
-    <script>
-        // Splash Screen Control
-        window.addEventListener('load', () => {
-            const splash = document.getElementById('splash-screen');
-            if (splash) {
-                setTimeout(() => {
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 500); // 0.5s transition
-                }, 200); // 200ms delay
-            }
-        });
-    </script>
-    <script src="dynamic-style/theme-init.js"></script>
+
+    <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-    <title>Music Admin Space</title>
+    <title>MAERS Admin - Music</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
@@ -30,21 +19,23 @@
     <link rel="stylesheet" href="static-style/theme.css">
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/toast.css">
     <link rel="stylesheet" href="custom/music/viewer/music.css">
-    <link rel="stylesheet" href="custom/music/admin/admin-music.css">
+    <link rel="stylesheet" href="custom/music/admin/music-admin.css">
+
 </head>
 
 <body class="admin-mode">
-    <!-- 🔥 Splash Screen: 掩盖初始加载闪烁 -->
-    <div id="splash-screen">
-        <div class="splash-logo">🛠️</div>
-    </div>
-    <script src="data-manage/data-provider.js"></script>
-    <script src="dynamic-style/style-injector.js"></script>
-    <script src="dynamic-style/layout.js"></script>
-    <script>MAERS.StyleInjector.inject();</script>
-    <!-- 数据 (本地模式可写，线上模式只读) -->
-    <script src="data/music-data.js"></script>
+
+    <script type="module" src="shared/style-injector.module.js"></script>
+    <script type="module" src="shared/layout.module.js"></script>
+    <script type="module">await import('./shared/style-injector.module.js').then(m => m.default.inject());</script>
+    <!-- [MIGRATED] 统一使用 theme.module.js -->
+    <script type="module">
+        import { initTheme } from './shared/theme.module.js';
+        // 确保 DOM 加载后初始化，或直接调用（initTheme内部有检查）
+        initTheme();
+    </script>
     <script>
         // 🔥 强制开启管理员模式
         window.IS_ADMIN = true;
@@ -54,10 +45,12 @@
         <div class="main-card">
             <!-- 头部 -->
             <div class="music-header-bar">
-                <a href="admin.html" class="back-btn">← Back</a>
-                <div class="center-title">Music & Video Space <span class="admin-tag admin-badge">EDIT</span>
-                </div>
-                <div class="right-icon zoom-trigger-whole" onclick="toggleGlobalShrink(event)">🎧</div>
+                <a href="admin-portal.html" class="back-btn">← Back</a>
+                <div class="center-title"><img src="ui/music-icon.svg" class="music-title-icon zoom-trigger-icon"
+                        style="height: 1.1em; width: 1.1em; position: relative; top: 3px; margin-right: 4px;">Music &
+                    Video</div>
+                <div class="right-icon"><img src="ui/music-headphone.svg"
+                        style="width: 1em; height: 1em; vertical-align: middle;"></div>
             </div>
             <!-- 主内容区 -->
             <div class="content-wrapper" style="opacity: 0; transition: opacity 0.5s ease;">
@@ -85,11 +78,10 @@
                     <!-- 播放控制条 -->
                     <div class="custom-control-bar">
                         <div class="control-btns">
-                            <button class="ctrl-btn" onclick="playPrev()">◀◀</button>
-                            <button class="ctrl-btn" onclick="remoteTogglePlay()" id="master-play-btn"
-                                class="master-play-btn-large"><span class="play-icon-layer">▶</span><span
-                                    class="pause-icon-layer">||</span></button>
-                            <button class="ctrl-btn" onclick="playNext()">▶▶</button>
+                            <button class="ctrl-btn" id="play-prev-btn">◀◀</button>
+                            <button class="ctrl-btn" id="master-play-btn" class="master-play-btn-large"><span
+                                    class="play-icon-layer">▶</span><span class="pause-icon-layer">||</span></button>
+                            <button class="ctrl-btn" id="play-next-btn">▶▶</button>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span id="curr-time" class="time-label">00:00</span>
@@ -109,10 +101,11 @@
                             <!-- Level 0: 分类 -->
                             <div class="level-view">
                                 <div class="view-header">
-                                    <div class="header-left-group"><span>🍸 音乐分类</span></div>
+                                    <div class="header-left-group"><span><img src="ui/music-class.svg"
+                                                style="width: 1.25em; vertical-align: middle; margin-right: 4px;">
+                                            音乐分类</span></div>
                                     <span class="header-playing-info"></span>
-                                    <div class="add-btn btn-add-entity" onclick="MAERS.Music.Admin.addCategory()"
-                                        title="新建分类">＋
+                                    <div class="add-btn btn-add-entity" title="新建分类">＋
                                     </div>
                                 </div>
                                 <div class="view-content" id="list-level-0"></div>
@@ -121,15 +114,12 @@
                             <div class="level-view">
                                 <div class="view-header">
                                     <div class="header-left-group">
-                                        <span class="nav-back" onclick="goBack(0)">← 返回</span>
-                                        <svg class="home-icon-svg" viewBox="0 0 24 24" onclick="goBack(0)">
-                                            <path d="M4 21 L4 9 L12 3 L20 9 L20 21 H15 V13 H9 V21 H4"></path>
-                                        </svg>
+                                        <span class="nav-back" id="nav-back-L1-text">← 返回</span>
+                                        <img src="ui/music-home.svg" class="home-icon-svg" id="nav-home-L1">
                                         <span id="title-level-1" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>
-                                    <div class="add-btn btn-add-entity" onclick="MAERS.Music.Admin.addCollection()"
-                                        title="新建合集">＋
+                                    <div class="add-btn btn-add-entity" title="新建合集">＋
                                     </div>
                                 </div>
                                 <div class="view-content" id="list-level-1"></div>
@@ -138,15 +128,12 @@
                             <div class="level-view">
                                 <div class="view-header">
                                     <div class="header-left-group">
-                                        <span class="nav-back" onclick="goBack(1)">← 返回</span>
-                                        <svg class="home-icon-svg" viewBox="0 0 24 24" onclick="goBack(0)">
-                                            <path d="M4 21 L4 9 L12 3 L20 9 L20 21 H15 V13 H9 V21 H4"></path>
-                                        </svg>
+                                        <span class="nav-back" id="nav-back-L2-text">← 返回</span>
+                                        <img src="ui/music-home.svg" class="home-icon-svg" id="nav-home-L2">
                                         <span id="title-level-2" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>
-                                    <div class="add-btn btn-add-entity" onclick="MAERS.Music.Admin.addAlbum()"
-                                        title="添加视频">
+                                    <div class="add-btn btn-add-entity" title="添加视频">
                                         ＋</div>
                                 </div>
                                 <div class="view-content" id="list-level-2"></div>
@@ -158,22 +145,13 @@
         </div>
     </div>
     <!-- 脚本引入顺序至关重要 -->
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/music/viewer/music-player.js"></script> <!-- 核心播放器 -->
-    <script defer src="custom/music/viewer/music-render.js"></script> <!-- 渲染逻辑 -->
-    <script defer src="custom/music/viewer/music-control.js"></script> <!-- 播放控制 -->
-    <script defer src="custom/music/admin/music-drag.js"></script> <!-- 拖拽排序 -->
-    <script defer src="custom/music/admin/music-admin.js"></script> <!-- 管理逻辑 -->
-    <script defer src="custom/music/viewer/music-ui.js"></script> <!-- 列表UI逻辑 -->
-    <script defer src="custom/music/viewer/music-state.js"></script> <!-- 状态记忆 -->
-    <script src="shared/toast.js"></script>
+    <script type="module" src="shared/utils.module.js"></script>
+    <script type="module" src="data-manage/api-client.module.js"></script>
+    <!-- ES6 模块入口 (整合所有 Music Admin 模块) -->
+    <script type="module" src="custom/music/admin-main.module.js"></script>
+    <script type="module" src="shared/toast.module.js"></script>
     <script>
-        // 消息监听 (来自 iframe 或其他窗口)
-        window.addEventListener('message', function (event) {
-            if (event.data === 'toggle') remoteTogglePlay();
-            else if (event.data === 'next') playNext();
-            else if (event.data === 'prev') playPrev();
-        });
+        // 事件监听已移至 custom/music/admin-main.module.js
     </script>
 </body>
 

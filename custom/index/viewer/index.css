@@ -1,11 +1,31 @@
+@import "../../zmobile adaptation/mobile-index.css";
+
 /* 首页特定布局 */
 .home-container {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
+    /* justify-content: center; REMOVED to prevent top-clipping */
+    justify-content: flex-start;
     padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+}
+
+/* Safe Centering Spacers */
+.home-container::before {
+    content: '';
+    flex: 1;
+    width: 1px;
+    min-height: 20px;
+}
+
+.home-container::after {
+    content: '';
+    flex: 1;
+    width: 1px;
+    min-height: 20px;
 }
 
 .brand-area {
@@ -17,15 +37,22 @@
 .brand-logo {
     width: 100px;
     height: 100px;
-    margin-bottom: 25px;
+    margin-bottom: 8px;
     color: #d0d0d0;
-    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
+    filter: invert(0.8) drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.5s ease;
+    will-change: transform;
+    /* Fix ghosting */
 }
 
 .brand-logo:hover {
     transform: rotate(8deg);
     cursor: pointer;
+}
+
+/* 确保缩放功能不覆盖悬停效果 */
+.brand-logo.zoom-trigger-whole:hover {
+    transform: rotate(8deg) !important;
 }
 
 .brand-title {
@@ -35,6 +62,7 @@
     color: #8a8a8a;
     letter-spacing: 2px;
     text-transform: uppercase;
+    line-height: 1.1;
 }
 
 .maers-interactive {
@@ -69,7 +97,7 @@
 }
 
 .nav-card {
-    background: rgba(255, 255, 255, 0.03);
+    background: #141414;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 16px;
     padding: 30px;
@@ -80,14 +108,14 @@
     position: relative;
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    backdrop-filter: blur(10px);
+    backdrop-filter: none;
     will-change: transform;
     contain: layout style paint;
 }
 
 .nav-card:hover {
     transform: translateY(-8px);
-    background: rgba(255, 255, 255, 0.08);
+    background: #1f1f1f;
     border-color: rgba(255, 255, 255, 0.15);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.25);
 }
@@ -96,6 +124,16 @@
     font-size: 2.5rem;
     margin-bottom: 20px;
     filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
+}
+
+/* Minimal Inversion for Record Icon (Home Card) */
+.card-icon img[src*="record-icon"] {
+    filter: invert(0.9);
+    transition: filter 0.3s ease;
+}
+
+html.light-mode .card-icon img[src*="record-icon"] {
+    filter: none;
 }
 
 .card-title {
@@ -144,7 +182,7 @@ html.light-mode .brand-subtitle {
 }
 
 html.light-mode .nav-card {
-    background: rgba(255, 255, 255, 0.6);
+    background: #ffffff;
     border-color: rgba(0, 0, 0, 0.05);
 }
 

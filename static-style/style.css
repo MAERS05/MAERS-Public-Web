@@ -1,6 +1,7 @@
+@import "../custom/zmobile adaptation/mobile-global.css";
+
 /* ==========================================================================
    MAERS Space - Core Stylesheet
-   Entry point for global layout and imports.
    ========================================================================== */
 
 /* 2. Basic Resets & Performance */
@@ -13,7 +14,7 @@
 html {
     height: 100%;
     background-color: var(--bg-base);
-    transition: background-color 2.5s ease;
+    transition: background-color 1.2s ease;
 }
 
 html.light-mode {
@@ -30,19 +31,6 @@ body {
     transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* White mode texture layer */
-body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -2;
-    background-image: var(--bg-light-texture);
-    pointer-events: none;
-    will-change: opacity;
-}
 
 /* 3. Theme Mask (Animated Background) */
 #theme-mask {
@@ -59,7 +47,7 @@ body::before {
         radial-gradient(80% 80% at 50% -20%, rgba(40, 40, 55, 0.4) 0%, transparent 60%),
         linear-gradient(180deg, #141417 0%, #0a0a0c 100%);
     clip-path: circle(150% at 100% 0%);
-    transition: clip-path 2.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: clip-path 1.6s cubic-bezier(0.22, 1, 0.36, 1);
     /* GPU 硬件加速 */
     transform: translateZ(0);
     will-change: clip-path;
@@ -78,34 +66,52 @@ body::before {
         radial-gradient(1.2px 1.2px at 200px 80px, rgba(255, 255, 255, 0.6), transparent),
         radial-gradient(1px 1px at 300px 250px, rgba(255, 255, 255, 0.7), transparent);
     background-size: 400px 400px;
-    animation: stars-random-flicker 15s infinite ease-in-out;
+    animation: stars-random-flicker 50s infinite linear;
 }
 
 @keyframes stars-random-flicker {
-
-    0%,
-    100% {
-        opacity: 0.7;
+    0% {
+        opacity: 0.5;
     }
 
-    20% {
+    3% {
         opacity: 0.2;
     }
 
-    35% {
-        opacity: 0.8;
-    }
-
-    50% {
-        opacity: 0.1;
-    }
-
-    65% {
+    18% {
         opacity: 0.6;
     }
 
-    85% {
+    22% {
+        opacity: 0.15;
+    }
+
+    41% {
+        opacity: 0.55;
+    }
+
+    47% {
+        opacity: 0.25;
+    }
+
+    63% {
+        opacity: 0.65;
+    }
+
+    68% {
+        opacity: 0.18;
+    }
+
+    84% {
+        opacity: 0.45;
+    }
+
+    91% {
         opacity: 0.3;
+    }
+
+    100% {
+        opacity: 0.5;
     }
 }
 
@@ -128,40 +134,6 @@ html.light-mode #theme-mask::after {
     flex-direction: column;
 }
 
-/* 6. Layout Media Queries */
-@media (max-width: 1024px) {
-    .container {
-        padding-top: 60px;
-        height: auto;
-        overflow: auto;
-    }
-}
-
-@media (max-width: 768px) {
-    .grid-layout {
-        grid-template-columns: 1fr;
-        gap: 20px;
-        display: block;
-    }
-
-    .category-card {
-        margin-bottom: 20px;
-        height: 160px;
-        flex-direction: row;
-        gap: 20px;
-        padding: 0 30px;
-        justify-content: flex-start;
-    }
-
-    .card-icon {
-        font-size: 3rem;
-        margin-bottom: 0;
-    }
-
-    .text-group {
-        text-align: left;
-    }
-}
 
 /* 7. Special View States (Shrink/Zoom) */
 html.shrink-view body {
@@ -192,8 +164,9 @@ html.shrink-view .container {
 
 html.shrink-view .main-card,
 html.shrink-view .home-container {
-    transform: scale(0.65) translateY(50px);
-    transform-origin: center top;
+    transform: scale(0.65);
+    /* Slightly larger for better visibility */
+    transform-origin: center center;
     border-radius: 40px;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.5s, box-shadow 0.5s;
@@ -213,9 +186,9 @@ html.shrink-view::after {
 
 .zoom-trigger-icon,
 .zoom-trigger-whole {
-    cursor: pointer !important;
+    cursor: pointer;
     display: inline-block;
-    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
     user-select: none;
     position: relative;
     z-index: 10;
@@ -223,9 +196,9 @@ html.shrink-view::after {
 
 .zoom-trigger-icon:hover,
 .zoom-trigger-whole:hover {
-    transform: scale(1.15) !important;
+    transform: scale(1.15);
     /* filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)) !important; Removed glow */
-    cursor: pointer !important;
+    cursor: pointer;
 }
 
 /* 8. Lightbox State */
@@ -248,69 +221,108 @@ body.is-viewing .auto-mode-btn:hover {
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
-/* ==========================================================================
-   📱 Mobile Performance Optimization: Simple Fade Transition
-   ========================================================================== */
-@media (max-width: 1024px) {
-
-    /* 1. 重写遮罩层动画逻辑 */
-    #theme-mask {
-        /* 强制取消几何裁剪过渡，改为透明度过渡 */
-        transition: opacity 0.5s ease-in-out !important;
-
-        /* 默认状态（黑夜）是显示的，且铺满全屏 */
-        opacity: 1;
-        clip-path: none !important;
-        /* 移除圆形裁剪，改为普通图层 */
-
-        /* [可选] 禁用背景的微光呼吸动画，进一步省电 */
-        animation: none !important;
-    }
-
-    /* 2. 禁用星星闪烁动画 (性能杀手) */
-    #theme-mask::after {
-        display: none !important;
-        /* 移动端太小看不清星星，直接隐藏以大幅提升性能 */
-    }
-
-    /* 3. 定义白昼模式下的状态 */
-    html.light-mode #theme-mask {
-        /* 白昼模式下，遮罩层简单地变透明 */
-        opacity: 0 !important;
-        /* 不再需要改变 clip-path */
-    }
-
-    /* 4. 加快底层的背景色切换速度 */
-    /* 原本是 2.5s，移动端改为 0.5s 会感觉更跟手 */
-    html,
-    body {
-        transition: background-color 0.5s ease, color 0.5s ease !important;
-    }
+/* Helper class for SVG icons in Navigation Cards */
+.nav-icon-img {
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+    object-fit: contain;
+    display: inline-block;
 }
 
-/* Mobile Performance Optimization remains */
+/* ==========================================================================
+   Fixed Layout Utility - Photos Model
+   ========================================================================== */
+/* Standardizes layout: fixed 100vh container + hidden card overflow */
+/* Content areas (.photo-grid, .folder-grid, etc.) handle their own scrolling */
+/* Page itself remains scrollable (NO overflow:hidden on html/body) */
 
-@media (max-width: 1024px) {
+html.fixed-layout-page .container {
+    height: 100vh !important;
+    padding: 15px !important;
+    display: flex;
+    flex-direction: column;
+}
 
-    /* 1. 禁用毛玻璃：这是导致手机卡顿的元凶 */
-    .main-card {
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
+html.fixed-layout-page .main-card {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: none !important;
+}
 
-        /* 2. 改用高不透明度纯色：弥补视觉质感 */
-        /* 深色模式下：几乎全黑 */
-        background: rgba(20, 20, 20, 0.95);
+/* ==========================================================================
+   Global Custom Scrollbar
+   ========================================================================== */
+/* Unified scrollbar styles for all scrollable containers */
 
-        /* 3. 移除大阴影：减少 GPU 渲染开销 */
-        box-shadow: none !important;
+.photo-grid,
+.folder-grid,
+.drawer-body,
+.reader-view,
+.reader-scroll-area,
+.gallery-content,
+.admin-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
 
-        /* 4. 移除边框：扁平化设计更适合移动端 */
-        border: none !important;
-    }
+.photo-grid::-webkit-scrollbar,
+.folder-grid::-webkit-scrollbar,
+.drawer-body::-webkit-scrollbar,
+.reader-view::-webkit-scrollbar,
+.reader-scroll-area::-webkit-scrollbar,
+.gallery-content::-webkit-scrollbar,
+.admin-content::-webkit-scrollbar {
+    display: block;
+    width: 6px;
+    height: 6px;
+    background-color: transparent;
+}
 
-    /* 5. 适配白昼模式 */
-    html.light-mode .main-card {
-        /* 白昼模式下：几乎全白 */
-        background: rgba(255, 255, 255, 0.98);
-    }
+.photo-grid::-webkit-scrollbar-track,
+.folder-grid::-webkit-scrollbar-track,
+.drawer-body::-webkit-scrollbar-track,
+.reader-view::-webkit-scrollbar-track,
+.reader-scroll-area::-webkit-scrollbar-track,
+.gallery-content::-webkit-scrollbar-track,
+.admin-content::-webkit-scrollbar-track {
+    background-color: transparent;
+}
+
+.photo-grid::-webkit-scrollbar-thumb,
+.folder-grid::-webkit-scrollbar-thumb,
+.drawer-body::-webkit-scrollbar-thumb,
+.reader-view::-webkit-scrollbar-thumb,
+.reader-scroll-area::-webkit-scrollbar-thumb,
+.gallery-content::-webkit-scrollbar-thumb,
+.admin-content::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border-radius: 10px;
+}
+
+.photo-grid::-webkit-scrollbar-thumb:hover,
+.folder-grid::-webkit-scrollbar-thumb:hover,
+.drawer-body::-webkit-scrollbar-thumb:hover,
+.reader-view::-webkit-scrollbar-thumb:hover,
+.reader-scroll-area::-webkit-scrollbar-thumb:hover,
+.gallery-content::-webkit-scrollbar-thumb:hover,
+.admin-content::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+}
+
+/* Light mode overrides specific to these classes */
+html.light-mode .photo-grid::-webkit-scrollbar-thumb,
+html.light-mode .folder-grid::-webkit-scrollbar-thumb,
+html.light-mode .gallery-content::-webkit-scrollbar-thumb,
+html.light-mode .admin-content::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+html.light-mode .photo-grid::-webkit-scrollbar-thumb:hover,
+html.light-mode .folder-grid::-webkit-scrollbar-thumb:hover,
+html.light-mode .gallery-content::-webkit-scrollbar-thumb:hover,
+html.light-mode .admin-content::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.8);
 }

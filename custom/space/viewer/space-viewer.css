@@ -1,0 +1,293 @@
+@import "../../zmobile%20adaptation/mobile-space.css";
+
+/* space-viewer.css - Completely independent styling */
+
+.gallery-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px;
+    background: transparent;
+}
+
+/* Fix CMS Breadcrumb Visibility */
+.breadcrumb-bar {
+    display: flex !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    margin-bottom: 20px;
+    z-index: 99 !important;
+    position: relative;
+    padding-left: 2px;
+}
+
+/* Ensure no accidental opacity override when searching, unless overlaid */
+.breadcrumb-bar.is-searching>span:not(.breadcrumb-overlay) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.breadcrumb-overlay {
+    z-index: 100 !important;
+}
+
+.explorer-header {
+    display: grid !important;
+    grid-template-columns: 1fr auto 1fr;
+    /* 三列对齐：左标题，中搜索，右工具 */
+    align-items: center;
+    gap: 15px;
+    padding-bottom: 25px;
+}
+
+.header-left {
+    min-width: 250px;
+    /* 锁定左侧宽度以确保搜索框居中 */
+}
+
+.header-right {
+    min-width: 250px;
+    /* 锁定右侧宽度对称 */
+    justify-self: end;
+    display: flex !important;
+    align-items: center;
+    justify-content: flex-end;
+    position: relative;
+    height: 42px;
+    margin-top: 12px;
+    /* 位置下移 */
+}
+
+/* Adaptive Search Box */
+.explorer-header .search-box {
+    justify-self: center;
+    width: 100%;
+    /* 移除硬编码的 max-width 限制，由 search-input 控制容器弹性 */
+    display: flex;
+    justify-content: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-top: 12px;
+    /* 与右侧对齐一同下移 */
+}
+
+.search-input {
+    width: 300px !important;
+    /* 初始宽度：300px */
+    height: 35px !important;
+    /* 高度改为 35px */
+    text-align: center;
+    padding: 0 15px !important;
+    border-radius: 17.5px !important;
+    /* 匹配 35px 高度 */
+    background: #121212 !important;
+    opacity: 1 !important;
+    border: 1px solid var(--pill-border);
+    font-size: 14px !important;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none;
+    /* 强制去除白昼/黑夜下的一切阴影 */
+}
+
+.search-input::placeholder {
+    text-align: center;
+}
+
+.search-input:focus {
+    width: 360px !important;
+    /* 延申至 360px */
+    outline: none;
+    background: #121212;
+    /* 使用实色背景遮挡下方图形 */
+    box-shadow: none;
+    /* 强制去聚焦阴影 */
+}
+
+/* 白昼模式下确保背景不透明，覆盖底层文字 */
+.light-mode .search-input,
+html.light-mode .search-input {
+    background: #ffffff !important;
+    color: #000000 !important;
+}
+
+.light-mode .search-input:focus,
+html.light-mode .search-input:focus {
+    background: #ffffff !important;
+}
+
+/* 历史按钮：强制绝对定位，不占用主行空间 */
+.recent-toggle-btn {
+    position: absolute !important;
+    top: 100%;
+    right: 5px;
+    margin-top: 8px !important;
+    /* 增加间距 */
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.recent-toggle-btn:hover {
+    opacity: 1;
+}
+
+.grid-layout {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    height: 100%;
+    align-content: start;
+}
+
+.space-card {
+    position: relative;
+    height: 200px;
+    background: var(--pill-bg);
+    border: none;
+    border-radius: 24px;
+    box-shadow: var(--pill-shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 15px;
+    /* 增加顶部内边距，使内容整体居中 */
+    text-decoration: none;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.space-card:hover {
+    transform: translateY(-5px);
+    background: var(--pill-hover-bg);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+.header-title img {
+    filter: invert(1);
+}
+
+.light-mode .header-title img {
+    filter: none;
+}
+
+.space-icon {
+    margin-bottom: 10px;
+    /* 统一间距 10px */
+    z-index: 2;
+    transition: transform 0.5s ease;
+}
+
+.space-card:hover .space-icon {
+    transform: rotate(3deg) scale(1.01);
+}
+
+.space-icon img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
+}
+
+.space-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-main);
+    z-index: 2;
+    text-align: center;
+    line-height: 1.1;
+    margin-bottom: 6px;
+    /* 统一间距 6px */
+}
+
+.space-desc {
+    font-size: 0.85rem;
+    color: var(--text-sub);
+    margin-top: 8px;
+    /* 与标题间距 8px */
+    margin-bottom: 15px;
+    /* 底部预留稍大，避免与标签冲突 */
+    z-index: 2;
+    opacity: 0.6;
+    text-align: center;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    /* Standard property */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 90%;
+    line-height: 1.25;
+
+}
+
+.space-text {
+    text-align: center;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.space-tags {
+    position: absolute;
+    bottom: 8px;
+    /* 统一间距 6px */
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    /* 统一间距 6px */
+    z-index: 2;
+}
+
+.space-tag {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    background: rgba(255, 255, 255, 0.08);
+    /* CMS Default */
+    color: var(--text-sub);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    /* Slightly Adjusted */
+}
+
+.space-tag:not(.active):hover {
+    transform: scale(1.05);
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--text-main);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    opacity: 1;
+    /* Override opacity from base */
+}
+
+.space-tag.active {
+    background: #78ffd6;
+    color: #000;
+    font-weight: bold;
+    box-shadow: 0 0 10px rgba(120, 255, 214, 0.6);
+    transform: scale(1.1);
+    opacity: 1;
+    border-color: transparent;
+}
+
+/* Light Mode Adaptations */
+.light-mode .space-tag {
+    background: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    /* Visible border */
+    color: rgba(0, 0, 0, 0.7);
+    /* Dark text */
+}
+
+.light-mode .space-tag:not(.active):hover {
+    background: rgba(0, 0, 0, 0.05);
+    /* Slight tint on hover only */
+    border-color: rgba(0, 0, 0, 0.3);
+    color: #000;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}

@@ -1,0 +1,241 @@
+/**
+ * Admin Modal - Shared Styles
+ * 通用管理模态框样式
+ */
+
+.admin-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.admin-modal .modal-content {
+    background: #1a1a1a;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.admin-modal .modal-content h3 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--text-main, #ffffff);
+}
+
+.admin-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.admin-modal .btn-close-modal {
+    background: transparent;
+    border: none;
+    color: var(--text-sub, rgba(255, 255, 255, 0.6));
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.admin-modal .btn-close-modal:hover {
+    color: var(--text-main, #fff);
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.admin-modal .modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.admin-modal .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.admin-modal .form-group label {
+    font-size: 14px;
+    color: var(--text-sub, rgba(255, 255, 255, 0.7));
+}
+
+.admin-modal .form-control {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--text-main, #ffffff);
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.admin-modal .form-control:focus {
+    outline: none;
+    border-color: var(--accent-color, rgba(100, 150, 255, 0.6));
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-modal textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.admin-modal .modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.admin-modal .modal-actions button {
+    flex: 1;
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.admin-modal .btn-primary {
+    background: var(--accent-color, rgba(100, 150, 255, 0.8));
+    color: #ffffff;
+}
+
+.admin-modal .btn-primary:hover {
+    background: var(--accent-color, rgba(100, 150, 255, 1));
+}
+
+.admin-modal .btn-cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-main, #ffffff);
+}
+
+.admin-modal .btn-cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Light Mode */
+.light-mode .admin-modal .btn-close-modal {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+.light-mode .admin-modal .btn-close-modal:hover {
+    color: #000;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.light-mode .admin-modal .modal-content {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #1a1a1a;
+}
+
+.light-mode .admin-modal .modal-content h3 {
+    color: #1a1a1a;
+}
+
+.light-mode .admin-modal .form-group label {
+    color: rgba(0, 0, 0, 0.6);
+}
+
+.light-mode .admin-modal .form-control {
+    background: #f5f5f5;
+    border-color: rgba(0, 0, 0, 0.1);
+    color: #1a1a1a;
+}
+
+.light-mode .admin-modal .form-control:focus {
+    background: #ffffff;
+    border-color: var(--accent-color, #0066cc);
+}
+
+.light-mode .admin-modal .btn-cancel {
+    background: rgba(0, 0, 0, 0.05);
+    color: #1a1a1a;
+}
+
+.light-mode .admin-modal .btn-cancel:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+/* Image Preview */
+.admin-modal .icon-preview {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    object-fit: contain;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* Fetch Button */
+.admin-modal .btn-fetch-meta {
+    padding: 0 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: var(--text-main, #fff);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.admin-modal .btn-fetch-meta:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.admin-modal .btn-fetch-meta.loading {
+    animation: rotate 1s linear infinite;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

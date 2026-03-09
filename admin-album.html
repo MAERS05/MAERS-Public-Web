@@ -1,12 +1,12 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-    <title>Album Admin - MAERS</title>
+    <title>MAERS Admin - Album</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
@@ -15,46 +15,36 @@
     <link rel="stylesheet" href="static-style/theme.css">
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="static-style/toast.css">
     <link rel="stylesheet" href="custom/album/viewer/album-viewer.css">
     <link rel="stylesheet" href="static-style/responsive.css">
-    <script defer src="shared/utils.js"></script>
-    <script defer src="data-manage/data-provider.js"></script>
-    <script defer src="dynamic-style/style-injector.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/photos/admin/photos-controller.js"></script>
+    <script type="module" src="shared/utils.module.js"></script>
+    <script type="module" src="shared/style-injector.module.js"></script>
+    <script type="module" src="shared/layout.module.js"></script>
+    <!-- [MIGRATED] 统一使用 theme.module.js -->
+    <script type="module">
+        import { initTheme } from './shared/theme.module.js';
+        initTheme();
+    </script>
     <script>
         window.addEventListener('DOMContentLoaded', () => {
             MAERS.StyleInjector.inject();
         });
     </script>
-    <script src="shared/toast.js"></script>
-    <link rel="stylesheet" href="custom/album/admin/admin-album.css">
+    <script type="module" src="shared/toast.module.js"></script>
+    <link rel="stylesheet" href="custom/album/admin/album-admin.css">
+    <link rel="stylesheet" href="static-style/admin-modal.css">
     <link rel="stylesheet" href="static-style/splash.css">
-    <script>
-        // Splash Screen Control
-        window.addEventListener('load', () => {
-            const splash = document.getElementById('splash-screen');
-            if (splash) {
-                setTimeout(() => {
-                    splash.style.opacity = '0';
-                    setTimeout(() => splash.remove(), 500);
-                }, 200);
-            }
-        });
-    </script>
 </head>
 
 <body>
-    <!-- 🔥 Splash Screen -->
-    <div id="splash-screen">
-        <div class="splash-logo">🛠️</div>
-    </div>
+
     <div class="container">
         <div class="main-card">
             <div class="page-header-bar">
-                <a href="admin.html" class="back-btn">← Back to Console</a>
-                <div class="header-title">🛠️ Gallery Manager</div>
+                <a href="admin-portal.html" class="back-btn">← Back to Console</a>
+                <div class="header-title"><img src="ui/album-icon.svg" alt="Album"
+                        style="height: 1.25em; width: auto; vertical-align: middle;"> My Gallery</div>
                 <div class="header-actions">
                     <button id="save-order-btn" title="保存修改">💾</button>
                 </div>
@@ -64,12 +54,8 @@
             </div>
         </div>
     </div>
-    <script defer src="data-manage/api-client.js"></script>
-    <script src="custom/album/viewer/album-config.js"></script>
-    <script defer src="custom/album/admin/album-admin.js"></script>
-    <script>
-        // Inline script removed to custom/album/album-admin.js
-    </script>
+
+    <script type="module" src="custom/album/admin-main.module.js"></script>
 </body>
 
 </html>

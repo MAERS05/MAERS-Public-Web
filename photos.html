@@ -1,12 +1,12 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-    <title>Photos - MAERS's Space</title>
+    <title>MAERS Space - Photos</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
@@ -15,16 +15,16 @@
     <link rel="stylesheet" href="static-style/theme.css">
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-base.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css">
     <link rel="stylesheet" href="custom/photos/viewer/photos-viewer.css">
+    <link rel="stylesheet" href="custom/photos/viewer/photos-header-btn.css">
     <link rel="stylesheet" href="static-style/responsive.css">
-    <script defer src="data-manage/api-client.js"></script>
-    <script defer src="data-manage/data-provider.js"></script>
-    <script src="data/photos-data.js"></script>
-    <script src="custom/album/viewer/album-config.js"></script>
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
-    <script defer src="custom/photos/admin/photos-controller.js"></script>
-    <script defer src="custom/photos/viewer/photos-view.js"></script>
+
+    <!-- 数据现在通过 ES6 模块异步加载 (data/photos-data.json) -->
+
+
+    <script type="module" src="custom/photos/main.module.js"></script>
 
     <style>
         /* Ensure header title is white in dark mode */
@@ -68,6 +68,7 @@
             transform: scale(0.95);
         }
 
+        /* 上传按钮 (Label实现) - Theme handled by header-action-btn class */
         .upload-label {
             display: flex;
             align-items: center;
@@ -75,18 +76,14 @@
             height: 40px;
             padding: 0 20px;
             border-radius: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--pill-border);
             cursor: pointer !important;
             transition: 0.3s;
-            color: var(--text-main);
             font-weight: bold;
             white-space: nowrap;
             user-select: none;
         }
 
         .upload-label:hover {
-            background: rgba(255, 255, 255, 0.25);
             transform: translateY(-2px);
         }
 
@@ -98,30 +95,12 @@
             display: none;
         }
 
-        .photo-grid::-webkit-scrollbar {
-            width: 8px !important;
-            background-color: transparent !important;
-        }
 
-        .photo-grid::-webkit-scrollbar-track {
-            background-color: transparent !important;
-            margin: 0 !important;
-            border: none !important;
-        }
 
-        .photo-grid::-webkit-scrollbar-thumb {
-            background-color: rgba(255, 255, 255, 0.2) !important;
-            border-radius: 4px !important;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .photo-grid::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(255, 255, 255, 0.5) !important;
-        }
-
-        .photo-grid {
-            scrollbar-width: thin;
-            scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        /* [Fix] Make theme switch visible on white card background */
+        html.light-mode .theme-switch-label {
+            background-color: rgba(0, 0, 0, 0.1) !important;
+            border-color: rgba(0, 0, 0, 0.15) !important;
         }
     </style>
 </head>
@@ -133,13 +112,29 @@
                 <a href="album.html" class="back-btn">← Back</a>
                 <div class="header-title" id="page-title">Loading...</div>
                 <div class="header-actions">
+                    <button id="tag-toggle-btn" class="header-action-btn pill-btn" title="筛选标签">
+                        🏷️ Tags
+                    </button>
+                    <div class="sort-dropdown-container">
+                        <button id="sort-trigger-btn" class="header-action-btn pill-btn" title="排序方式">
+                            <span id="sort-label">默认</span>
+                            <span class="arrow-icon">▾</span>
+                        </button>
+                        <div class="sort-dropdown-menu" id="sort-menu">
+                            <div class="sort-item active" data-mode="0">默认</div>
+                            <div class="sort-item" data-mode="1">时间顺序 (新→旧)</div>
+                            <div class="sort-item" data-mode="2">时间倒序 (旧→新)</div>
+                        </div>
+                    </div>
                     <button id="save-order-btn" style="display:none;" title="保存排序">💾</button>
-                    <label class="upload-label" id="upload-btn" style="display:none;" for="file-input">
+                    <label class="upload-label header-action-btn" id="upload-btn" style="display:none;"
+                        for="file-input">
                         ＋ 上传图片
                     </label>
                     <input type="file" id="file-input" accept="image/*" multiple>
                 </div>
             </div>
+            <div class="breadcrumb-bar" id="breadcrumb" style="padding: 10px 20px;"></div>
             <div class="photo-grid" id="gallery-container"></div>
         </div>
     </div>
@@ -149,6 +144,22 @@
         <button class="lb-nav lb-next">&#10095;</button>
         <img id="lightbox-img" src="" alt="Preview">
         <div class="hd-switch-wrapper" id="hd-switch"><span class="hd-text">HD</span></div>
+    </div>
+
+    <!-- CMS Tag Drawer (Copied from Admin/Space) -->
+    <div id="drawer-overlay" class="drawer-overlay"></div>
+    <div id="tag-drawer" class="tag-drawer">
+        <div class="drawer-header">
+            <div class="drawer-title-row">
+                <h3>Tags</h3>
+                <button class="btn-close-drawer">×</button>
+            </div>
+            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags">
+        </div>
+        <div class="drawer-body" id="drawer-list"></div>
+        <div class="drawer-footer">
+            <button class="btn-clear-tags">Clear All</button>
+        </div>
     </div>
 </body>
 

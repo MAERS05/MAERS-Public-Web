@@ -1,2 +1,50 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# ===================================================
+# .gitattributes - Git 文件属性配置
+# 防止 Git 修改二进制和脚本文件的内容
+# ===================================================
+
+# ----- 可执行二进制文件 (完全不修改) -----
+*.exe binary
+*.dll binary
+*.msi binary
+*.pdb binary
+
+# ----- Windows 脚本文件 (强制 CRLF 换行符) -----
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# ----- 压缩包 / 打包文件 (二进制) -----
+*.zip binary
+*.rar binary
+*.7z binary
+*.tar binary
+*.gz binary
+
+# ----- 图片 / 媒体文件 (二进制) -----
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.mp4 binary
+*.mp3 binary
+
+# ----- 字体文件 (二进制) -----
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+
+# ----- 文本文件 (统一使用 LF，跨平台一致) -----
+*.js text eol=lf
+*.ts text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf

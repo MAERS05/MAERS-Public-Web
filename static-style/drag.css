@@ -1,0 +1,73 @@
+/* 
+ * Drag & Pan Interaction Styles 
+ * Automatically injected by theme.module.js
+ */
+
+/* 1. 缩放模式下的基础容器修正 */
+html.shrink-view body {
+    overflow: hidden !important;
+    /* 锁定全页滚动，防止拖拽背景时页面乱跑 */
+}
+
+/* 2. 启用位移坐标支持 (覆盖 style.css 中的基础 transform) */
+html.shrink-view .main-card,
+html.shrink-view .home-container {
+    /* 基础缩放 + 动态位移 */
+    transform: scale(0.65) translate(var(--zoom-pan-x, 0px), var(--zoom-pan-y, 0px));
+
+    /* 优化拖拽性能，独立层渲染 */
+    will-change: transform;
+
+    /* 即使在缩放模式下，也允许内部内容滚动 */
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 80vh;
+    /* 限制高度以触发滚动条 */
+    /* 隐藏滚动条让UI更干净 */
+    scrollbar-width: none;
+
+    /* 核心修复：禁止在缩放视图下选中文本，防止拖拽产生蓝框和菜单 */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    /* 禁止原生拖拽图片 */
+    -webkit-user-drag: none;
+}
+
+/* 3. 拖拽时的高性能状态 (核心) */
+/* 当 JS 加上 .is-dragging 类时：禁用过渡动画，实现 0 延迟跟手 */
+html.shrink-view .main-card.is-dragging,
+html.shrink-view .home-container.is-dragging {
+    transition: none !important;
+    cursor: grabbing;
+}
+
+/* 4. 长按触发的蓝色涟漪动画 */
+.long-press-ripple {
+    position: fixed;
+    border-radius: 50%;
+    /* 蓝色半透明涟漪 */
+    background: rgba(0, 120, 255, 0.6);
+    box-shadow: 0 0 20px rgba(0, 120, 255, 0.4);
+    pointer-events: none;
+    /* 确保不阻挡鼠标事件 */
+    z-index: 99999;
+
+    /* 0.6秒扩散动画，配合长按时长 */
+    animation: ripple-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes ripple-pop {
+    0% {
+        transform: scale(0);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(3);
+        /* 放大3倍后消失 */
+        opacity: 0;
+    }
+}

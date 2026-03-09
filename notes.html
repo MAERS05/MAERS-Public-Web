@@ -1,11 +1,11 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
+﻿<!DOCTYPE html>
+<html lang="zh-CN" class="fixed-layout-page">
 
 <head>
-    <script src="dynamic-style/theme-init.js"></script>
+    <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Study Notes</title>
+    <title>MAERS Space - Notes</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
@@ -15,7 +15,8 @@
     <link rel="stylesheet" href="static-style/components.css">
     <link rel="stylesheet" href="static-style/style.css">
     <link rel="stylesheet" href="plugins/vditor-assets/index.css" />
-    <link rel="stylesheet" href="custom/cms/viewer/cms-common.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-base.css">
+    <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css">
     <link rel="stylesheet" href="custom/notes/viewer/notes.css" /> <!-- Custom Visitor Style -->
 </head>
 
@@ -26,14 +27,15 @@
             <div class="explorer-header">
                 <div class="header-left">
                     <a href="index.html" class="back-btn">← Back</a>
-                    <div class="header-title">✒️ Study Notes</div>
+                    <div class="header-title"><img src="ui/notes-icon.svg" alt="Notes"
+                            style="height: 1.25em; width: auto; vertical-align: middle;"> Study Notes</div>
                 </div>
                 <div class="header-right">
                     <div class="header-tools-row">
                         <div class="search-box">
                             <input type="search" class="search-input" id="search-input" placeholder="名称,Name">
                         </div>
-                        <button class="tag-toggle-btn" onclick="MAERS.CMS.View.toggleTagDrawer()">
+                        <button class="tag-toggle-btn">
                             🏷️ Tags
                         </button>
                     </div>
@@ -52,45 +54,39 @@
     <div id="immersive-reader" class="immersive-layer">
         <div class="reader-toolbar">
             <div class="reader-meta">
-                <span class="reader-icon">📝</span>
                 <span class="reader-title" id="reader-title">Untitled</span>
             </div>
             <div class="reader-actions">
-                <button class="close-btn" onclick="MAERS.CMS.Editor.close()">✕</button>
+                <button class="close-btn">✕</button>
             </div>
         </div>
         <div class="reader-scroll-area">
             <div class="markdown-body paper-sheet" id="reader-content"></div>
-            <div class="reader-footer">— End of Note —</div>
         </div>
     </div>
-    <div id="drawer-overlay" class="drawer-overlay" onclick="MAERS.CMS.View.toggleTagDrawer()"></div>
+    <div id="drawer-overlay" class="drawer-overlay"></div>
     <div id="tag-drawer" class="tag-drawer">
         <div class="drawer-header drawer-header-custom">
             <div class="drawer-title-row">
-                <h3>Filter by Tags</h3>
-                <button class="btn-close-drawer" onclick="MAERS.CMS.View.toggleTagDrawer()">×</button>
+                <h3>Tags</h3>
+                <button class="btn-close-drawer">×</button>
             </div>
-            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags"
-                oninput="MAERS.CMS.View.refreshDrawerList()">
+            <input type="search" id="tag-drawer-search" class="drawer-search-input" placeholder="标签,Tags">
         </div>
         <div class="drawer-body" id="drawer-list"></div>
         <div class="drawer-footer">
-            <button class="btn-clear-tags" onclick="MAERS.CMS.View.clearTagFilter()">Clear All</button>
+            <button class="btn-clear-tags">Clear All</button>
         </div>
     </div>
-    <script src="data/notes-tree.js"></script>
+    <!-- 数据现在通过 ES6 模块异步加载 (data/notes-tree.json) -->
     <script defer src="plugins/marked.min.js"></script>
-    <!-- Shared Utilities -->
-    <script defer src="shared/utils.js"></script>
-    <script defer src="dynamic-style/module-config.js"></script>
-    <!-- Core Scripts -->
-    <script defer src="dynamic-style/layout.js"></script>
-    <script defer src="dynamic-style/script.js"></script>
 
-    <script defer src="custom/cms/admin/cms-controller.js"></script>
-    <script defer src="custom/cms/viewer/cms-view.js"></script>
-    <script defer src="custom/cms/admin/cms-editor.js"></script>
+    <!-- Vditor for Editor -->
+    <script src="https://unpkg.com/vditor@3.8.15/dist/index.min.js"></script>
+
+    <!-- CMS ES6 Module Entry Point -->
+    <script type="module" src="custom/cms/main.module.js"></script>
+
 </body>
 
 </html>

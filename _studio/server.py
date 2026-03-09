@@ -83,5 +83,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     socketserver.TCPServer.allow_reuse_address = True
     print(f"🚀 服务器已启动: http://localhost:{PORT}")
+    
+    # Init Data Sync
+    try:
+        print("🔄 [Server] Syncing Gallery Data...")
+        routes.photos.sync_gallery_js()
+    except Exception as e:
+        print(f"⚠️ [Server] Init Sync Failed: {e}")
+        
     try: httpd = socketserver.TCPServer(("", PORT), Handler); httpd.serve_forever()
-    except: pass
+    except KeyboardInterrupt: pass

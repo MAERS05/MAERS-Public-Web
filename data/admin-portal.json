@@ -1,0 +1,48 @@
+[
+  {
+    "title": "图片管理",
+    "icon": "ui/album-icon.svg",
+    "url": "admin-album.html?type=photos",
+    "style": "custom/album/admin/album-admin.css"
+  },
+  {
+    "title": "音视管理",
+    "icon": "ui/music-icon.svg",
+    "url": "admin-music.html",
+    "style": "custom/music/admin/music-admin.css"
+  },
+  {
+    "title": "笔记管理",
+    "icon": "ui/notes-icon.svg",
+    "url": "admin-cms.html?module=notes",
+    "style": "custom/notes/viewer/notes.css"
+  },
+  {
+    "title": "文学管理",
+    "icon": "ui/literature-icon.svg",
+    "url": "admin-cms.html?module=literature",
+    "style": "custom/literature/viewer/literature.css"
+  },
+  {
+    "title": "记录管理",
+    "icon": "ui/record-icon.svg",
+    "url": "admin-cms.html?module=record",
+    "style": "custom/record/viewer/record.css"
+  },
+  {
+    "title": "游戏管理",
+    "icon": "ui/games-icon.svg",
+    "url": "admin-cms.html?module=games",
+    "style": "custom/games/viewer/games.css"
+  },
+  {
+    "title": "空间管理",
+    "icon": "ui/space-icon.svg",
+    "url": "admin-space.html"
+  },
+  {
+    "title": "首页管理",
+    "icon": "ui/index.svg",
+    "url": "admin-index.html"
+  }
+]

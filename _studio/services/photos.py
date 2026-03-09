@@ -20,11 +20,12 @@ THUMB_DIR      = 'photos/thumbnails'
 PREVIEW_DIR    = 'photos/previews'
 
 # 静态JS文件路径
-GALLERY_JSON_FILE = os.path.join(DATA_DIR, 'photos-data.json') # 保留引用仅用于兼容性或清理
-GALLERY_JS_FILE   = os.path.join(DATA_DIR, 'photos-data.js')
+
+# 静态JS文件路径
+GALLERY_JSON_FILE = os.path.join(DATA_DIR, 'photos-data.json')
 
 try:
-    from PIL import Image, ImageOps
+    from PIL import Image, ImageOps 
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
@@ -35,10 +36,20 @@ except ImportError:
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    
+    # Check for tags column migration
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(photos)")
+    columns = [r['name'] for r in cursor.fetchall()]
+    if 'tags' not in columns:
+        print("  [ PHOTOS ] ⚠️  Schema Migration: Adding 'tags' column...")
+        cursor.execute("ALTER TABLE photos ADD COLUMN tags TEXT")
+        conn.commit()
+    
     return conn
 
 def sync_gallery_js():
-    """从数据库生成静态 JS 数据供前端极其快速地读取"""
+    """从数据库生成静态 JSON 数据供前端读取"""
     conn = get_db()
     cursor = conn.cursor()
     
@@ -53,32 +64,55 @@ def sync_gallery_js():
         if cat not in data: data[cat] = []
         
         item = {
+            "id": row['id'],
             "path": row['path'],
             "name": row['name'],
             "thumb": row['thumb'],
             "preview": row['preview'],
-            "hash": row['hash']
+            "hash": row['hash'],
+            "tags": json.loads(row['tags']) if row['tags'] else []
         }
         data[cat].append(item)
     
-    # 写入文件
+    # 写入 JSON 文件
     try:
-        js_content = f"window.galleryData = {json.dumps(data, ensure_ascii=False, indent=2)};\n"
-        with open(GALLERY_JS_FILE, 'w', encoding='utf-8') as f:
-            f.write(js_content)
-        print(f"✅ [Photos] Gallery JS 同步成功")
+        with open(GALLERY_JSON_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        print(f"✅ [Photos] Gallery JSON 同步成功: {os.path.basename(GALLERY_JSON_FILE)}")
     except Exception as e:
-        print(f"❌ [Photos] Gallery JS 同步失败: {e}")
+        print(f"❌ [Photos] Gallery JSON 同步失败: {e}")
 
 # ================= 业务逻辑 =================
 
 def to_web_path(path):
     return path.replace('\\', '/')
 
+def get_exif_datetime(file_data):
+    """从图片二进制数据中读取 EXIF 拍摄时间，返回 (time_struct, timestamp) 或 None"""
+    if not HAS_PIL:
+        return None
+    try:
+        import io
+        img = Image.open(io.BytesIO(file_data))
+        exif_data = img._getexif()
+        if not exif_data:
+            return None
+        # Tag 36867 = DateTimeOriginal, 36868 = DateTimeDigitized, 306 = DateTime
+        for tag_id in (36867, 36868, 306):
+            raw = exif_data.get(tag_id)
+            if raw:
+                t_struct = time.strptime(raw, '%Y:%m:%d %H:%M:%S')
+                timestamp = time.mktime(t_struct)
+                return (t_struct, timestamp)
+    except Exception as e:
+        print(f"  [ PHOTOS ] ⚠️  EXIF 读取失败，使用当前时间: {e}")
+    return None
+
 def handle_upload(query, file_data):
     """处理图片上传请求"""
     category = os.path.basename(query.get('category', ['default'])[0])
-    raw_name_input = query.get('name', ['temp.jpg'])[0]
+    import urllib.parse
+    raw_name_input = urllib.parse.unquote(query.get('name', ['temp.jpg'])[0])
     ext = os.path.splitext(raw_name_input)[1].lower()
     if not ext: ext = '.jpg'
     
@@ -100,7 +134,7 @@ def handle_upload(query, file_data):
         full_existing_path = os.path.join(PROJECT_ROOT, existing_row['path'])
         
         if os.path.exists(full_existing_path):
-            print(f"♻️ [Photos] 检测到重复图片 ({file_hash})，跳过上传，提升排序")
+            print(f"  [ PHOTOS ] ♻️  检测到重复图片 ({file_hash}) | Duplicate found, skipping upload.")
             # 移到第一位 (更新 sort_order)
             # 获取当前最小 order
             cursor.execute("SELECT MIN(sort_order) FROM photos WHERE category=?", (category,))
@@ -112,16 +146,34 @@ def handle_upload(query, file_data):
             conn.close()
             
             sync_gallery_js()
-            return {"status": "success", "msg": "duplicate_found", "path": existing_row['path']}
+            
+            return_path = existing_row['path']
+            # 如果要求使用 avif，但数据库原图不是 avif，则直接返回早就作为 preview 生成并落地的 avif 路径。
+            if need_convert and not return_path.endswith('.avif'):
+                if existing_row['preview'] and existing_row['preview'].endswith('.avif'):
+                    return_path = existing_row['preview']
+                    
+            return {"status": "success", "msg": "duplicate_found", "path": return_path}
         else:
-            print(f"⚠️ [Photos] 数据库存在记录但文件丢失，执行修复: {existing_row['path']}")
+            print(f"  [ PHOTOS ] ⚠️  数据库记录存在但物理文件丢失 | DB record exists but file missing, repairing: {existing_row['path']}")
             safe_name = existing_row['name']
             is_restore = True
 
     # 2. 生成新文件 (如果不是修复模式)
     if not is_restore:
-        t_struct = time.localtime()
-        base_time_str = time.strftime('%Y%m%d_%H%M%S', t_struct)
+        print(f"  [ PHOTOS ] 📤 上传图片中 | Uploading to category: {category}")
+        
+        # 优先使用 EXIF 拍摄时间，降级使用当前系统时间
+        exif_result = get_exif_datetime(file_data)
+        if exif_result:
+            t_struct, exif_timestamp = exif_result
+            base_time_str = time.strftime('%Y%m%d_%H%M%S', t_struct)
+            print(f"  [ PHOTOS ] 📅 使用 EXIF 拍摄时间: {base_time_str}")
+        else:
+            t_struct = time.localtime()
+            exif_timestamp = None
+            base_time_str = time.strftime('%Y%m%d_%H%M%S', t_struct)
+            print(f"  [ PHOTOS ] 📅 EXIF 不可用，使用当前时间: {base_time_str}")
         
         counter = 1
         while True:
@@ -209,7 +261,8 @@ def handle_upload(query, file_data):
         cursor.execute("UPDATE photos SET sort_order=? WHERE id=?", (new_order, existing_row['id']))
     else:
         new_id = str(uuid.uuid4())
-        created_at = time.time()
+        # 优先用 EXIF 时间作为 created_at，降级用当前时间
+        created_at = exif_timestamp if exif_timestamp else time.time()
         cursor.execute('''
             INSERT INTO photos (id, category, name, path, thumb, preview, hash, created_at, sort_order)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -219,9 +272,11 @@ def handle_upload(query, file_data):
     conn.close()
     
     sync_gallery_js()
+    print(f"  [ PHOTOS ] ✅ 处理完成 | Processed: {safe_name}")
 
     return {
         "status": "success",
+        "id": existing_row['id'] if is_restore else new_id,
         "path": rel_path,
         "name": safe_name,
         "thumb": rel_thumb,
@@ -231,7 +286,7 @@ def handle_upload(query, file_data):
 def handle_delete(body):
     """处理删除请求"""
     target_path = body.get('path')
-    print(f"🗑️ [Photos] 请求删除: {target_path}")
+    print(f"  [ PHOTOS ] 🗑️  请求删除文件 | Request delete: {target_path}")
     
     conn = get_db()
     cursor = conn.cursor()
@@ -241,7 +296,7 @@ def handle_delete(body):
     row = cursor.fetchone()
     
     if not row:
-        print("   ❌ 数据库中未找到该记录")
+        print(f"  [ PHOTOS ] ❌ 数据库未找到记录 | Record not found in DB")
         conn.close()
         return {}
 
@@ -253,7 +308,6 @@ def handle_delete(body):
         # 删除原图
         if os.path.exists(full_path):
             os.remove(full_path)
-            print(f"   ✅ 原图已删: {full_path}")
             
         # 删除关联图
         # 这里逻辑稍微优化下，直接从 DB 拿 thumb/preview 路径更稳
@@ -263,10 +317,10 @@ def handle_delete(body):
                 derived_full = os.path.abspath(os.path.join(PROJECT_ROOT, derived_sys))
                 if os.path.exists(derived_full):
                     os.remove(derived_full)
-                    print(f"   ✅ 关联已删: {derived_full}")
+        print(f"  [ PHOTOS ] 🔥 物理文件已粉碎 | Physical files purged: {target_path}")
                     
     except Exception as e:
-        print(f"   ❌ 删除文件出错: {e}")
+        print(f"  [ PHOTOS ] ❌ 删除出错 | Delete Error: {e}")
         
     # 3. 数据库删除
     cursor.execute("DELETE FROM photos WHERE id=?", (row['id'],))
@@ -280,6 +334,8 @@ def handle_reorder(query, body):
     """处理排序请求"""
     cat_id = query.get('category', [None])[0]
     if not cat_id: return {}
+    
+    print(f"  [ PHOTOS ] ↕️  图库重排序 | Reordering gallery: {cat_id}")
     
     # body: [ {path: '...'}, ... ]
     # 这意味着前端给的是一个新的顺序列表
@@ -297,12 +353,35 @@ def handle_reorder(query, body):
             cursor.execute("UPDATE photos SET sort_order=? WHERE path=? AND category=?", (index, path, cat_id))
         
         conn.commit()
-        print(f"✅ [Photos] 重排序完成 ({len(body)} items)")
+        print(f"  [ PHOTOS ] ✅ 排序完成 | Reorder complete ({len(body)} items)")
         
     except Exception as e:
-        print(f"❌ [Photos] 重排序失败: {e}")
+        print(f"  [ PHOTOS ] ❌ 排序错误 | Reorder Error: {e}")
         conn.rollback()
         
     conn.close()
     sync_gallery_js()
     return {}
+
+def update_tags(photo_id, tags):
+    """Update tags for a specific photo"""
+    if not photo_id:
+        raise ValueError("Photo ID is required")
+        
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Verify existence
+    cursor.execute("SELECT id FROM photos WHERE id=?", (photo_id,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError(f"Photo not found: {photo_id}")
+        
+    tags_json = json.dumps(tags, ensure_ascii=False)
+    cursor.execute("UPDATE photos SET tags=? WHERE id=?", (tags_json, photo_id))
+    conn.commit()
+    conn.close()
+    
+    print(f"  [ PHOTOS ] 🏷️  Tags Updated: {photo_id} -> {tags}")
+    sync_gallery_js()
+    return True
