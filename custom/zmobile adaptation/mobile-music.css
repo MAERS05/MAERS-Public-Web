@@ -204,21 +204,19 @@ body .playlist-container {
         height: auto !important;
         min-height: 50px !important;
         padding: 5px 8px !important;
-        position: relative !important;
-        /* 为绝对定位提供参考 */
     }
 
     body .center-title {
         position: static !important;
         transform: none !important;
         font-size: 1.15rem !important;
-        flex: 1 !important;
+        flex: 1 1 auto !important;
         text-align: center !important;
         white-space: nowrap !important;
-        overflow: visible !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
         padding: 0 8px !important;
         min-width: 0 !important;
-        z-index: 5 !important;
     }
 
     body .back-btn {
@@ -232,16 +230,5 @@ body .playlist-container {
         font-size: 1.5rem !important;
         flex-shrink: 0 !important;
         z-index: 10 !important;
-    }
-
-    /* 📱 极窄屏（500px以下）下移耳机图标到 35px 位置 */
-    @media (max-width: 500px) {
-        body .right-icon {
-            position: absolute !important;
-            top: 35px !important;
-            right: 10px !important;
-            font-size: 1.2rem !important;
-            z-index: 1 !important;
-        }
     }
 }

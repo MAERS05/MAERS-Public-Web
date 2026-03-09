@@ -23,8 +23,7 @@ JS_SYNC_MAP = {
     'notes': 'data/notes-tree.json',
     'literature': 'data/literature-tree.json',
     'record': 'data/record-tree.json',
-    'games': 'data/games-tree.json',
-    'videos': 'data/videos-tree.json'
+    'games': 'data/games-tree.json'
 }
 
 # ================= 数据库操作 / 基础设施 =================

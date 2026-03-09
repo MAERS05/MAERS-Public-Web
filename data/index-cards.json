@@ -9,10 +9,10 @@
   },
   {
     "id": "nav-music",
-    "bgText": "REEL",
+    "bgText": "FLOW",
     "icon": "ui/music-icon.svg",
-    "title": "M&V",
-    "description": "Personal playlist and cinematic archives.",
+    "title": "Music",
+    "description": "Personal playlist and rhythm. Listen to the vibe.",
     "url": "music.html"
   },
   {

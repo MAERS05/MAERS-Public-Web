@@ -217,24 +217,17 @@
 
 .item-tags {
   display: flex;
-  gap: 3px;
+  gap: 5px;
   flex-wrap: wrap;
   margin-top: 12px;
-  width: 100%;
-  box-sizing: border-box;
 }
 
 .mini-tag {
   font-size: 0.7rem;
-  padding: 3px 4px;
+  padding: 3px 8px;
   border-radius: 6px;
   cursor: pointer;
   display: inline-block;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  box-sizing: border-box;
   transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   -webkit-user-select: none;
   user-select: none;
@@ -468,8 +461,7 @@
   transition: all 0.2s;
   font-size: 10px;
   font-weight: bold;
-  color: #1a1a1c;
-  /* Text color when picked */
+  color: #1a1a1c; /* Text color when picked */
 }
 
 .light-mode .tag-select-dot {

@@ -107,21 +107,6 @@
     gap: 10px;
 }
 
-.music-mode-btn {
-    cursor: pointer;
-    font-weight: 800;
-    transition: opacity 0.2s ease;
-}
-
-.music-mode-btn:hover {
-    opacity: 0.7;
-    text-decoration: underline;
-}
-
-.music-mode-btn.active {
-    text-decoration: underline;
-}
-
 @keyframes music-beat {
     0% {
         transform: scale(1);
