@@ -57,17 +57,9 @@ function getCoverUrl(node, moduleName) {
     // Games Module: Map to previews/gamecovers/*.avif
     if (moduleName === 'games') {
         const pathParts = node.coverImage.split('/');
-        const filename = pathParts[pathParts.length - 1];
-        const basename = filename.replace(/\.[^/.]+$/, "");
+        const filename = pathParts[pathParts.length - 1]; // 20260211_143001_01.jpg
+        const basename = filename.replace(/\.[^/.]+$/, ""); // 20260211_143001_01
         return `photos/previews/gamecovers/${basename}.avif`;
-    }
-
-    // Videos Module: Map to previews/videocovers/*.avif
-    if (moduleName === 'videos') {
-        const pathParts = node.coverImage.split('/');
-        const filename = pathParts[pathParts.length - 1];
-        const basename = filename.replace(/\.[^/.]+$/, "");
-        return `photos/previews/videocovers/${basename}.avif`;
     }
 
     // Literature Module: legacy logic (photos/previews/literaturecovers/....avif)
@@ -106,7 +98,7 @@ export function createGridItem(node, State, index) {
     if (State.IS_ADMIN && Admin && AdminButtonHelper) {
         const isDeleted = manager ? manager.isDeleted(index) : false;
         const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
-        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (currentMod === 'videos') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games')) || (window.location.search.includes('module=videos'));
+        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games'));
         const filtering = isFiltering();
 
         const wrapper = document.createElement('div');
@@ -153,7 +145,7 @@ export function createGridItem(node, State, index) {
 
     // Cover/Icon
     const currentModule = Controller?.CONFIG?.CURRENT_MODULE;
-    const showCover = currentModule === 'literature' || currentModule === 'games' || currentModule === 'videos';
+    const showCover = currentModule === 'literature' || currentModule === 'games';
 
     if (showCover) {
         const coverUrl = getCoverUrl(node, currentModule);
@@ -291,7 +283,7 @@ function patchGridItem(el, node, State, index) {
         const oldWrapper = el.querySelector('.maers-admin-action-group');
         const isDeleted = manager ? manager.isDeleted(index) : false;
         const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
-        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (currentMod === 'videos') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games')) || (window.location.search.includes('module=videos'));
+        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games'));
         const filtering = isFiltering();
 
         const wrapper = document.createElement('div');
@@ -338,7 +330,7 @@ function patchGridItem(el, node, State, index) {
 
     // 4. Patch Cover Image — PRESERVE existing <img> if URL unchanged
     const currentModule = Controller?.CONFIG?.CURRENT_MODULE;
-    const showCover = currentModule === 'literature' || currentModule === 'games' || currentModule === 'videos';
+    const showCover = currentModule === 'literature' || currentModule === 'games';
 
     if (showCover) {
         const newCoverUrl = getCoverUrl(node, currentModule);

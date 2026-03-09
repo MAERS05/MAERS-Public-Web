@@ -162,9 +162,7 @@ html.light-mode .header-title img[src*="record-icon"] {
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: 3px;
-    width: 100%;
-    box-sizing: border-box;
+    gap: 8px;
 }
 
 .grid-item .mini-tag {
@@ -173,15 +171,10 @@ html.light-mode .header-title img[src*="record-icon"] {
 
     font-size: 0.75rem;
     font-weight: bold;
-    padding: 4px 4px;
+    padding: 4px 8px;
     border-radius: 4px;
     border: none;
     box-shadow: none;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    box-sizing: border-box;
     transition: all 0.2s;
 }
 

@@ -6,16 +6,10 @@
     "style": "custom/album/admin/album-admin.css"
   },
   {
-    "title": "音乐管理",
+    "title": "音视管理",
     "icon": "ui/music-icon.svg",
     "url": "admin-music.html",
     "style": "custom/music/admin/music-admin.css"
-  },
-  {
-    "title": "影视管理",
-    "icon": "ui/music-icon.svg",
-    "url": "admin-cms.html?module=videos",
-    "style": "custom/videos/viewer/videos.css"
   },
   {
     "title": "笔记管理",
