@@ -458,15 +458,19 @@ function openEditModal(node, index, isNew = false) {
                 // Update app state first
                 syncToAppState();
 
-                // Call the main save function directly
-                await handleSave();
+                // Save to server without reloading — the node is already mutated in memory,
+                // so we only need to persist and re-render locally (no JSON fetch needed).
+                await saveToServer();
 
-                // If we reach here, save was successful
+                // Re-render with the already-updated in-memory data
+                render();
+
+                // Sync manager snapshot so the save bar knows there are no dirty changes
+                if (manager) manager.setList(currentLevelNodes);
+
                 if (window.MAERS?.Toast) {
                     window.MAERS.Toast.success(isNew ? "网站收藏成功" : "保存成功!");
                 }
-
-                if (manager) manager.setList(currentLevelNodes);
 
                 return true; // Close modal
             } catch (err) {
@@ -500,7 +504,11 @@ function handleAdd() {
     openEditModal(newNode, null, true);
 }
 
-async function handleSave() {
+/**
+ * Only POST the current treeData to the server (prune deleted nodes first).
+ * Does NOT reload from JSON or re-render — caller is responsible for that.
+ */
+async function saveToServer() {
     function pruneDeleted(nodes) {
         if (!nodes) return [];
         return nodes.filter(n => !n._deleted).map(n => {
@@ -511,27 +519,34 @@ async function handleSave() {
         });
     }
 
+    const cleanRoot = pruneDeleted(treeData.root);
+    const dataToSave = { root: cleanRoot };
+
+    const res = await fetch('/api/space/save_tree', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSave)
+    });
+
+    if (!res.ok) throw new Error(res.status);
+    return true;
+}
+
+/**
+ * Full save used by the floating save bar:
+ * writes to server, then reloads JSON data and re-renders.
+ * Needed when items may have been deleted or reordered.
+ */
+async function handleSave() {
     try {
-        // Create a clean copy of the tree data
-        const cleanRoot = pruneDeleted(treeData.root);
-        const dataToSave = { root: cleanRoot };
+        await saveToServer();
 
-        const res = await fetch('/api/space/save_tree', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(dataToSave)
-        });
+        if (manager) manager.reset();
 
-        if (res.ok) {
-            if (manager) manager.reset();
-
-            // Reload data
-            await loadData();
-            render(); // Force UI update with new data
-            return true;
-        } else {
-            throw new Error(res.status);
-        }
+        // Reload data to reflect server state (deletions, reorders, etc.)
+        await loadData();
+        render();
+        return true;
     } catch (e) {
         console.error(e);
         if (window.MAERS?.Toast) window.MAERS.Toast.error("Save failed");
