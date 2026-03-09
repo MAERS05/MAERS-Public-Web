@@ -8,11 +8,11 @@ def wipe_all_data():
     print("========================================================")
     print("   ⚠️  极度危险：MAERS 全量数据清空工具 ⚠️")
     print("========================================================")
-    print(" 1. 清空 cms.db (笔记、文献、随记、作品)")
+    print(" 1. 清空 cms.db (笔记、文献、随记、作品、视频)")
     print(" 2. 清空 gallery.db (相册数据库)")
-    print(" 3. 重置所有 data/*.json 静态文件 (包括 Space 收藏)")
+    print(" 3. 重置所有 data/*.json 静态文件 (包括 Space 收藏、视频)")
     print(" 4. 删除 data/ 各模块下的所有 .md 正文文件")
-    print(" 5. 删除 photos/ 下的所有物理图片 (原图、缩略图、预览图)")
+    print(" 5. 删除 photos/ 下的所有物理图片 (原图、缩略图、预览图、封面图)")
     print("========================================================")
     
     confirm = input("确定要清空吗？此操作不可撤销！请输入 'YES' 确认: ")
@@ -51,6 +51,7 @@ def wipe_all_data():
         (os.path.join(config.DATA_DIR, 'literature-tree.json'), {"root": []}, 'json'),
         (os.path.join(config.DATA_DIR, 'record-tree.json'), {"root": []}, 'json'),
         (os.path.join(config.DATA_DIR, 'games-tree.json'), {"root": []}, 'json'), # Added games
+        (os.path.join(config.DATA_DIR, 'videos-tree.json'), {"root": []}, 'json'), # Added videos
         (os.path.join(config.DATA_DIR, 'photos-data.json'), {}, 'json'),
         (config.MUSIC_DATA, [], 'json'),
         (os.path.join(config.DATA_DIR, 'search-index.json'), [], 'json'),

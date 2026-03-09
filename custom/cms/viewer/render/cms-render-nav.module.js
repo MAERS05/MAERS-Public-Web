@@ -252,9 +252,17 @@ export function renderPageTitle() {
             literature: '<img src="ui/literature-icon.svg" style="height: 1.25em; vertical-align: middle;">',
             record: '<img src="ui/record-icon.svg" style="height: 1.25em; vertical-align: middle;">',
             album: '<img src="ui/album-icon.svg" style="height: 1.25em; vertical-align: middle;">',
-            games: '<img src="ui/games-icon.svg" style="height: 1.25em; vertical-align: middle;">'
+            games: '<img src="ui/games-icon.svg" style="height: 1.25em; vertical-align: middle;">',
+            videos: '<img src="ui/music-icon.svg" style="height: 1.25em; vertical-align: middle;">'
         };
-        const titleMap = { notes: "Study Notes", literature: "Literature", record: "Records", album: "Album", games: "Games" };
+        const titleMap = {
+            notes: "Study Notes",
+            literature: "Literature",
+            record: "Records",
+            album: "Album",
+            games: "Games",
+            videos: '<span class="music-mode-btn" onclick="window.location.href=\'music.html\'">Music</span> & <span class="music-mode-btn active" onclick="window.location.href=\'videos.html\'">Videos</span>'
+        };
         const icon = iconMap[State.CONFIG.CURRENT_MODULE] || "📂";
         const text = titleMap[State.CONFIG.CURRENT_MODULE] || State.CONFIG.CURRENT_MODULE.toUpperCase();
         desiredHTML = `${icon} ${text}`;
@@ -275,7 +283,7 @@ export function renderPageTitle() {
                 node = next;
             }
 
-            titleEl.appendChild(document.createTextNode(' ' + targetText.trim()));
+            titleEl.insertAdjacentHTML('beforeend', ' ' + targetText.trim());
 
             if (window.MAERS?.Theme?.setupZoomTrigger) {
                 window.MAERS.Theme.setupZoomTrigger(existingImg, 'icon_only', true);
