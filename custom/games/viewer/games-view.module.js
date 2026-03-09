@@ -82,8 +82,9 @@ export const GamesView = {
         container.innerHTML = `
             <div class="playing-sandbox">
                 <div class="playing-card-group">
+                    <div class="playing-label">今日玩:</div>
                     <div class="folder-grid playing-grid" id="playing-card-wrapper"></div>
-                    <button id="btn-draw-game" class="btn-draw-game">随机抽取</button>
+                    <button id="btn-draw-game" class="btn-draw-game">抽一下</button>
                 </div>
             </div>
         `;
@@ -222,7 +223,7 @@ export const GamesView = {
                     this._isAnimating = false;
 
                     this._btnDraw.disabled = false;
-                    this._btnDraw.textContent = '随机抽取';
+                    this._btnDraw.textContent = '抽一下';
 
                     this._renderCard(winner);
                     try { localStorage.setItem('maers_playing_game_id', winner.id); } catch { }

@@ -38,7 +38,7 @@ const VERSION_CONFIG = {
     // 📅 全局默认版本（兜底，优先级最低）
     // 大版本发布时修改这里
     // ════════════════════════════════════════════
-    default: '2026.0228-0000',
+    default: '2026.0307-2000',
 
     // ════════════════════════════════════════════
     // 📦 分组版本（推荐日常使用 ⭐）
@@ -53,7 +53,7 @@ const VERSION_CONFIG = {
         },
         // 📝 CMS 核心内容管理
         cms: {
-            version: '1.1',   // ← 改了 CMS？把这个数字 +1
+            version: '1',   // ← 改了 CMS？把这个数字 +1
             paths: ['custom/cms/']
         },
         // 📚 文学模块
@@ -73,13 +73,18 @@ const VERSION_CONFIG = {
         },
         // 🎮 游戏模块
         games: {
-            version: '1.1',
+            version: '1',
             paths: ['custom/games/', 'data/games-tree.json']
         },
         // 🎵 音乐模块
         music: {
             version: '1',
             paths: ['custom/music/', 'data/music-data.json']
+        },
+        // 🎬 影视模块
+        videos: {
+            version: '1',
+            paths: ['custom/videos/', 'data/videos-tree.json']
         },
         // 🖼️ 相册模块
         photos: {

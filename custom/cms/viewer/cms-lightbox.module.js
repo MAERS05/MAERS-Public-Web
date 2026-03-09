@@ -21,6 +21,7 @@ function _collectImages() {
         if (img.closest('.brand-logo')) return false;
         if (img.closest('button')) return false;
         if (img.closest('.spatial-card')) return false;
+        if (img.closest('#spatial-nav-container')) return false;
         if (img.classList.contains('zoom-trigger-icon')) return false;
         return true;
     });
@@ -107,6 +108,7 @@ export function initLightbox() {
                 target.closest("button") ||
                 target.closest(".tag-toggle-btn") ||
                 target.closest(".spatial-card") ||
+                target.closest("#spatial-nav-container") ||
                 target.closest(".theme-switch-wrapper")
             ) {
                 return;

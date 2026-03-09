@@ -59,6 +59,15 @@ const MODULE_CONFIG = {
         allowMove: true,
         allowContent: true,
         dataFile: 'data/games-tree.json'
+    },
+    videos: {
+        icon: 'ui/music-icon.svg',
+        title: 'Videos',
+        displayTitle: '<img src="ui/music-icon.svg" alt="Videos" onerror="this.src=\'ui/literature-icon.svg\'" style="height: 1.25em; width: auto; vertical-align: middle;"> Videos',
+        allowTags: true,
+        allowMove: true,
+        allowContent: true,
+        dataFile: 'data/videos-tree.json'
     }
 };
 
