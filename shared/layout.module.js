@@ -20,8 +20,37 @@ export function injectThemeSwitch() {
     document.body.insertAdjacentHTML('afterbegin', html);
 }
 
+export function injectImmersiveBackground() {
+    if (document.getElementById('immersive-bg')) return;
+    const bg = document.createElement('div');
+    bg.id = 'immersive-bg';
+    bg.className = 'immersive-bg';
+
+    // Two layers for cross-fade. Each has a blur layer + a clear contain layer.
+    ['a', 'b'].forEach(id => {
+        const layer = document.createElement('div');
+        layer.id = `imm-layer-${id}`;
+        layer.className = 'imm-layer';
+
+        // Bottom: blurred cover (fills screen, hides letterboxing)
+        const blur = document.createElement('div');
+        blur.className = 'imm-blur';
+
+        // Top: crisp contain (full image, correct aspect ratio, centered)
+        const clear = document.createElement('div');
+        clear.className = 'imm-clear';
+
+        layer.appendChild(blur);
+        layer.appendChild(clear);
+        bg.appendChild(layer);
+    });
+
+    document.body.insertAdjacentElement('afterbegin', bg);
+}
+
 function _runInit() {
     injectThemeSwitch();
+    injectImmersiveBackground();
     // Load Spatial Nav (replaces loadSpatialNav which injected script tag)
     initSpatialNav();
 }

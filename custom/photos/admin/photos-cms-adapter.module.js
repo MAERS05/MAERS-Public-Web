@@ -110,8 +110,10 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, Photo
                 const filterTags = Array.from(AppState.activeFilters);
                 if (tagFilterMode === 'AND') {
                     matchesTags = filterTags.every(tag => photo.tags?.includes(tag));
-                } else {
+                } else if (tagFilterMode === 'OR') {
                     matchesTags = filterTags.some(tag => photo.tags?.includes(tag));
+                } else if (tagFilterMode === 'DEL') {
+                    matchesTags = !filterTags.some(tag => photo.tags?.includes(tag));
                 }
             }
 

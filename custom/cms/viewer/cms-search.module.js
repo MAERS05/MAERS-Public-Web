@@ -104,11 +104,16 @@ export function applyFilter(shouldResetManager = false) {
                     if (!node.tags.includes(tag)) return false;
                 }
                 return true;
-            } else { // OR
+            } else if (tagFilterMode === 'OR') { // OR
                 for (let tag of State.AppState.activeFilters) {
                     if (node.tags.includes(tag)) return true;
                 }
                 return false;
+            } else if (tagFilterMode === 'DEL') { // DEL
+                for (let tag of State.AppState.activeFilters) {
+                    if (node.tags.includes(tag)) return false;
+                }
+                return true;
             }
         });
     } else {

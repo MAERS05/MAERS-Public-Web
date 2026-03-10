@@ -37,8 +37,10 @@ export function setupSpaceAdapter(applyFiltersCallback) {
                 const filterTags = Array.from(AppState.activeFilters);
                 if (tagFilterMode === 'AND') {
                     matchesTags = filterTags.every(tag => node.tags?.includes(tag));
-                } else {
+                } else if (tagFilterMode === 'OR') {
                     matchesTags = filterTags.some(tag => node.tags?.includes(tag));
+                } else if (tagFilterMode === 'DEL') {
+                    matchesTags = !filterTags.some(tag => node.tags?.includes(tag));
                 }
             }
 

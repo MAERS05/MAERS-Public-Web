@@ -374,12 +374,16 @@ export const Search = {
                             for (let t of filters) {
                                 if (!node.tags.includes(t)) { match = false; break; }
                             }
-                        } else { // OR
+                        } else if (filterMode === 'OR') { // OR
                             let hasAny = false;
                             for (let t of filters) {
                                 if (node.tags.includes(t)) { hasAny = true; break; }
                             }
                             if (!hasAny) match = false;
+                        } else if (filterMode === 'DEL') { // DEL
+                            for (let t of filters) {
+                                if (node.tags.includes(t)) { match = false; break; }
+                            }
                         }
                     }
                 }
