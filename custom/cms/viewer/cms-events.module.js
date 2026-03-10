@@ -34,7 +34,6 @@ export function setupImmersiveBackground() {
     let activeLayerId = 'a';
 
     function isBlocked() {
-        if (document.documentElement.classList.contains('shrink-view')) return true;
         const reader = document.getElementById('immersive-reader');
         return !!(reader && reader.classList.contains('active'));
     }
