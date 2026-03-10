@@ -14,9 +14,9 @@
 .playlist-window,
 .search-results {
     transition:
-        background-color 0.8s ease,
-        border-color 0.8s ease,
-        box-shadow 0.4s ease,
+        background-color 0.5s ease,
+        border-color 0.5s ease,
+        box-shadow 0.5s ease,
         color 0.4s ease,
         transform 0.4s ease;
     backface-visibility: hidden;
@@ -416,6 +416,85 @@ html.light-mode .icon-btn:hover {
 .item-cover.placeholder {
     background: rgba(255, 255, 255, 0.05);
 }
+
+/* --- 10. Immersive Background Layer --- */
+.immersive-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 15;
+    pointer-events: none;
+    background: transparent;
+    transition: background 0.5s ease;
+    /* fade-out of dark fallback */
+}
+
+/* Only add dark fallback while actively showing images (prevents layer leakage during transitions) */
+.immersive-bg.active {
+    background: #050505;
+}
+
+/* Two layers for cross-fade between images */
+.imm-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    transition: opacity 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: opacity;
+}
+
+/* Bottom sub-layer: blurred cover — fills the screen and hides letterboxing edges */
+.imm-blur {
+    position: absolute;
+    inset: -30px;
+    /* overshoot to hide blur-edge artifacts */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    filter: blur(35px) brightness(0.5) saturate(1.2);
+}
+
+/* Top sub-layer: crisp original image — full aspect ratio, centered, no crop */
+.imm-clear {
+    position: absolute;
+    inset: 0;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* Dark overlay on top of layers for cinematic feel */
+.immersive-bg::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 1;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+.immersive-bg.active::after {
+    opacity: 1;
+}
+
+/* When active: main-card becomes transparent so background shows through */
+body.immersive-active .main-card {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    backdrop-filter: none !important;
+}
+
 
 html.light-mode .item-cover.placeholder {
     background: rgba(0, 0, 0, 0.05);

@@ -77,7 +77,10 @@ export const TagsRender = {
         }
 
         // 2. Toggle Button
-        html += `<div class="tag-filter-toggle-btn" title="筛选逻辑: ${filterMode === 'AND' ? '关联标签 (AND)' : '任意标签 (OR)'}" style="${toggleBtnStyle}">${filterMode}</div>`;
+        let filterTitle = '关联标签 (AND)';
+        if (filterMode === 'OR') filterTitle = '任意标签 (OR)';
+        else if (filterMode === 'DEL') filterTitle = '排除标签 (DEL)';
+        html += `<div class="tag-filter-toggle-btn" title="筛选逻辑: ${filterTitle}" style="${toggleBtnStyle}">${filterMode}</div>`;
 
         html += `</div>`;
 
@@ -93,7 +96,7 @@ export const TagsRender = {
         const renderTag = (tag) => {
             const count = tagCounts[tag];
             const active = State.AppState.activeFilters.has(tag) ? "active" : "";
-            
+
             const seqIndex = selectedArray.indexOf(tag);
             const selected = seqIndex >= 0 ? "is-picked" : "";
             const seqNum = seqIndex >= 0 ? (seqIndex + 1) : "";

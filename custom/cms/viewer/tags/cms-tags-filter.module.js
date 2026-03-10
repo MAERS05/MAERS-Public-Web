@@ -13,10 +13,12 @@ export function initFilter(deps) {
     Search = deps.Search;
 }
 
-export let tagFilterMode = 'AND'; // 'AND' or 'OR'
+export let tagFilterMode = 'AND'; // 'AND', 'OR' or 'DEL'
 
 export function toggleFilterMode() {
-    tagFilterMode = tagFilterMode === 'AND' ? 'OR' : 'AND';
+    if (tagFilterMode === 'AND') tagFilterMode = 'OR';
+    else if (tagFilterMode === 'OR') tagFilterMode = 'DEL';
+    else tagFilterMode = 'AND';
     if (Search?.applyFilter) Search.applyFilter();
     return tagFilterMode;
 }

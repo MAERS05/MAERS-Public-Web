@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MAERS Photos - Admin Entry Point (Admin View)
  * @version 4.1.0 - CMS Tags Integration (Scope Fix)
  */
@@ -16,6 +16,7 @@ import { Admin, initAdmin, initManager, togglePick, stageDelete, executeMove } f
 import { initTags, Tags } from '../cms/viewer/cms-tags.module.js';
 import { setupPhotosAdapter, preloadTagCategories } from './admin/photos-cms-adapter.module.js';
 import { initNav, Nav } from '../cms/viewer/render/cms-render-nav.module.js';
+import { setupImmersiveBackground } from '../cms/viewer/cms-events.module.js';
 
 // Pure ES6: AdminCore is imported, not mounted
 // Pure ES6: AdminCore is imported, not mounted
@@ -42,6 +43,7 @@ initAdmin(Controller, View, AdminCore);
 initView(Controller, Admin, AdminCore);
 initLayout();
 initTheme();
+setupImmersiveBackground();
 
 // DOM Ready Initialization
 document.addEventListener('DOMContentLoaded', async () => {

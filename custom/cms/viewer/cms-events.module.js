@@ -23,8 +23,117 @@ export function initEvents(state, render, admin = null, tags = null, editor = nu
     Recent = recent;
 }
 
+let immersiveBgDelegated = false;
+
+export function setupImmersiveBackground() {
+    if (immersiveBgDelegated) return;
+    immersiveBgDelegated = true;
+
+    let hoverTimeout = null;
+    let fadeOutTimeout = null;
+    let activeLayerId = 'a';
+
+    function isBlocked() {
+        const reader = document.getElementById('immersive-reader');
+        return !!(reader && reader.classList.contains('active'));
+    }
+
+    function triggerFadeOut() {
+        clearTimeout(fadeOutTimeout);
+        fadeOutTimeout = setTimeout(() => {
+            const immersiveBg = document.getElementById('immersive-bg');
+            if (!immersiveBg) return;
+            const layerA = document.getElementById('imm-layer-a');
+            const layerB = document.getElementById('imm-layer-b');
+            if (layerA) { layerA.style.transition = 'opacity 0.5s ease'; layerA.style.opacity = '0'; }
+            if (layerB) { layerB.style.transition = 'opacity 0.5s ease'; layerB.style.opacity = '0'; }
+            immersiveBg.classList.remove('active');
+            document.body.classList.remove('immersive-active');
+        }, 350);
+    }
+
+    function onBlockStateChange() {
+        if (isBlocked()) {
+            clearTimeout(hoverTimeout);
+            clearTimeout(fadeOutTimeout);
+        } else {
+            triggerFadeOut();
+        }
+    }
+
+    new MutationObserver(onBlockStateChange)
+        .observe(document.documentElement, { attributeFilter: ['class'] });
+
+    new MutationObserver((mutations) => {
+        if (mutations.some(m => m.target.id === 'immersive-reader')) onBlockStateChange();
+    }).observe(document.body, { attributes: true, attributeFilter: ['class'], subtree: true });
+
+    document.body.addEventListener("mouseover", (e) => {
+        if (isBlocked()) return;
+
+        const card = e.target.closest(".grid-item, .book-card, .photo-item, .category-card");
+        if (!card) return;
+
+        let imgUrl = null;
+        const imgEl = card.querySelector('.item-cover-img') || card.querySelector('img:not(.card-icon):not(.nav-icon-img)');
+        if (imgEl) {
+            imgUrl = imgEl.src || imgEl.getAttribute('data-src');
+        } else {
+            const coverEl = card.querySelector('.book-cover');
+            if (coverEl && coverEl.style.backgroundImage && coverEl.style.backgroundImage !== "none") {
+                imgUrl = coverEl.style.backgroundImage.replace(/^url\(["']?/, '').replace(/["']?\)$/, '');
+            }
+        }
+
+        const pickedId = State?.AppState?.pickedId || null;
+        const manager = typeof Admin?.getManager === 'function' ? Admin.getManager() : null;
+        if (!imgUrl || pickedId || (manager?.selectedIndices?.length > 0)) return;
+
+        clearTimeout(hoverTimeout);
+        clearTimeout(fadeOutTimeout);
+
+        hoverTimeout = setTimeout(() => {
+            const immersiveBg = document.getElementById('immersive-bg');
+            if (!immersiveBg) return;
+
+            const nextId = activeLayerId === 'a' ? 'b' : 'a';
+            const nextLayer = document.getElementById(`imm-layer-${nextId}`);
+            const currentLayer = document.getElementById(`imm-layer-${activeLayerId}`);
+            if (!nextLayer) return;
+
+            const blurEl = nextLayer.querySelector('.imm-blur');
+            const clearEl = nextLayer.querySelector('.imm-clear');
+            if (blurEl) blurEl.style.backgroundImage = `url('${imgUrl}')`;
+            if (clearEl) clearEl.style.backgroundImage = `url('${imgUrl}')`;
+
+            requestAnimationFrame(() => {
+                nextLayer.style.transition = 'opacity 0.5s ease';
+                nextLayer.style.opacity = '1';
+                if (currentLayer) {
+                    currentLayer.style.transition = 'opacity 1s ease';
+                    currentLayer.style.opacity = '0';
+                }
+                immersiveBg.classList.add('active');
+                document.body.classList.add('immersive-active');
+                activeLayerId = nextId;
+            });
+        }, 80);
+    });
+
+    document.body.addEventListener("mouseout", (e) => {
+        if (isBlocked()) return;
+        const card = e.target.closest(".grid-item, .book-card, .photo-item, .category-card");
+        if (!card) return;
+        if (e.relatedTarget && card.contains(e.relatedTarget)) return;
+        clearTimeout(hoverTimeout);
+        triggerFadeOut();
+    });
+}
+
 export function setupGridEventDelegation() {
-    if (State.gridEventsDelegated) return;
+    setupImmersiveBackground();
+
+    if (State?.gridEventsDelegated) return;
     const container = document.getElementById("grid-container");
     if (!container) return;
 
