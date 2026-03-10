@@ -171,6 +171,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Bind drawer overlay close
+    const overlay = document.getElementById('drawer-overlay');
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            Tags.toggleTagDrawer();
+        });
+    }
+
     // Bind clear tags button
     const clearBtn = document.querySelector('.btn-clear-tags');
     if (clearBtn) {
