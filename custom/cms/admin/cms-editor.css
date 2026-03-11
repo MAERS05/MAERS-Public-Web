@@ -304,15 +304,27 @@ html.light-mode .admin-editor-mode #edit-preview {
 }
 
 /* 9. Scrollbar for Vditor Content */
+.vditor-ir,
+.vditor-wysiwyg,
+.vditor-sv,
+.vditor-preview {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
 .vditor-ir::-webkit-scrollbar,
 .vditor-wysiwyg::-webkit-scrollbar,
-.vditor-sv::-webkit-scrollbar {
+.vditor-sv::-webkit-scrollbar,
+.vditor-preview::-webkit-scrollbar {
+    display: block;
     width: 6px;
+    height: 6px;
 }
 
 .vditor-ir::-webkit-scrollbar-thumb,
 .vditor-wysiwyg::-webkit-scrollbar-thumb,
-.vditor-sv::-webkit-scrollbar-thumb {
+.vditor-sv::-webkit-scrollbar-thumb,
+.vditor-preview::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 10px;
 }
