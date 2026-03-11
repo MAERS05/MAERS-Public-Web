@@ -163,6 +163,7 @@ function _renderAdminEditor(layer, node) {
         mode: 'ir',
         value: node.content || '',
         theme: themeMode,
+        cdn: 'plugins/vditor-assets',
         preview: {
             theme: {
                 current: contentTheme,
@@ -193,24 +194,39 @@ function _renderVisitorReader(layer, node) {
     layer.style = '';
     const safeTitle = _escapeHtml(node.title);
 
-    let htmlContent = "> No content.";
-    if (window.marked) {
-        htmlContent = marked.parse(node.content || "> No content.", { breaks: true });
-    }
-
-    if (window.DOMPurify) {
-        htmlContent = DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } });
-    }
-
     layer.innerHTML = `
   <div class="reader-toolbar">
       <div class="reader-meta"><span class="reader-title">${safeTitle}</span></div>
       <div class="reader-actions"><button class="close-btn">✕</button></div>
   </div>
   <div class="reader-scroll-area">
-      <div class="markdown-body paper-sheet" id="reader-content">${htmlContent}</div>
+      <div class="markdown-body paper-sheet" id="reader-content"><div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-main);font-size:1.5rem;">加载中...</div></div>
   </div>
   `;
+
+    const contentDiv = layer.querySelector('#reader-content');
+    const isLight = document.documentElement.classList.contains('light-mode');
+    const contentTheme = isLight ? 'light' : 'dark';
+
+    if (window.Vditor) {
+        Vditor.preview(contentDiv, node.content || "> No content.", {
+            mode: isLight ? 'light' : 'dark',
+            theme: {
+                current: contentTheme,
+                path: 'plugins/vditor-assets/css/content-theme'
+            },
+            cdn: 'plugins/vditor-assets'
+        });
+    } else {
+        let htmlContent = "> No content.";
+        if (window.marked) {
+            htmlContent = marked.parse(node.content || "> No content.", { breaks: true });
+        }
+        if (window.DOMPurify) {
+            htmlContent = DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } });
+        }
+        contentDiv.innerHTML = htmlContent;
+    }
 
     // 绑定关闭按钮事件
     const closeBtn = layer.querySelector('.close-btn');
