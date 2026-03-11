@@ -193,22 +193,13 @@ function _renderVisitorReader(layer, node) {
     layer.style = '';
     const safeTitle = _escapeHtml(node.title);
 
-    let htmlContent = "> No content.";
-    if (window.marked) {
-        htmlContent = marked.parse(node.content || "> No content.", { breaks: true });
-    }
-
-    if (window.DOMPurify) {
-        htmlContent = DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } });
-    }
-
     layer.innerHTML = `
   <div class="reader-toolbar">
       <div class="reader-meta"><span class="reader-title">${safeTitle}</span></div>
       <div class="reader-actions"><button class="close-btn">✕</button></div>
   </div>
   <div class="reader-scroll-area">
-      <div class="markdown-body paper-sheet" id="reader-content">${htmlContent}</div>
+      <div class="vditor-reset paper-sheet" id="reader-content" style="padding: 24px;"></div>
   </div>
   `;
 
@@ -216,6 +207,33 @@ function _renderVisitorReader(layer, node) {
     const closeBtn = layer.querySelector('.close-btn');
     if (closeBtn) {
         closeBtn.addEventListener('click', close);
+    }
+
+    // 调用 Vditor 的 preview 功能来进行带主题和样式的渲染
+    const readerContent = layer.querySelector('#reader-content');
+    if (window.Vditor) {
+        const isLight = document.documentElement.classList.contains('light-mode');
+        const contentTheme = isLight ? 'light' : 'dark';
+
+        // 显示一个短暂的加载提示（可选）
+        readerContent.innerHTML = '<div style="text-align:center; color:gray;">⏳ Rendering...</div>';
+
+        Vditor.preview(readerContent, node.content || "> No content.", {
+            mode: contentTheme,
+            theme: {
+                current: contentTheme,
+                path: 'plugins/vditor-assets/css/content-theme'
+            }
+            // 不设置 cdn：让 Vditor 自动使用与自身相同的 CDN（unpkg）去加载 lute.min.js 等动态 JS 资源
+            // 本地的 plugins/vditor-assets 只用于 CSS 主题（通过 theme.path 已单独配置）
+        });
+    } else if (window.marked) {
+        // 作为 Vditor 未加载成功时的 Fallback
+        let htmlContent = marked.parse(node.content || "> No content.", { breaks: true });
+        if (window.DOMPurify) {
+            htmlContent = DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } });
+        }
+        readerContent.innerHTML = htmlContent;
     }
 }
 
