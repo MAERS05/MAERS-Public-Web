@@ -10,6 +10,7 @@
 - [2. 关键守则 (Do's & Don'ts)](#2-关键守则-dos--donts)
 - [3. 代码生成规范](#3-代码生成规范)
 - [4. 修改现有代码](#4-修改现有代码)
+- [5. 内部链接与跨模块跳转](#5-内部链接与跨模块跳转)
 
 ---
 
@@ -122,3 +123,53 @@ body .example-container {
 
 在修改现有文件前，务必先**阅读文件的头部注释**和**导入部分**，理解其依赖关系。
 如果发现旧代码（如 `MAERS.xxx = ...`），请优先建议重构为 ES6 模块，而不是继续沿用旧模式（除非用户明确要求最小化修改）。
+
+---
+
+## 5. 内部链接与跨模块跳转
+
+### 5.1 本地 Markdown 内链（同模块跳转）
+
+MAERS 的阅读器和 Vditor 编辑器已内置了对本地 `.md` 链接的**拦截引擎**，无需特殊处理。
+
+- **核心函数**：`_interceptMdLinks(container, currentNode)` 位于 `custom/cms/admin/cms-editor.module.js`。
+- **触发条件**：链接的 `href` 以 `.md` 结尾，且**不以** `http` 开头。
+- **匹配逻辑**：从链接路径中提取文件名（无扩展名），然后在 `Controller.AppState.allNodes` 中按 `title` 或 `content` 字段匹配目标节点，调用 `Editor.open(node)` 打开。
+- **书写格式示例**（同模块内跳转，直接写文件名即可）：
+  ```markdown
+  [另一篇笔记](另一篇笔记.md)
+  ```
+
+### 5.2 跨模块深度链接（`?openNote` 参数）
+
+当你需要在 Markdown 文章中链接**另一个模块**的内容时（如从 notes 链接到 games），使用以下规范：
+
+- **格式**：`[链接文字](/目标模块.html?openNote=笔记完整标题)`
+- **工作原理**：由于链接以 `/` 或 `http` 开头，拦截器**不会拦截**，浏览器正常跳转到目标页面。目标页面在 `DOMContentLoaded` 初始化完成后，会自动读取 URL 中的 `openNote` 参数，在 `allNodes` 中查找对应节点并弹开。
+- **已支持的模块入口**：`notes.html`, `literature.html`, `games.html`, `videos.html`（以及对应的 `admin-cms.html?module=xxx`）。
+- **注意事项**：`openNote` 的值必须和树节点的 `title` 字段**完全一致**（包含书名号等特殊符号）。
+
+```markdown
+<!-- 推荐：使用相对路径（本地测试和线上部署都能正常工作） -->
+[黑神话：悟空](/games.html?openNote=黑神话：悟空)
+[《北欧神话》](/literature.html?openNote=《北欧神话》)
+
+<!-- 后台管理员专用：直接跳转到 Admin 编辑器并自动打开 -->
+[后台编辑黑神话](/admin-cms.html?module=games&openNote=黑神话：悟空)
+```
+
+### 5.3 新增模块时的接入规范
+
+如果将来新增一个模块（如 `record.html`），你必须在其对应的 `main.module.js` 的 `DOMContentLoaded` 事件中补充以下标准接入代码，否则该模块无法响应 `openNote` 跳转指令：
+
+```javascript
+// [Feature] Auto-open specific note from URL ('?openNote=Title')
+const urlParams = new URLSearchParams(window.location.search);
+const openNoteTitle = urlParams.get('openNote');
+if (openNoteTitle && Controller?.AppState?.allNodes) {
+    const targetNode = Controller.AppState.allNodes.find(n => n.type === 'note' && n.title === openNoteTitle);
+    if (targetNode && Editor) {
+        setTimeout(() => { Editor.open(targetNode); }, 100);
+    }
+}
+```

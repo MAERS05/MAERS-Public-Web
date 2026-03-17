@@ -67,6 +67,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupViewEventListeners();
     initRecent(State, Controller, View);
 
+    // [New Feature] Auto-open specific note from URL ('?openNote=Title')
+    const urlParams = new URLSearchParams(window.location.search);
+    const openNoteTitle = urlParams.get('openNote');
+    if (openNoteTitle && Editor) {
+        const normalize = (s) => s.trim().replace(/[《》]/g, '');
+        const needle = normalize(openNoteTitle);
+        let attempts = 0;
+        const tryOpen = () => {
+            const allNodes = Controller?.AppState?.allNodes;
+            if (allNodes && allNodes.length > 0) {
+                const targetNode = allNodes.find(n =>
+                    n.type === 'note' && (n.title === openNoteTitle || normalize(n.title) === needle)
+                );
+                if (targetNode) Editor.open(targetNode);
+            } else if (attempts < 50) {
+                attempts++;
+                setTimeout(tryOpen, 100);
+            }
+        };
+        setTimeout(tryOpen, 200);
+    }
+
     // -- Global Admin Save/Cancel Logic (Mirrored from Literature/Admin) --
     if (State.IS_ADMIN) {
         const checkGlobalDirty = () => {

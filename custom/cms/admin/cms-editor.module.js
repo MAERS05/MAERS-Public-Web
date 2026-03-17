@@ -1,7 +1,7 @@
 /**
  * MAERS CMS Editor & Viewer Logic (cms-editor.module.js)
  * 依赖: Vditor, marked, DOMPurify (optional), MAERS.Utils.Search, MAERS.CMS.Core
- * @version 3.0.0 - ES6 Module
+ * @version 3.1.0 - ES6 Module + Internal Link Interception
  */
 
 import { Utils } from '../../../shared/utils.module.js';
@@ -16,25 +16,85 @@ export function initEditor(controller) {
 let vditorInstance = null;
 let currentEditingId = null;
 
-// 打开阅读器/编辑器
+// ─── 内部链接拦截（共用逻辑）───
+function _interceptMdLinks(container, currentNode) {
+    if (!container) return;
+    // 每次重新绑定，先移除旧的（通过替换同名函数引用实现——直接重新 addEventListener 即可，capture 不会重复）
+    container.dataset.linkIntercepted = "true";
+
+    container.addEventListener('click', (e) => {
+        // 1. 标准 <a> 标签
+        const a = e.target.closest('a');
+        let href = null;
+
+        if (a) {
+            href = a.getAttribute('href');
+        } else {
+            // 2. Vditor IR 模式中的 span.vditor-ir__link
+            const linkSpan = e.target.closest('.vditor-ir__link');
+            if (linkSpan) {
+                href = linkSpan.textContent;
+            }
+        }
+
+        if (!href || !href.endsWith('.md') || href.startsWith('http')) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const decoded = decodeURIComponent(href);
+        const filename = decoded.split('/').pop().replace('.md', '');
+        const allNodes = Controller?.AppState?.allNodes || [];
+        const targetNode = allNodes.find(n =>
+            n.type === 'note' &&
+            (n.title === filename || (n.content && n.content.endsWith(decoded)))
+        );
+
+        if (targetNode) {
+            // Admin 模式下提示保存
+            if (window.IS_ADMIN && vditorInstance && currentNode) {
+                const current = vditorInstance.getValue();
+                const original = currentNode._originalContent ?? currentNode.content ?? '';
+                if (current !== original) {
+                    if (confirm('您有未保存的更改，跳转前是否需要保存？\n【确定】先保存再跳转\n【取消】直接丢弃更改跳转')) {
+                        save().then(() => open(targetNode));
+                        return;
+                    }
+                }
+            }
+            open(targetNode);
+        } else {
+            console.warn("[MAERS.CMS] Note not found for link:", decoded);
+            if (window.MAERS?.Toast?.show) {
+                window.MAERS.Toast.show('未找到链接的笔记: ' + filename, 'error');
+            } else {
+                alert('未找到链接的笔记: ' + filename);
+            }
+        }
+    }, true); // capture phase — 在 Vditor 的默认行为之前拦截
+}
+
+// ─── 打开阅读器/编辑器 ───
 export async function open(node) {
     const layer = document.getElementById('immersive-reader');
     if (!layer) return;
 
+    // 在 layer 上做一次性链接拦截（覆盖 visitor reader 视图）
+    _interceptMdLinks(layer, node);
+
     // Lazy Load Content if it's a file path
     if (node.content && typeof node.content === 'string' && node.content.endsWith('.md')) {
-
         try {
-            // Show loading state
             layer.innerHTML = '<div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-main);font-size:1.5rem;">⏳ Loading Content...</div>';
             layer.classList.add('active');
             document.body.style.overflow = 'hidden';
 
-            // Allow relative path loading from data root
             const path = 'data/' + node.content;
-            const res = await fetch(path + '?t=' + Date.now()); // Cache bust for safety or use versioning
+            const res = await fetch(path + '?t=' + Date.now());
             if (res.ok) {
-                node.content = await res.text();
+                node._originalContent = await res.text();
+                node.content = node._originalContent;
             } else {
                 console.error("Failed to load md:", path);
                 node.content = "> ⚠️ Error: Content file not found at " + path;
@@ -58,7 +118,7 @@ export async function open(node) {
     document.body.style.overflow = 'hidden';
 }
 
-// 关闭
+// ─── 关闭 ───
 export function close() {
     const layer = document.getElementById('immersive-reader');
     if (layer) {
@@ -73,7 +133,7 @@ export function close() {
     document.body.style.overflow = '';
 }
 
-// 保存笔记 (Admin)
+// ─── 保存笔记 (Admin) ───
 export async function save() {
     if (!window.IS_ADMIN) return;
 
@@ -105,22 +165,18 @@ export async function save() {
     }
 }
 
-// --- Internal Render Helpers ---
+// ─── Internal Render Helpers ───
 
 function _renderAdminEditor(layer, node) {
     const isLight = document.documentElement.classList.contains('light-mode');
     const themeMode = isLight ? 'classic' : 'dark';
     const contentTheme = isLight ? 'light' : 'dark';
 
-    // 样式初始化 - 移除 main-card 以免触发全局缩放
     layer.className = 'immersive-layer active admin-editor-mode';
 
-    // 阻止编辑界面内的点击向上冒泡，防止触发“缩放视图”下的“点击外部复原”逻辑
-    // 使用 addEventListener 以确保稳健性
-    layer.onclick = null; // 清除可能存在的旧 handler
+    layer.onclick = null;
     layer.addEventListener('click', (e) => e.stopPropagation());
 
-    // 构建 HTML
     layer.innerHTML = `
       <div class="editor-header">
           <div class="editor-left">
@@ -185,6 +241,11 @@ function _renderAdminEditor(layer, node) {
             handler: async (files) => {
                 return _handleImageUpload(files);
             }
+        },
+        after: () => {
+            // Vditor 初始化完成后，在编辑器容器上拦截 .md 链接
+            const vditorEl = document.getElementById('vditor-container');
+            _interceptMdLinks(vditorEl, node);
         }
     });
 }
@@ -215,7 +276,11 @@ function _renderVisitorReader(layer, node) {
                 current: contentTheme,
                 path: 'plugins/vditor-assets/css/content-theme'
             },
-            cdn: 'plugins/vditor-assets'
+            cdn: 'plugins/vditor-assets',
+            after: () => {
+                // Fix: 在 Vditor 异步渲染完成后再绑定链接拦截器
+                _interceptMdLinks(contentDiv, node);
+            }
         });
     } else {
         let htmlContent = "> No content.";
@@ -226,6 +291,8 @@ function _renderVisitorReader(layer, node) {
             htmlContent = DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } });
         }
         contentDiv.innerHTML = htmlContent;
+        // 非 Vditor 渲染时同步绑定
+        _interceptMdLinks(contentDiv, node);
     }
 
     // 绑定关闭按钮事件
