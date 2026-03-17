@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MAERS CMS - Main Entry Point (User View)
  * @version 1.0.2 - ES6 Module with Shared Utils
  */
@@ -52,4 +52,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup event listeners after bootstrap
     setupViewEventListeners();
     initRecent(State, Controller, View);
+
+    // [New Feature] Auto-open specific note from URL ('?openNote=Title')
+    const urlParams = new URLSearchParams(window.location.search);
+    const openNoteTitle = urlParams.get('openNote');
+    if (openNoteTitle && Controller?.AppState?.allNodes) {
+        const targetNode = Controller.AppState.allNodes.find(n => n.type === 'note' && n.title === openNoteTitle);
+        if (targetNode && Editor) {
+            // Give the grid a moment to render before opening
+            setTimeout(() => {
+                Editor.open(targetNode);
+            }, 100);
+        }
+    }
 });

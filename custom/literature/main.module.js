@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MAERS Literature - Main Entry Point
  * @version 3.0.1 - ES6 Module Migration (Fixed)
  */
@@ -78,4 +78,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRecent(State, Controller, View);
     // Initialize Literature View (Flow Engine)
     await LiteratureView.init();
+
+    // [New Feature] Auto-open specific note from URL ('?openNote=Title')
+    const urlParams = new URLSearchParams(window.location.search);
+    const openNoteTitle = urlParams.get('openNote');
+    if (openNoteTitle && Controller?.AppState?.allNodes) {
+        const targetNode = Controller.AppState.allNodes.find(n => n.type === 'note' && n.title === openNoteTitle);
+        if (targetNode && Editor) {
+            // Give the grid a moment to render before opening
+            setTimeout(() => {
+                Editor.open(targetNode);
+            }, 100);
+        }
+    }
 });
