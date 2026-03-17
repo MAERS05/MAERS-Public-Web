@@ -56,13 +56,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     // [New Feature] Auto-open specific note from URL ('?openNote=Title')
     const urlParams = new URLSearchParams(window.location.search);
     const openNoteTitle = urlParams.get('openNote');
-    if (openNoteTitle && Controller?.AppState?.allNodes) {
-        const targetNode = Controller.AppState.allNodes.find(n => n.type === 'note' && n.title === openNoteTitle);
-        if (targetNode && Editor) {
-            // Give the grid a moment to render before opening
-            setTimeout(() => {
-                Editor.open(targetNode);
-            }, 100);
-        }
+    if (openNoteTitle && Editor) {
+        const normalize = (s) => s.trim().replace(/[《》]/g, '');
+        const needle = normalize(openNoteTitle);
+        // 轮询等待 allNodes 加载完成（最多等 5 秒）
+        let attempts = 0;
+        const tryOpen = () => {
+            const allNodes = Controller?.AppState?.allNodes;
+            if (allNodes && allNodes.length > 0) {
+                const targetNode = allNodes.find(n =>
+                    n.type === 'note' && (n.title === openNoteTitle || normalize(n.title) === needle)
+                );
+                if (targetNode) Editor.open(targetNode);
+            } else if (attempts < 50) {
+                attempts++;
+                setTimeout(tryOpen, 100);
+            }
+        };
+        setTimeout(tryOpen, 200);
     }
 });

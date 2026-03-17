@@ -18,7 +18,8 @@ let currentEditingId = null;
 
 // ─── 内部链接拦截（共用逻辑）───
 function _interceptMdLinks(container, currentNode) {
-    if (!container || container.dataset.linkIntercepted) return;
+    if (!container) return;
+    // 每次重新绑定，先移除旧的（通过替换同名函数引用实现——直接重新 addEventListener 即可，capture 不会重复）
     container.dataset.linkIntercepted = "true";
 
     container.addEventListener('click', (e) => {
@@ -275,7 +276,11 @@ function _renderVisitorReader(layer, node) {
                 current: contentTheme,
                 path: 'plugins/vditor-assets/css/content-theme'
             },
-            cdn: 'plugins/vditor-assets'
+            cdn: 'plugins/vditor-assets',
+            after: () => {
+                // Fix: 在 Vditor 异步渲染完成后再绑定链接拦截器
+                _interceptMdLinks(contentDiv, node);
+            }
         });
     } else {
         let htmlContent = "> No content.";
@@ -286,6 +291,8 @@ function _renderVisitorReader(layer, node) {
             htmlContent = DOMPurify.sanitize(htmlContent, { USE_PROFILES: { html: true } });
         }
         contentDiv.innerHTML = htmlContent;
+        // 非 Vditor 渲染时同步绑定
+        _interceptMdLinks(contentDiv, node);
     }
 
     // 绑定关闭按钮事件
