@@ -180,6 +180,7 @@ function _renderAdminEditor(layer, node) {
     layer.innerHTML = `
       <div class="editor-header">
           <div class="editor-left">
+              <button class="outline-btn" title="Toggle Outline">☰</button>
               <input type="text" value="${_escapeHtml(node.title)}" id="edit-title-input">
           </div>
           <div class="editor-right">
@@ -187,7 +188,10 @@ function _renderAdminEditor(layer, node) {
               <button class="close-btn">✕</button>
           </div>
       </div>
-      <div id="vditor-container" style="flex:1; width:100%;"></div>
+      <div class="reader-body-layout">
+          <div class="reader-outline-panel collapsed" id="reader-outline"></div>
+          <div id="vditor-container" style="flex:1; min-width:0;"></div>
+      </div>
   `;
 
     // 绑定事件监听器
@@ -242,10 +246,17 @@ function _renderAdminEditor(layer, node) {
                 return _handleImageUpload(files);
             }
         },
+        input: () => {
+            clearTimeout(window._adminOutlineTimer);
+            window._adminOutlineTimer = setTimeout(() => {
+                _generateOutline();
+            }, 800);
+        },
         after: () => {
-            // Vditor 初始化完成后，在编辑器容器上拦截 .md 链接
             const vditorEl = document.getElementById('vditor-container');
             _interceptMdLinks(vditorEl, node);
+            _bindOutlineToggle();
+            _generateOutline();
         }
     });
 }
@@ -257,11 +268,19 @@ function _renderVisitorReader(layer, node) {
 
     layer.innerHTML = `
   <div class="reader-toolbar">
-      <div class="reader-meta"><span class="reader-title">${safeTitle}</span></div>
-      <div class="reader-actions"><button class="close-btn">✕</button></div>
+      <div class="reader-meta">
+          <button class="outline-btn" title="Toggle Outline">☰</button>
+          <span class="reader-title">${safeTitle}</span>
+      </div>
+      <div class="reader-actions">
+          <button class="close-btn">✕</button>
+      </div>
   </div>
-  <div class="reader-scroll-area">
-      <div class="markdown-body paper-sheet" id="reader-content"><div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-main);font-size:1.5rem;">加载中...</div></div>
+  <div class="reader-body-layout">
+      <div class="reader-outline-panel collapsed" id="reader-outline"></div>
+      <div class="reader-scroll-area">
+          <div class="markdown-body paper-sheet" id="reader-content"><div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-main);font-size:1.5rem;">加载中...</div></div>
+      </div>
   </div>
   `;
 
@@ -280,6 +299,8 @@ function _renderVisitorReader(layer, node) {
             after: () => {
                 // Fix: 在 Vditor 异步渲染完成后再绑定链接拦截器
                 _interceptMdLinks(contentDiv, node);
+                _bindOutlineToggle();
+                _generateOutline();
             }
         });
     } else {
@@ -293,6 +314,8 @@ function _renderVisitorReader(layer, node) {
         contentDiv.innerHTML = htmlContent;
         // 非 Vditor 渲染时同步绑定
         _interceptMdLinks(contentDiv, node);
+        _bindOutlineToggle();
+        _generateOutline();
     }
 
     // 绑定关闭按钮事件
@@ -300,6 +323,66 @@ function _renderVisitorReader(layer, node) {
     if (closeBtn) {
         closeBtn.addEventListener('click', close);
     }
+}
+
+function _bindOutlineToggle() {
+    const btn = document.querySelector('.outline-btn');
+    const outline = document.getElementById('reader-outline');
+    if (btn && outline) {
+        // Prevent duplicate bindings if called multiple times
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        newBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            outline.classList.toggle('collapsed');
+        });
+    }
+}
+
+function _generateOutline() {
+    const outlinePanel = document.getElementById('reader-outline');
+    let contentContainer = document.getElementById('reader-content');
+
+    // In admin mode, the container and scroll area are different due to vditor
+    if (window.IS_ADMIN && vditorInstance) {
+        // Vditor IR mode uses .vditor-ir content editable wrapper
+        contentContainer = document.querySelector('.vditor-ir');
+    }
+
+    if (!outlinePanel || !contentContainer) return;
+
+    // Get all headings
+    const headings = contentContainer.querySelectorAll('h1, h2, h3, h4, h5, h6');
+    outlinePanel.innerHTML = '<div class="outline-title">目录大纲</div>';
+
+    if (headings.length === 0) {
+        outlinePanel.innerHTML += '<div class="outline-item" style="color:var(--text-sub);cursor:default;">暂无目录</div>';
+        return;
+    }
+
+    headings.forEach((heading, index) => {
+        const level = parseInt(heading.tagName.substring(1));
+        const item = document.createElement('div');
+        item.className = `outline-item outline-level-${level}`;
+        // Preserve clean text (Vditor might have internal span tags)
+        let rawText = heading.innerText || heading.textContent || 'Untitled';
+        // Remove Vditor IR mode heading markers (e.g., "### ") and zero-width spaces
+        rawText = rawText.replace(/^#+\s*/g, '').replace(/\u200B/g, '').trim();
+        item.textContent = rawText;
+        item.title = rawText;
+
+        // Ensure ID
+        if (!heading.id) heading.id = 'maers-heading-' + index;
+
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        outlinePanel.appendChild(item);
+    });
+
+
 }
 
 async function _handleImageUpload(files) {
