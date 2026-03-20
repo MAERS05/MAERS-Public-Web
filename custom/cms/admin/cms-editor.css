@@ -111,11 +111,18 @@
     color: var(--text-main);
 }
 
+.admin-editor-mode .reader-outline-panel {
+    background: #1e2227 !important; /* Midnight blue */
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
 html.light-mode .immersive-layer.admin-editor-mode,
 html.light-mode .admin-editor-mode .editor-header,
 html.light-mode .admin-editor-mode .editor-body,
 html.light-mode .admin-editor-mode #edit-md-input,
-html.light-mode .admin-editor-mode #edit-preview {
+html.light-mode .admin-editor-mode #edit-preview,
+html.light-mode .admin-editor-mode .reader-outline-panel {
     background: #ffffff !important;
     color: #333 !important;
 }
