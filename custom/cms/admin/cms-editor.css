@@ -203,7 +203,7 @@ html.light-mode .admin-editor-mode .reader-outline-panel {
 }
 
 /* 1.1 Contrast Fix for floating tooltips (hints) */
-.vditor-tooltipped::after {
+html:not(.light-mode) .vditor-tooltipped::after {
     background: #4a4f56 !important;
     color: #ffffff !important;
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -212,23 +212,23 @@ html.light-mode .admin-editor-mode .reader-outline-panel {
 }
 
 /* Tooltip Arrow Fixes (Full directional coverage) */
-.vditor-tooltipped::before {
+html:not(.light-mode) .vditor-tooltipped::before {
     border-top-color: #4a4f56 !important;
 }
 
-[class*="vditor-tooltipped__n"]::before {
+html:not(.light-mode) [class*="vditor-tooltipped__n"]::before {
     border-top-color: #4a4f56 !important;
 }
 
-[class*="vditor-tooltipped__s"]::before {
+html:not(.light-mode) [class*="vditor-tooltipped__s"]::before {
     border-bottom-color: #4a4f56 !important;
 }
 
-[class*="vditor-tooltipped__w"]::before {
+html:not(.light-mode) [class*="vditor-tooltipped__w"]::before {
     border-left-color: #4a4f56 !important;
 }
 
-[class*="vditor-tooltipped__e"]::before {
+html:not(.light-mode) [class*="vditor-tooltipped__e"]::before {
     border-right-color: #4a4f56 !important;
 }
 
@@ -254,14 +254,14 @@ html.light-mode .admin-editor-mode .reader-outline-panel {
 }
 
 /* 1.2 Contrast Fix for dropdown menus (Heading/Emoji etc) */
-.vditor-hint,
-.vditor-panel {
+html:not(.light-mode) .vditor-hint,
+html:not(.light-mode) .vditor-panel {
     background-color: #1e2227 !important;
     border: 1px solid var(--pill-border) !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
 }
 
-.vditor-hint li:hover {
+html:not(.light-mode) .vditor-hint li:hover {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: #fff !important;
 }
@@ -282,7 +282,7 @@ html.light-mode .admin-editor-mode .reader-outline-panel {
 }
 
 /* 6. Fix for Code Blocks & Inline Code in Dark Mode */
-.vditor-reset code:not(.hljs) {
+html:not(.light-mode) .vditor-reset code:not(.hljs) {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: #ff79c6 !important;
     /* Pink-ish for code visibility */
@@ -303,8 +303,8 @@ html.light-mode .admin-editor-mode .reader-outline-panel {
     border-collapse: collapse !important;
 }
 
-.vditor-reset table th,
-.vditor-reset table td {
+html:not(.light-mode) .vditor-reset table th,
+html:not(.light-mode) .vditor-reset table td {
     border: 1px solid var(--pill-border) !important;
     background: rgba(255, 255, 255, 0.03) !important;
     padding: 8px !important;
