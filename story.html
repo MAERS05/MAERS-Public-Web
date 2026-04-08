@@ -67,10 +67,27 @@
             line-height: 1;
             transition: transform 0.3s ease;
             font-weight: 200;
+            z-index: 100;
         }
 
         #reader-overlay .close-btn:hover {
             transform: scale(1.2);
+        }
+
+        @media (max-width: 768px) {
+            #reader-overlay .close-btn {
+                top: 15px;
+                right: 20px;
+                font-size: 40px;
+            }
+            #reader-overlay .content {
+                padding: 25px 20px !important;
+                width: 85%;
+            }
+            #reader-overlay h1 {
+                padding-right: 35px; /* Prevent text from overlapping the close button */
+                font-size: 1.6rem;
+            }
         }
 
         #reader-overlay .content {
