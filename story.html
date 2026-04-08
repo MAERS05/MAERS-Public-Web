@@ -323,11 +323,13 @@
         </div>
     </div>
 
+    <!-- Polyfill for older mobile browsers to understand importmap -->
+    <script async src="https://unpkg.com/es-module-shims@1.8.0/dist/es-module-shims.js"></script>
     <script type="importmap">
         {
             "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+                "three": "./plugins/three/three.module.js",
+                "three/addons/controls/OrbitControls.js": "./plugins/three/OrbitControls.js"
             }
         }
     </script>
@@ -458,9 +460,16 @@
         const tooltipDropdown = document.getElementById('tooltip-dropdown');
         const gotoText = document.getElementById('goto-text');
 
-        window.addEventListener('pointermove', (event) => {
+        // Update pointer on move (desktop hover) AND on pointerdown (mobile tap sync)
+        function updatePointer(event) {
             pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
             pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        window.addEventListener('pointerdown', updatePointer);
+
+        window.addEventListener('pointermove', (event) => {
+            updatePointer(event);
             if (isExpanded) return;
 
             if (event.target.closest('#sphere-tooltip')) {
@@ -609,6 +618,7 @@
         window.addEventListener('click', (e) => {
             if (isExpanded) return;
             if (e.target.closest('#sphere-tooltip')) return; // ignore UI clicks
+            if (e.target.closest('#nav-dot') || e.target.closest('#nav-bar')) return; // ignore nav clicks
 
             raycaster.setFromCamera(pointer, camera);
             const intersects = raycaster.intersectObjects([sphere, smallSphere], false);
