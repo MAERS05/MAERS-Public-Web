@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <meta name="description" content="MAERS 故事空间 — 沉浸式深空叙事体验">
+    <title>MAERS Space - Story</title>
+    <link rel="icon" type="image/svg+xml" href="ui/logo.svg" />
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            pointer-events: none;
+            letter-spacing: 2px;
+        }
+
+        #reader-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            color: #fff;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background: transparent;
+        }
+
+        #reader-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        #reader-overlay .close-btn {
+            position: absolute;
+            top: 30px;
+            right: 50px;
+            font-size: 50px;
+            cursor: pointer;
+            line-height: 1;
+            transition: transform 0.3s ease;
+            font-weight: 200;
+        }
+
+        #reader-overlay .close-btn:hover {
+            transform: scale(1.2);
+        }
+
+        #reader-overlay .content {
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            line-height: 1.8;
+            letter-spacing: 1px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+        }
+
+        #reader-overlay .content::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        #reader-overlay .content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        #reader-overlay h1 {
+            margin-top: 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            font-weight: normal;
+        }
+
+        /* Pure Reading Mode Elements */
+        .enter-action {
+            margin-top: 60px;
+            text-align: right;
+        }
+
+        #enter-reader-btn {
+            display: inline-block;
+            padding: 10px 0;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 14px;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+        }
+
+        #enter-reader-btn:hover {
+            color: #fff;
+            transform: translateX(-5px);
+        }
+
+        /* Pure Reading Mode State */
+        body.pure-reading canvas {
+            display: none !important;
+        }
+
+        body.pure-reading #instructions {
+            display: none !important;
+        }
+
+        body.pure-reading #reader-overlay {
+            background: #000;
+        }
+
+        body.pure-reading #reader-overlay .content {
+            border: none;
+            box-shadow: none;
+            background: transparent;
+            backdrop-filter: none;
+            max-width: 800px;
+            max-height: 90vh;
+            transform: scale(1.05);
+            transition: transform 0.5s ease;
+        }
+
+        body.pure-reading .enter-action {
+            display: none;
+        }
+
+        #reader-brief,
+        #reader-brief-title {
+            display: block;
+        }
+
+        #reader-full,
+        #reader-full-title {
+            display: none;
+        }
+
+        body.pure-reading #reader-brief,
+        body.pure-reading #reader-brief-title {
+            display: none !important;
+        }
+
+        body.pure-reading #reader-full,
+        body.pure-reading #reader-full-title {
+            display: block;
+        }
+
+        #bg-watermark {
+            position: fixed;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            color: rgba(255, 255, 255, 0.15);
+            z-index: 1;
+            /* Below everything except canvas */
+            pointer-events: none;
+            font-weight: 900;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+            white-space: nowrap;
+            user-select: none;
+            letter-spacing: 4px;
+        }
+
+        #bg-watermark.visible {
+            opacity: 1;
+        }
+
+        /* Navigation dot + bar */
+        #nav-dot {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1.5px solid #fff;
+            box-sizing: border-box;
+            cursor: pointer;
+            z-index: 100;
+            transition: background 0.3s ease, border-color 0.3s ease;
+        }
+
+        #nav-dot:hover {
+            border-color: #fff;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+        }
+
+        #nav-dot.active {
+            background: #fff;
+            border-color: #fff;
+        }
+
+        #nav-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-100%);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        #nav-bar.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        #nav-back {
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            letter-spacing: 2px;
+            transition: text-shadow 0.2s ease;
+            line-height: 50px;
+        }
+
+        #nav-back:hover {
+            text-shadow: 0 0 10px #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navigation -->
+    <div id="nav-dot" title="导航"></div>
+    <div id="nav-bar">
+        <a id="nav-back" href="index.html">&larr;</a>
+    </div>
+
+    <div id="bg-watermark"></div>
+    <div id="sphere-tooltip"
+        style="display: none; position: absolute; background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.4); border-radius: 50px; color: white; padding: 12px 24px; cursor: pointer; pointer-events: auto; z-index: 5; font-size: 14px; transform: translate(-50%, -100%); font-family: sans-serif; letter-spacing: 1px; white-space: nowrap; box-shadow: 0 0 15px rgba(0,0,0,0.8);">
+        <div id="tooltip-title">黑洞数量:1 &gt;</div>
+        <div id="tooltip-dropdown"
+            style="display: none; position: absolute; left: calc(100% + 15px); top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.85); border: 1px solid rgba(255,255,255,0.4); border-radius: 50px; padding: 12px 24px; white-space: nowrap; box-shadow: 0 0 15px rgba(0,0,0,0.8);">
+            <div style="color:#aaa;">传送至: <span id="goto-text"
+                    style="color:#fff; text-decoration: underline;">世界2</span></div>
+        </div>
+    </div>
+
+    <div id="instructions">拖拽鼠标 / 点击球体阅读记录</div>
+
+    <div id="reader-overlay">
+        <div class="close-btn" id="close-reader">&times;</div>
+        <div class="content">
+            <h1 id="reader-brief-title">一位世界 简介</h1>
+            <h1 id="reader-full-title">一位世界</h1>
+
+            <div id="reader-brief">
+                <p>这是当前所在世界的概览档案。请确认坐标锚点后，进入底层架构获取完整数据。</p>
+            </div>
+
+            <div id="reader-full">
+                <p>在这个仅存面性黑与线性白的虚空中，几何体构建了认知的边界。</p>
+                <p>悬浮的球状簇，即是承载时间碎片的读取终端。</p>
+                <p>由于缺乏常规参照物，在此调阅档案时请注意保持意识锚点，以免迷失于无尽的坐标系里。</p>
+                <br>
+                <p>【系统正在解析时间轴...】</p>
+                <p>... 具体的内容长文将会在此呈现 ...</p>
+            </div>
+
+            <div class="enter-action">
+                <span id="enter-reader-btn">载入具体内容 / ENTER <span style="margin-left: 5px;">→</span></span>
+            </div>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // 1. Scene Setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x000000);
+        scene.fog = new THREE.FogExp2(0x000000, 0.015);
+
+        // 2. Camera Setup
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // Default horizontal perspective
+        camera.position.set(0, 10, 22);
+
+        // 3. Renderer Setup
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // Helper function: Create "面性黑色 + 线性白色" (Black Faces + White Edges) Mesh
+        function createDarkMesh(geometry, edgeThreshold = 1) {
+            // Solid black face
+            const material = new THREE.MeshBasicMaterial({
+                color: 0x000000,
+                side: THREE.DoubleSide,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1
+            });
+            const mesh = new THREE.Mesh(geometry, material);
+
+            // White wireframe/edges
+            const edges = new THREE.EdgesGeometry(geometry, edgeThreshold);
+            const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                linewidth: 1,
+                transparent: true,
+                opacity: 0.9
+            }));
+            mesh.add(line);
+
+            return mesh;
+        }
+
+        // 4. Create Round Table with a Hole using LatheGeometry (cleaner structure, no seams)
+        const outerRadius = 12;
+        const innerRadius = 3.5;
+        const halfDepth = 0.3; // Total thickness 0.6
+        const points = [];
+        points.push(new THREE.Vector2(innerRadius, -halfDepth)); // bottom inner
+        points.push(new THREE.Vector2(outerRadius, -halfDepth)); // bottom outer
+        points.push(new THREE.Vector2(outerRadius, halfDepth));  // top outer
+        points.push(new THREE.Vector2(innerRadius, halfDepth));  // top inner
+        points.push(new THREE.Vector2(innerRadius, -halfDepth)); // close loop
+
+        const tableGeometry = new THREE.LatheGeometry(points, 64);
+
+        // Use 20 threshold to hide the vertical connecting triangles and only show outer rings
+        const table = createDarkMesh(tableGeometry, 20);
+        scene.add(table);
+
+        // 5. Create Floating Sphere
+        // Using Icosahedron for a more interesting linear structure instead of regular sphere
+        const sphereGeometry = new THREE.IcosahedronGeometry(2.2, 2);
+        const sphere = createDarkMesh(sphereGeometry, 0); // 0 threshold draws all geometry lines
+        scene.add(sphere);
+
+        // 5.1 Create Second Smaller Sphere Floating Over the Table
+        // Radius of 1.1 makes it exactly half the diameter (and fits well as "小一倍")
+        const smallSphereGeom = new THREE.IcosahedronGeometry(1.1, 2);
+        const smallSphere = createDarkMesh(smallSphereGeom, 0);
+        // Position it higher to float clearly above table
+        smallSphere.position.set(7, 2.0, 0);
+        table.add(smallSphere); // Add to table group so it rotates with the table automatically
+
+
+        // 6. Deep Space Assets (Stars + Grid)
+        const starsGeom = new THREE.BufferGeometry();
+        const starsPos = [];
+        for (let i = 0; i < 4500; i++) {
+            starsPos.push(
+                (Math.random() - 0.5) * 150,
+                (Math.random() - 0.5) * 150,
+                (Math.random() - 0.5) * 150
+            );
+        }
+        starsGeom.setAttribute('position', new THREE.Float32BufferAttribute(starsPos, 3));
+        const starsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.1, transparent: true, opacity: 0.7, sizeAttenuation: true });
+        const stars = new THREE.Points(starsGeom, starsMat);
+        scene.add(stars);
+
+        // Optional space grid
+        const gridHelper = new THREE.PolarGridHelper(40, 64, 8, 64, 0xffffff, 0xffffff);
+        gridHelper.material.transparent = true;
+        gridHelper.material.opacity = 0.1;
+        gridHelper.position.y = -8;
+        scene.add(gridHelper);
+
+        // 7. Controls Setup
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        // Limit upward/downward rotation completely to 90 degrees
+        // minPolarAngle = 0 (top-down view)
+        // maxPolarAngle = Math.PI / 2 (horizontal view, flat with the table)
+        controls.minPolarAngle = 0;
+        controls.maxPolarAngle = Math.PI / 2;
+        // Allowed infinite left/right 360 degree rotation by default
+        controls.minDistance = 8;
+        controls.maxDistance = 45;
+
+        // 7.5 Interaction Setup (Raycaster)
+        const raycaster = new THREE.Raycaster();
+        const pointer = new THREE.Vector2();
+        let expandedSphere = null;
+        let isExpanded = false;
+        let targetScale = 1;
+        let isPureReading = false;
+
+        let hoveredSphere = null;
+        let hoverTimeout = null;
+        const tooltipBox = document.getElementById('sphere-tooltip');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipDropdown = document.getElementById('tooltip-dropdown');
+        const gotoText = document.getElementById('goto-text');
+
+        window.addEventListener('pointermove', (event) => {
+            pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
+            pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            if (isExpanded) return;
+
+            if (event.target.closest('#sphere-tooltip')) {
+                if (hoverTimeout) {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = null;
+                }
+                return;
+            }
+
+            if (event.target === renderer.domElement) {
+                raycaster.setFromCamera(pointer, camera);
+                const intersects = raycaster.intersectObjects([sphere, smallSphere], false);
+                if (intersects.length > 0) {
+                    document.body.style.cursor = 'pointer';
+                    hoveredSphere = intersects[0].object;
+
+                    if (hoverTimeout) {
+                        clearTimeout(hoverTimeout);
+                        hoverTimeout = null;
+                    }
+
+                    const watermark = document.getElementById('bg-watermark');
+
+                    if (hoveredSphere === sphere) {
+                        tooltipBox.style.display = 'block';
+                        tooltipBox.style.cursor = 'pointer';
+                        tooltipTitle.innerHTML = '黑洞数量:1 &gt;';
+                        gotoText.innerText = '方形暗狱';
+
+                        watermark.innerText = '一位世界';
+                        watermark.classList.add('visible');
+                    } else {
+                        tooltipBox.style.display = 'block';
+                        tooltipBox.style.cursor = 'default';
+                        tooltipDropdown.style.display = 'none';
+                        tooltipTitle.innerHTML = '黑洞数量:0';
+
+                        watermark.innerText = '一位世界分化-方形暗狱';
+                        watermark.classList.add('visible');
+                    }
+                } else {
+                    document.body.style.cursor = 'default';
+                    // Only collapse if dropdown is not manually expanded
+                    if (tooltipDropdown.style.display !== 'block') {
+                        if (!hoverTimeout) {
+                            hoverTimeout = setTimeout(() => {
+                                hoveredSphere = null;
+                                tooltipBox.style.display = 'none';
+                                document.getElementById('bg-watermark').classList.remove('visible');
+                                hoverTimeout = null;
+                            }, 350); // 350ms grace period to jump the gap safely
+                        }
+                    }
+                }
+            }
+        });
+
+        tooltipTitle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (hoveredSphere !== sphere) return;
+            tooltipDropdown.style.display = tooltipDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        gotoText.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const targetMesh = (gotoText.innerText === '一位世界') ? sphere : smallSphere;
+            triggerExpand(targetMesh);
+        });
+
+        const world1Brief = `<p>这是当前所在世界的概览档案。请确认坐标锚点后，进入底层架构获取完整数据。</p>`;
+        const world1Full = `<p>在这个仅存面性黑与线性白的虚空中，几何体构建了认知的边界。</p>
+                <p>悬浮的球状簇，即是承载时间碎片的读取终端。</p>
+                <p>由于缺乏常规参照物，在此调阅档案时请注意保持意识锚点，以免迷失于无尽的坐标系里。</p>
+                <br>
+                <p>【系统正在解析时间轴...】</p>
+                <p>... 具体的内容长文将会在此呈现 ...</p>`;
+
+        const world2Brief = `<p>档案代号：方形暗狱。一座被永夜笼罩、严丝合缝的封闭式建筑。</p>
+                <p>内部充满冷黯的光线、扭曲的轮廓以及病态的阶级统治。疑似发生过大规模异变。</p>`;
+
+        const world2Full = `<p>那是一个永夜笼罩的学校，一个严丝合缝的，完美到令人窒息的正方体建筑。零散的半球灯具被牢牢锁在铁丝网内，使其散发出的光比最稀薄的月色还要冷黯，勉强勾勒出物体模糊而扭曲的轮廓。</p>
+<p>“站住！！！”几名老师和高层同时喘着粗气喊道：“你严重违反了校规！以为入寝后从六层翻到三层就没人会发现吗？！”</p>
+<p>“我可不想被拉去见‘皇上’——！”这位同学的话音在学校里回荡着，不幸的是从他的前方又出现了几名老师，这下他无路可逃了。</p>
+<p>这个小插曲引来了无数同学围观：“这谁啊？”“好像叫季风。”“翻墙我都能理解，他居然能翻楼层，真厉害”。学生们渐渐散去，校园又恢复了平日的模样。</p>
+<p>第二天，一名身形魁梧、面带横肉的男人穿行在回廊中。他是这所学校一位导师手下最不安分的门徒，曾无数次与导师决裂并冲出这座学校。这一次，他在校外干着跑车师傅的工作，开到一段荒凉的道路上时，后面坐着的一对夫妻不满于他抽烟，没想到，他竟然破口大骂；但还是停了车下去抽烟。这时裤兜里的手机传来振动，是导师发来的消息：“马厄斯，回来，我要教你新东西。”</p>
+<p>在马厄斯与导师对练时，余光瞥见了书架上一本异样的书籍。</p>
+<p>“动作乱了。”导师冰冷地说着。马厄斯收回神来，暗暗地在内心盘算。</p>
+<p>“终于让老子在这些天找到机会了。”马厄斯叼着烟迅速誊写了一本，“这老婆娘居然藏了这么个东西。”</p>
+<p>接下来的几天，马厄斯一直待在自己的房间，对着漆黑的镜子疯狂地练习“一种，两种，三种……”镜子断断续续地反射出灼热的光芒，他看着镜中在自己的手心不断变换的炽黄色武器，内心狂笑道：“这一次我必定杀了你！”</p>
+<p>突然，在门的方向传来一声巨响，马厄斯猛然转头，看到门竟然消失了，取而代之的是一名女孩，手里握着炽黄色的螺旋长枪，开口道：“虽然我的天赋不如你，但我是导师亲自教的！”马厄斯开始不断变化手中的武器，像在无声地宣判赢家。</p>
+<p>几分钟后，女孩走了出来，走到空旷的休息区，站在导师的对面，此时的导师双手正搭在一面靠墙的沙发上，桌上放着泡好的茶水。“还我头来！还我头来！”从房间里奔出一名摇摇晃晃的男子，脖子滴着殷红的鲜血，竟然还能够说话。但在怒吼几声后，得到的回应却是死一般的寂静。</p>
+<p>男子发狂了，用尽全力冲向导师，却在靠近的一瞬间，跪了下来。深不见底的墙壁如同一面冷峻粗砺的镜子，让他看清了自己的模样，竟然还能够看到。男子对着墙壁猛烈地撞击着自己的脖子，直至力度越来越微弱，渐渐地哭喊道“还我头来！还我头来！我不反......我不反了！”</p>
+<p>导师这时开口了：“可以。”抬手指示跟女孩站在一起的，穿着一身骑士盔甲的人把头拿来。过了一会儿，骑士双手捧着一颗头颅走到男子身前，伴随一股毁灭性的力量，精准砸进男子的脖子。</p>
+<p>马厄斯抬头看向墙面，心中的庆幸瞬间被冻结，墙面映射出的，是“皇上”的头，但他开不了口了。他想把头拽下来，但都是徒劳，随即他又发现头上的一道缝线，心里咒骂道：“奶奶的！头和脑子是拼一块的！”他渐渐感到意识正在被剥夺，反抗的越来越无力，最后，成为了一具傀儡。</p>
+<p>导师欣赏完这一幕，打了一个响指，傀儡身体迅速膨胀，变成巨大的肉茧，肉丝与四周黏连在一起，使茧悬浮在半空中。又一个响指，肉茧颤动，在学校各个位置都凭空诞生了新的肉茧。</p>
+<p>“这是什么？”刚从“皇上”办公室逃出来的季风看着眼前令人恶心的东西：“奇怪，‘皇上’这几天去哪了？”他带着疑惑迅速清理了眼前的障碍。</p>
+<p>与此同时，某区域。一些同学正在散步说笑，他们中的几个人感知到了前方的异常，迅速跑了过去。“你们几个怎么突然跑这么快，怎么了？”方才被落下的同学扶着膝盖气喘吁吁地问道。“啊，哈哈，没事，我们几个一时兴起想比个赛。”几人尴尬地笑着解释到。</p>`;
+
+        function triggerExpand(targetObject) {
+            if (isExpanded) return;
+            expandedSphere = targetObject;
+            isExpanded = true;
+            targetScale = (expandedSphere === smallSphere) ? 120 : 60;
+
+            const briefTitle = document.getElementById('reader-brief-title');
+            const fullTitle = document.getElementById('reader-full-title');
+            const briefContent = document.getElementById('reader-brief');
+            const fullContent = document.getElementById('reader-full');
+
+            if (expandedSphere === smallSphere) {
+                briefTitle.innerHTML = '一位世界分化-方形暗狱 简介';
+                fullTitle.innerHTML = '一位世界分化-方形暗狱';
+                briefContent.innerHTML = world2Brief;
+                fullContent.innerHTML = world2Full;
+            } else {
+                briefTitle.innerHTML = '一位世界 简介';
+                fullTitle.innerHTML = '一位世界';
+                briefContent.innerHTML = world1Brief;
+                fullContent.innerHTML = world1Full;
+            }
+
+            tooltipBox.style.display = 'none';
+            tooltipDropdown.style.display = 'none';
+            hoveredSphere = null;
+            document.getElementById('bg-watermark').classList.remove('visible');
+            if (hoverTimeout) {
+                clearTimeout(hoverTimeout);
+                hoverTimeout = null;
+            }
+            document.body.style.cursor = 'default';
+
+            setTimeout(() => {
+                const navDot = document.getElementById('nav-dot');
+                const navBar = document.getElementById('nav-bar');
+                navDot.classList.remove('active');
+                navBar.classList.remove('visible');
+                navDot.style.display = 'none';
+                navBar.style.display = 'none';
+
+                const overlay = document.getElementById('reader-overlay');
+                if (overlay) overlay.classList.add('active');
+            }, 250); // 250ms delay per user request
+        }
+
+        window.addEventListener('click', (e) => {
+            if (isExpanded) return;
+            if (e.target.closest('#sphere-tooltip')) return; // ignore UI clicks
+
+            raycaster.setFromCamera(pointer, camera);
+            const intersects = raycaster.intersectObjects([sphere, smallSphere], false);
+
+            if (intersects.length > 0) {
+                triggerExpand(intersects[0].object);
+            } else {
+                tooltipDropdown.style.display = 'none';
+                hoveredSphere = null;
+                tooltipBox.style.display = 'none';
+                document.getElementById('bg-watermark').classList.remove('visible');
+                if (hoverTimeout) {
+                    clearTimeout(hoverTimeout);
+                    hoverTimeout = null;
+                }
+            }
+        });
+
+        document.getElementById('enter-reader-btn').addEventListener('click', () => {
+            isPureReading = true;
+            document.body.classList.add('pure-reading');
+        });
+
+        document.getElementById('close-reader').addEventListener('click', () => {
+            const overlay = document.getElementById('reader-overlay');
+            if (overlay) overlay.classList.remove('active');
+
+            document.getElementById('nav-dot').style.display = '';
+            document.getElementById('nav-bar').style.display = '';
+
+            setTimeout(() => {
+                targetScale = 1;
+                // Exit pure reading mode quickly to re-render shrinking process
+                if (isPureReading) {
+                    document.body.classList.remove('pure-reading');
+                    isPureReading = false;
+                }
+            }, 100); // 100ms delay per user request
+
+            setTimeout(() => {
+                isExpanded = false;
+                if (expandedSphere) {
+                    expandedSphere.scale.set(1, 1, 1);
+                    expandedSphere = null;
+                }
+            }, 1600);  // Adjusted to 1600ms match the slower shrink speed 0.05
+        });
+
+        // 8. Animation Loop
+        const clock = new THREE.Clock();
+        let accTime1 = 0;
+        let accTime2 = 0;
+        let lastTime = 0;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = clock.getElapsedTime();
+            const delta = time - lastTime;
+            lastTime = time;
+
+            if (hoveredSphere !== sphere || isExpanded) accTime1 += delta;
+            if (hoveredSphere !== smallSphere || isExpanded) accTime2 += delta;
+
+            sphere.position.y = 3.5 + Math.sin(accTime1 * 1.5) * 0.8;
+            sphere.rotation.y = accTime1 * 0.15;
+            sphere.rotation.x = accTime1 * 0.075;
+
+            smallSphere.position.y = 2.0 + Math.sin(accTime2 * 1.5) * 0.4;
+            smallSphere.rotation.y = accTime2 * 0.15;
+            smallSphere.rotation.x = accTime2 * 0.075;
+
+            table.rotation.y = time * 0.05;
+            stars.rotation.y = time * 0.02;
+
+            // Update UI box positioning overlaying 3D geometry
+            if (hoveredSphere && !isExpanded && tooltipBox.style.display === 'block') {
+                const vector = new THREE.Vector3();
+                vector.setFromMatrixPosition(hoveredSphere.matrixWorld);
+                // Lift the anchor precisely above geometry: 2.8 for large sphere, 1.6 for small sphere
+                vector.y += (hoveredSphere === sphere) ? 2.8 : 1.6;
+                vector.project(camera);
+
+                const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+                const y = (vector.y * -0.5 + 0.5) * window.innerHeight;
+                tooltipBox.style.left = `${x}px`;
+                tooltipBox.style.top = `${y}px`; // No need for hardcoded pixel hacking anymore!
+            }
+
+            if (!isExpanded) {
+                controls.update();
+            }
+
+            if (expandedSphere) {
+                const speed = targetScale === 1 ? 0.05 : 0.05; // Shrink speed slowed by half (0.1 -> 0.05)
+                expandedSphere.scale.lerp(new THREE.Vector3(targetScale, targetScale, targetScale), speed);
+            }
+
+            // To completely stop loading/GPU usage in pure reading mode:
+            if (!isPureReading) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        animate();
+
+        // 9. Resize Handler
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        // 10. Nav dot toggle
+        const navDot = document.getElementById('nav-dot');
+        navDot.addEventListener('click', () => {
+            document.getElementById('nav-bar').classList.toggle('visible');
+            navDot.classList.toggle('active');
+        });
+    </script>
+</body>
+
+</html>

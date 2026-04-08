@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN" style="background-color: #0a0a0a; color: #e0e0e0">
 
 <head>
@@ -53,6 +53,15 @@
       background-color: #f2f0eb;
       /* 浅色模式基础色 */
     }
+
+    #index-story-icon {
+      width: 20px;
+      height: 20px;
+      filter: invert(1);
+    }
+    html.light-mode #index-story-icon {
+      filter: invert(0.2); /* Adjust to a dark gray #333ish for light mode */
+    }
   </style>
 
   <!-- 🔥 第二优先级：主题检测脚本 (精简版 - 逻辑已同步至 theme-init.js，但此处保留用于覆盖 index 特有的 mask 逻辑) -->
@@ -81,6 +90,11 @@
 <body>
   <!-- 🔥 防闪烁遮罩 - 在页面内容渲染完成后会被移除 -->
   <div id="flash-guard"></div>
+  <!-- 故事入口图标 -->
+  <a href="story.html" title="故事"
+    style="position:fixed;top:45px;left:54px;z-index:10000;display:flex;align-items:center;justify-content:center;">
+    <img id="index-story-icon" src="ui/story.svg" alt="故事" />
+  </a>
   <div class="home-container">
     <div class="brand-area">
       <img src="ui/index.svg" alt="Logo" class="brand-logo" id="brand-logo" />
