@@ -59,8 +59,10 @@
       height: 20px;
       filter: invert(1);
     }
+
     html.light-mode #index-story-icon {
-      filter: invert(0.2); /* Adjust to a dark gray #333ish for light mode */
+      filter: invert(0.2);
+      /* Adjust to a dark gray #333ish for light mode */
     }
   </style>
 
@@ -91,7 +93,7 @@
   <!-- 🔥 防闪烁遮罩 - 在页面内容渲染完成后会被移除 -->
   <div id="flash-guard"></div>
   <!-- 故事入口图标 -->
-  <a href="story.html" title="故事"
+  <a href="https://story.maersy.com" target="_blank" title="故事"
     style="position:fixed;top:45px;left:54px;z-index:10000;display:flex;align-items:center;justify-content:center;">
     <img id="index-story-icon" src="ui/story.svg" alt="故事" />
   </a>
