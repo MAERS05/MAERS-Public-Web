@@ -11,7 +11,7 @@
         // 3. 构建 HTML 结构
         const html = `
         <div class="site-guide-wrapper" id="site-guide-btn">
-            网站引导
+            网站引导 &rarr;
         </div>
         
         <div class="video-modal" id="video-modal">
