@@ -514,7 +514,7 @@ function loadToLightbox(data) {
     if (hdBtn) {
         hdBtn.classList.toggle('active', ViewState.isHD);
         const hdText = hdBtn.querySelector('.hd-text');
-        if (hdText) hdText.textContent = ViewState.isHD ? "RAW" : "HD";
+        if (hdText) hdText.textContent = ViewState.isHD ? "Ori" : "Pre";
     }
     imgEl.classList.add('loading-hd');
     const tempLoader = new Image();

@@ -36,7 +36,7 @@ initView(Controller, null, AdminCore);
 // --- Frontend Adapter Setup (Identical to Admin-Main) ---
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Setup Adapter (Viewer Mode: IS_ADMIN = false)
-    const adapterResult = setupPhotosAdapter(applyTagFilters, Controller, {
+    const adapterResult = setupPhotosAdapter(applyTagFilters, Controller, null, {
         initialState: { IS_ADMIN: false }
     });
     const { AppState, mockController, mockSearch, StateWrapper } = adapterResult;
