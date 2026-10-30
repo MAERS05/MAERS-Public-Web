@@ -1,10 +1,12 @@
-﻿/**
+/**
  * MAERS Album Main Entry
  * @version 2.0.0 - ES6 Module
  */
 
 // 0. Shared Utilities (Required for Layout/Theme safety)
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
+import { isEncryptedRecord } from '../../data-manage/encrypt/crypto.module.js';
+import { revealInPlace } from '../../data-manage/encrypt/secret-unlock.module.js';
 
 // 1. UI Infrastructure
 import { initLayout, renderPageHeader } from '../../shared/layout.module.js';
@@ -25,7 +27,7 @@ initTheme();
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Load Album Config
     try {
-        const response = await fetch('data/album-config.json?t=' + Date.now());
+        const response = await fetch('data/album-config.json', { cache: 'no-cache' });
         if (response.ok) {
             CATEGORY_CONFIG = await response.json();
         } else {
@@ -34,6 +36,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
         console.error('Error loading album config:', err);
     }
+
+    // 已有会话密钥时，在内存中还原密文分类
+    await revealInPlace(CATEGORY_CONFIG, { transform: (plain) => plain.category || plain });
 
     // 2. Render Header
     renderPageHeader('<img src="ui/album-icon.svg" alt="Album" style="height: 1.25em; width: auto; vertical-align: middle;"> My Gallery');
@@ -45,7 +50,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Clear existing (if any)
     grid.innerHTML = '';
 
-    CATEGORY_CONFIG.forEach((cat, index) => {
+    // 过滤加密记录（_enc 字段存在的分类完全不渲染）
+    const visibleCats = CATEGORY_CONFIG.filter(c => !isEncryptedRecord(c));
+    visibleCats.forEach((cat, index) => {
         const a = document.createElement('a');
 
         // Construct Link

@@ -33,26 +33,6 @@
             padding: 0;
         }
 
-        /* 🔥 防闪烁遮罩 - 使用真实 div 元素 */
-        #flash-guard {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            /* 🎨 同步 #theme-mask 的精确背景，防止色差跳变 */
-            /* 🎨 同步 #theme-mask 的主色调，移除复杂纹理以减小体积 */
-            background-color: #141417;
-            z-index: 99999;
-            pointer-events: none;
-            /* 🎨 优化动画：0.15s */
-            transition: opacity 0.15s;
-        }
-
-        html.light-mode #flash-guard {
-            background-color: #f2f0eb;
-            /* 浅色模式基础色 */
-        }
     </style>
 
     <!-- 🔥 第三优先级：主题检测脚本 (精简版 - 逻辑已同步至 theme-init.js，但此处保留用于覆盖 index 特有的 mask 逻辑) -->
@@ -62,7 +42,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
     <link rel="icon" type="image/svg+xml" href="ui/logo.svg" />
-    <title>MAERS Admin - Index</title>
+    <title>MAERS Public Admin - Index</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style" />
@@ -78,11 +58,10 @@
     <!-- 引入管理界面专用样式 (for buttons, hover effects) -->
     <link rel="stylesheet" href="custom/admin-portal/viewer/admin-portal.css" />
     <link rel="stylesheet" href="static-style/admin-modal.css" />
+    <link rel="stylesheet" href="static-style/sync-ui.css" />
 </head>
 
 <body>
-    <!-- 🔥 防闪烁遮罩 - 在页面内容渲染完成后会被移除 -->
-    <div id="flash-guard"></div>
     <a href="admin-portal.html" class="back-btn"
         style="position: fixed; top: 20px; left: 20px; z-index: 1000; text-decoration: none;">
         <span style="font-size: 1.2em; line-height: 1;">←</span> Back

@@ -3,6 +3,13 @@
    ========================================================================== */
 
 /* 0. 🌐 Global Fluid Typography & Resizing */
+@media (prefers-reduced-motion: reduce) {
+    body .theme-switch-label .ball {
+        transition: none !important;
+        view-transition-name: none;
+    }
+}
+
 html {
     /* 核心：根据屏幕宽度自动缩放基准字体大小 (16px @ Desktop -> ~14px @ Mobile) */
     /* 这会让所有使用 rem 单位的元素（标题、间距等）自动随屏幕变小 */
@@ -10,6 +17,19 @@ html {
 }
 
 /* 1. Layout Media Queries */
+/* 1280px 以下及触屏常驻显示，桌面宽度再使用悬停显示。 */
+@media (max-width: 1280px), (hover: none) {
+    body .maers-admin-action-group {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+
+    body .maers-admin-action-group > .maers-admin-btn {
+        visibility: visible !important;
+        pointer-events: auto !important;
+    }
+}
+
 @media (max-width: 1024px) {
 
     /* 通用容器适配 (包括首页和其他页面) */
@@ -76,7 +96,7 @@ html {
     /* 其他页面的通用卡片保持单列横向 */
 
 
-    /* 2. Mobile Performance Optimization: Instant Switch (No Animation) */
+    /* 2. 移动端减少大面积颜色重绘，主题滑块保留独立过渡。 */
     @media (max-width: 1024px) {
 
         /* [极致性能] 运行时彻底隐藏遮罩层 */
@@ -85,7 +105,7 @@ html {
             display: none !important;
         }
 
-        /* [极致响应] 禁用所有过渡动画，点击即变色 */
+        /* 减少卡片过渡，滑块位移动画由独立规则控制。 */
         html,
         body,
         .main-card,

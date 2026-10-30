@@ -1,3 +1,7 @@
+"""
+相册分类服务：分类增删改排、目录与标签资源初始化、album-config.json 持久化。
+"""
+
 import sys
 import os
 
@@ -5,12 +9,15 @@ import os
 # 注意：在 server.py 运行时 path 已经设置好了，但单独测试时可能需要
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from . import cms
+from . import cms, storage
 import config
 import shutil # Import shutil at top level
 
 def ensure_category_resources(category_id):
-    """确保分类关联的物理目录和标签文件存在"""
+    """确保公开分类物理资源存在；加密分类的标签和图片继续保留在私有侧。"""
+    from . import private_photos
+    if private_photos.entry(category_id):
+        return {'dirs_created': False, 'dirs_existed': True, 'tag_file_created': False, 'tag_file_existed': True}
     if not category_id:
         return {}
     
@@ -46,19 +53,19 @@ def ensure_category_resources(category_id):
                 base_tag_file = os.path.join(tags_dir, 'cms-tag-categories.json')
             
             if os.path.exists(base_tag_file):
-                shutil.copy2(base_tag_file, target_tag_file)
+                with open(base_tag_file, 'rb') as source:
+                    storage.write_bytes(target_tag_file, source.read())
                 print(f"  [ ALBUM ] 🏷️  从模板创建标签 | Created from template: {target_tag_file}")
                 tag_file_created = True
             else:
-                with open(target_tag_file, 'w', encoding='utf-8') as f:
-                    f.write('[]')
+                storage.write_json(target_tag_file, [])
                 print(f"  [ ALBUM ] 🏷️  创建空标签文件 | Created empty tag file: {target_tag_file}")
                 tag_file_created = True
         else:
             tag_file_existed = True
             print(f"  [ ALBUM ] 🏷️  标签文件已存在 | Tag file exists: {target_tag_file}")
 
-    except Exception as e:
+    except OSError as e:
         print(f"  [ ALBUM ] ⚠️ 资源初始化异常 | Resource init error: {e}")
 
     return {
@@ -68,6 +75,7 @@ def ensure_category_resources(category_id):
         "tag_file_existed": tag_file_existed
     }
 
+@storage.transactional
 def handle_ops(path, body):
     conf = cms.load_json(config.ALBUM_CONFIG_JSON) or []
     
@@ -75,7 +83,7 @@ def handle_ops(path, body):
     
     if path == '/api/reorder_category':
         print(f"  [ ALBUM ] 📂 分类排序中 | Reordering categories...")
-        old_map = {x['id']:x for x in conf}
+        old_map = {(x.get('id') or x.get('_enc')):x for x in conf if (x.get('id') or x.get('_enc'))}
         # body 是 id 列表
         new_conf = []
         for uid in body:
@@ -85,7 +93,7 @@ def handle_ops(path, body):
         # 补全可能遗漏的
         existing = set(body)
         for x in conf:
-            if x['id'] not in existing:
+            if (x.get('id') or x.get('_enc')) not in existing:
                 new_conf.append(x)
         conf = new_conf
         changed = True
@@ -99,7 +107,7 @@ def handle_ops(path, body):
         res_info = ensure_category_resources(new_id)
 
         # 如果 JSON 中不存在，则添加
-        if not any(c['id'] == new_id for c in conf): 
+        if not any(c.get('id') == new_id for c in conf): 
             conf.append(body)
             changed = True
             print(f"  [ ALBUM ] 📝 已写入配置 | Added to album-config.json: {new_id}")
@@ -112,18 +120,22 @@ def handle_ops(path, body):
     elif path == '/api/delete_category': 
         # body 是 {id: '...', delete_physical: bool}
         target_id = body.get('id')
+        if not target_id:
+            return 400, {"status": "error", "message": "Missing ID"}
         delete_physical = body.get('delete_physical', False)
+        from . import private_photos
+        private = private_photos.entry(target_id)
         print(f"  [ ALBUM ] 🗑️  移除分类 | Removing category: {target_id} (物理删除 | Physical: {delete_physical})")
         
         initial_len = len(conf)
-        conf = [c for c in conf if c['id'] != target_id]
+        conf = [c for c in conf if c.get('id') != target_id]
         
         tag_file_deleted = False
         if len(conf) < initial_len:
             changed = True
             
             # 如果要求物理删除
-            if delete_physical and target_id:
+            if delete_physical and target_id and not private:
                 import shutil
                 try:
                     for sub in ['images', 'thumbnails', 'previews']:
@@ -140,7 +152,7 @@ def handle_ops(path, body):
                         print(f"  [ ALBUM ] 🗑️  标签配置已清理 | Tag config removed: {os.path.basename(tag_file)}")
                         tag_file_deleted = True
                         
-                except Exception as e:
+                except OSError as e:
                     print(f"  [ ALBUM ] ⚠️ 物理粉碎失败 | Physical purge failed: {e}")
 
             if changed:
@@ -156,7 +168,7 @@ def handle_ops(path, body):
         res_info = ensure_category_resources(target_id)
         
         for c in conf: 
-            if c['id'] == target_id: 
+            if target_id and c.get('id') == target_id: 
                 c.update(body)
                 changed = True
         

@@ -313,14 +313,7 @@
 
 /* ==================== 6. Grid Sizing Override ==================== */
 
-@media (min-width: 769px) {
-    .folder-grid {
-        grid-template-columns: repeat(auto-fill, 140px) !important;
-        justify-content: center;
-        gap: 30px !important;
-        padding: 25px 40px !important;
-    }
-}
+
 
 
 :root {

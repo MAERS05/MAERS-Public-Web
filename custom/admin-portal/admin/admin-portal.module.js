@@ -4,10 +4,13 @@
  * 集成 BatchItemManager 实现统一的排序、编辑、删除功能
  * @version 4.0.0
  */
+import { localFetch } from '../../../data-manage/api-client.module.js';
 
 import { Toast } from '../../../shared/toast.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin-base.module.js';
-import { AdminModal } from '../../../data-manage/admin-modal.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin/admin-base.module.js';
+import { AdminModal } from '../../../data-manage/admin/admin-modal.module.js';
+import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
+import { mountCryptoSettingsButton } from '../../../data-manage/encrypt/admin-lock.module.js';
 
 export const Admin = {
     grid: null,
@@ -15,22 +18,93 @@ export const Admin = {
     manager: null,
 
     async init() {
+        mountCryptoSettingsButton();
         this.grid = document.getElementById('admin-grid');
         if (!this.grid) return;
 
         await this.loadModules();
         this.initManager();
         this.render(); // 初始渲染
+
+        // 挂载顶栏同步、Git 提交与垃圾清理控制按钮
+        const headerActions = document.querySelector('.admin-header-actions');
+        if (headerActions) {
+            syncManager.injectSyncButton(headerActions);
+            this.injectCleanDataButton(headerActions);
+            const recovery = document.createElement('button');
+            recovery.type = 'button';
+            recovery.className = 'maers-toolbar-btn';
+            recovery.textContent = '备份与恢复';
+            recovery.onclick = async () => {
+                const { openDataRecovery } = await import('../../../data-manage/admin/data-recovery.module.js');
+                await openDataRecovery();
+            };
+            headerActions.appendChild(recovery);
+        }
+    },
+
+    injectCleanDataButton(container) {
+        if (document.getElementById('maers-clean-data-btn')) return;
+        const btn = document.createElement('button');
+        btn.id = 'maers-clean-data-btn';
+        btn.className = 'maers-toolbar-btn';
+        btn.innerHTML = '<span>清理垃圾</span>';
+        btn.title = '检查数据真源，将未引用文件移入本机回收区';
+        btn.addEventListener('click', () => this.runCleanData(btn));
+        container.appendChild(btn);
+    },
+
+    async runCleanData(btn) {
+        if (btn.disabled) return;
+        if (!confirm('确定整理未引用文件吗？\n\n将先检查数据索引和正文是否完整，再把未引用的图片与文档移入本机回收区。\n可通过「备份与恢复」恢复，不会因本地缺图删除图库记录。')) {
+            return;
+        }
+        const origHtml = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span>清理中...</span>';
+        try {
+            const res = await localFetch('/api/admin/clean_data', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                Toast.success(`🧹 整理完成：${data.deleted_files_count} 个未引用文件已移入回收区`);
+                syncManager.refreshGitStatusBadge();
+            } else {
+                Toast.error('清理失败：' + (data.error || '未知错误'));
+            }
+        } catch (e) {
+            Toast.error('清理请求失败，请确认本地后台服务正在运行');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
     },
 
     async loadModules() {
         try {
-            const res = await fetch('/api/modules');
-            this.modules = res.ok ? await res.json() : [];
+            const res = await localFetch('/api/modules');
+            if (res.ok) {
+                this.modules = await res.json();
+                return;
+            }
         } catch (e) {
-            console.error('加载模块失败:', e);
-            this.modules = [];
+            console.warn('API 加载模块失败，尝试读取静态文件:', e);
         }
+
+        // 静态降级回退（支持线上无后端环境访问）
+        try {
+            const fallbackRes = await localFetch('data/admin-portal.json');
+            if (fallbackRes.ok) {
+                this.modules = await fallbackRes.json();
+                return;
+            }
+        } catch (err) {
+            console.error('静态加载模块亦失败:', err);
+        }
+        this.modules = [];
     },
 
     initManager() {
@@ -152,7 +226,7 @@ export const Admin = {
 
                 // Auto create page if URL changed
                 if (mod.url && mod.url !== oldUrl && mod.url.endsWith('.html') && !mod.url.startsWith('http') && !mod.url.includes('/')) {
-                    fetch('/api/ensure_page', {
+                    localFetch('/api/ensure_page', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ filename: mod.url, title: mod.title })
@@ -200,7 +274,7 @@ export const Admin = {
                 let pageMsg = '';
                 if (formData.url.endsWith('.html') && !formData.url.startsWith('http') && !formData.url.includes('/')) {
                     try {
-                        const pageRes = await fetch('/api/ensure_page', {
+                        const pageRes = await localFetch('/api/ensure_page', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ filename: formData.url, title: formData.title })
@@ -221,7 +295,7 @@ export const Admin = {
                 this.modules.push(finalModule);
 
                 try {
-                    const res = await fetch('/api/save_modules', {
+                    const res = await localFetch('/api/save_modules', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(this.modules)
@@ -260,7 +334,7 @@ export const Admin = {
 
                 if (confirmName === mod.url) {
                     try {
-                        await fetch('/api/delete_page', {
+                        await localFetch('/api/delete_page', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ filename: mod.url })
@@ -276,7 +350,7 @@ export const Admin = {
         }
 
         try {
-            const res = await fetch('/api/save_modules', {
+            const res = await localFetch('/api/save_modules', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(cleanedModules)

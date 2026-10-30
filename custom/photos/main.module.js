@@ -36,7 +36,7 @@ initView(Controller, null, AdminCore);
 // --- Frontend Adapter Setup (Identical to Admin-Main) ---
 document.addEventListener('DOMContentLoaded', async () => {
     // 1. Setup Adapter (Viewer Mode: IS_ADMIN = false)
-    const adapterResult = setupPhotosAdapter(applyTagFilters, Controller, {
+    const adapterResult = setupPhotosAdapter(applyTagFilters, Controller, null, {
         initialState: { IS_ADMIN: false }
     });
     const { AppState, mockController, mockSearch, StateWrapper } = adapterResult;
@@ -49,6 +49,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const currentCategory = (Controller?.State?.category) || 'nature';
     const dynamicModuleName = `photos-${currentCategory}`;
     await preloadTagCategories(AppState, dynamicModuleName);
+    // 私密相册：公开标签文件已被移除，尝试从加密载荷还原标签分类
+    if (!AppState.tagCategories || AppState.tagCategories.length === 0) {
+        const { revealPrivateTagCategories } = await import('../../data-manage/encrypt/private-media.module.js');
+        const cats = await revealPrivateTagCategories(currentCategory);
+        if (cats) AppState.tagCategories = cats;
+    }
 
     // Initialize Tags System (Filter Logic Only, no Admin features since IS_ADMIN is false/default)
     initTags(StateWrapper, mockController, mockSearch);

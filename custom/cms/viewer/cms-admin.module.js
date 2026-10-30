@@ -5,7 +5,20 @@
  * @version 3.0.0 - ES6 Module
  */
 
-import { BatchItemManager, SaveButton, Feedback } from '../../../data-manage/admin-base.module.js';
+import { Toast } from '../../../shared/toast.module.js';
+
+import { BatchItemManager, SaveButton, Feedback } from '../../../data-manage/admin/admin-base.module.js';
+import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
+import {
+    unlockRecord,
+    mountUnlockAllButton,
+    refreshUnlockAllButton,
+    packCmsNodeForLock,
+    collectCmsPrivateCoverKeys,
+    countEncryptedDeep,
+    cancelProtection,
+    protectCmsNode
+} from '../../../data-manage/encrypt/admin-lock.module.js';
 
 // Dependency injection
 let State = null;
@@ -55,6 +68,14 @@ export async function initAdminFeatures() {
     // 3. 初始同步 - 使用 true 以重置 initialSnapshot，建立正确的“原始状态”
     syncManagerList(null, true);
 
+    // 3.5 注册「解锁全部」按钮（加密节点由 Controller 剪出到 lockedNodes）
+    mountUnlockAllButton({
+        source: `${Controller.CONFIG.CURRENT_MODULE}-tree.json`,
+        getCount: () => (Controller?.AppState?.lockedNodes?.length || 0) +
+            countEncryptedDeep(Controller.AppState.root, node => node.children, node => !!node._private_id),
+        onUnlockAll: unlockAllCms
+    });
+
     // 4. Inject Create Buttons
     const headerRight = document.querySelector('.header-right');
     if (headerRight) {
@@ -84,6 +105,7 @@ export async function initAdminFeatures() {
 
             targetContainer.insertBefore(btnFolder, insertRef);
             targetContainer.insertBefore(btnText, insertRef);
+            syncManager.injectSyncButton(targetContainer);
         }
     }
 }
@@ -222,6 +244,7 @@ export async function refreshView(fullReload = false, forceResetManager = false)
     if (fullReload) {
         await Controller.loadData();
     }
+    refreshUnlockAllButton();
 
     // [New Logic] If Search is active, delegate to Search
     // This ensures we stay in the filtered view after Save/Update
@@ -305,7 +328,7 @@ export async function uiCreateNode(type) {
             // Force Hide SaveBar
             if (SaveButton) SaveButton.hide();
         } else {
-            alert("Create Failed: " + res.msg);
+            Toast.error("Create Failed: " + res.msg);
         }
     }
 }
@@ -465,6 +488,123 @@ export async function uiRemoveTag(e, id, tag) {
     }
 }
 
+// --- 加锁 / 解锁 ---
+
+function _toast(type, msg) {
+    window.MAERS?.Toast?.[type]?.(msg);
+}
+
+/**
+ * 加锁节点（文件夹则连同全部子文档一起加密）
+ * 本地后端：立即写库并把封面迁入私有桶；中继模式：入队，电脑端合并时生效
+ */
+export async function uiLock(e, id) {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    const privateNode = Controller.AppState.allNodes.find(node => node.id === id && node._private_id);
+    if (privateNode) {
+        if (await cancelProtection(privateNode)) await refreshView(true, true);
+        return;
+    }
+
+    if (manager && manager.getSnapshot() !== manager.initialSnapshot) {
+        _toast('error', '存在未保存的改动，请先保存或取消后再加锁');
+        return;
+    }
+
+    const target = Controller.AppState.allNodes.find(n => n.id === id);
+    if (!target) return;
+    if (target._private) {
+        _toast('info', '该内容随上级文件夹对外加密，后台可正常编辑');
+        return;
+    }
+    const isFolder = Array.isArray(target.children);
+    const tip = isFolder
+        ? `确定加密文件夹「${target.title}」及其全部子文档吗？\n明文 .md 文件将被删除，封面图迁入私有桶。`
+        : `确定加密文档「${target.title}」吗？\n明文 .md 文件将被删除，封面图迁入私有桶。`;
+    if (!confirm(tip)) return;
+
+    try {
+        if (syncManager.isLocalHost()) {
+            if (await protectCmsNode(Controller.CONFIG.CURRENT_MODULE, id)) {
+                await refreshView(true, true);
+                _toast('success', '已对外加密，后台可继续编辑');
+            }
+            return;
+        }
+        await Controller.loadData();
+        const node = Controller.AppState.allNodes.find(n => n.id === id);
+        if (!node) return;
+
+        const packed = await packCmsNodeForLock(node, Controller.AppState.lockedNodes);
+        if (!packed) return;
+
+        const res = await Controller.lockNode(id, packed.enc, packed.covers, packed.sources);
+        if (!res.success) {
+            _toast('error', `加锁失败: ${res.msg || ''}`);
+            return;
+        }
+        _toast('success', '🔒 已加密');
+        await refreshView(false, true);
+        if (SaveButton) SaveButton.hide();
+    } catch (err) {
+        console.error('[CMS] Lock failed', err);
+        _toast('error', `加锁失败: ${err.message}`);
+    }
+}
+
+/** 解锁单个加密节点（不刷新视图） */
+async function _unlockOne(locked) {
+    const tree = await unlockRecord({ _enc: locked._enc });
+    if (!tree) return false;
+
+    const res = await Controller.unlockNode(locked.id, tree);
+    if (!res.success) {
+        _toast('error', `解锁失败: ${res.msg || ''}`);
+        return false;
+    }
+    return true;
+}
+
+export async function uiUnlock(id) {
+    const locked = (Controller.AppState.lockedNodes || []).find(n => n.id === id);
+    if (!locked) return;
+    if (await _unlockOne(locked)) {
+        _toast('success', '🔓 已解密');
+        await refreshView(false, true);
+    }
+}
+
+/**
+ * 直接删除整条加密记录
+ * 若当前会话已解锁，顺带清理其已迁入私有桶的封面图；未解锁则仅删除记录
+ */
+export async function uiDeleteLocked(id) {
+    if (!confirm('确定永久删除这条加密内容吗？此操作无法恢复。')) return;
+    const locked = (Controller.AppState.lockedNodes || []).find(n => n.id === id);
+    const purge = await collectCmsPrivateCoverKeys(locked);
+    const res = await Controller.deleteNode(id, purge.length ? { purge_private: purge } : undefined);
+    if (res.success) {
+        await refreshView(false, true);
+    }
+}
+
+/**
+ * 解锁全部：逐个解锁并重新读取状态。
+ * 解锁文件夹后其内部仍加密的子节点会变为新的顶层锁定项，循环直到清空。
+ * @returns {Promise<number>} 成功解锁数量
+ */
+async function unlockAllCms() {
+    let count = 0;
+    let guard = 0;
+    while ((Controller.AppState.lockedNodes || []).length > 0 && guard++ < 500) {
+        if (!(await _unlockOne(Controller.AppState.lockedNodes[0]))) break;
+        count++;
+    }
+    await refreshView(false, true);
+    return count;
+}
+
 export const Admin = {
     initAdmin,
     initAdminFeatures,
@@ -480,6 +620,9 @@ export const Admin = {
     uiRemoveCover,
     uiAddTag,
     uiRemoveTag,
+    uiLock,
+    uiUnlock,
+    uiDeleteLocked,
     performSave,
     performCancel
 };

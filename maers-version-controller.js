@@ -38,7 +38,7 @@ const VERSION_CONFIG = {
     // 📅 全局默认版本（兜底，优先级最低）
     // 大版本发布时修改这里
     // ════════════════════════════════════════════
-    default: '2026.0307-2000',
+    default: '2026.1103-0001',
 
     // ════════════════════════════════════════════
     // 📦 分组版本（推荐日常使用 ⭐）
@@ -48,17 +48,17 @@ const VERSION_CONFIG = {
     groups: {
         // 🎨 全局样式 (CSS)
         styles: {
-            version: '1',   // ← 改了 CSS？把这个数字 +1
-            paths: ['static-style/', 'custom/zmobile adaptation/']
+            version: '2',   // ← 改了 CSS？把这个数字 +1
+            paths: ['static-style/', 'custom/zmobile adaptation/', 'plugins/vditor-assets/', 'ui/']
         },
         // 📝 CMS 核心内容管理
         cms: {
-            version: '1',   // ← 改了 CMS？把这个数字 +1
+            version: '3',   // ← 改了 CMS？把这个数字 +1
             paths: ['custom/cms/']
         },
         // 📚 文学模块
         literature: {
-            version: '1',
+            version: '2',
             paths: ['custom/literature/', 'data/literature-tree.json']
         },
         // 📓 笔记模块
@@ -78,7 +78,7 @@ const VERSION_CONFIG = {
         },
         // 🎵 音乐模块
         music: {
-            version: '1',
+            version: '2',
             paths: ['custom/music/', 'data/music-data.json']
         },
         // 🎬 影视模块
@@ -88,22 +88,22 @@ const VERSION_CONFIG = {
         },
         // 🖼️ 相册模块
         photos: {
-            version: '1',
+            version: '3',
             paths: ['custom/photos/', 'custom/album/', 'data/photos-data.json', 'data/album-config.json']
         },
         // 🛠️ 基础设施 (shared + data-manage)
         shared: {
-            version: '1',
-            paths: ['shared/', 'data-manage/']
+            version: '3',
+            paths: ['shared/', 'data-manage/', 'custom/zmobile localization/', 'custom/admin-portal/']
         },
         // 🌌 空间模块
         space: {
-            version: '1',
+            version: '3',
             paths: ['custom/space/', 'data/space-tree.json']
         },
         // 🏠 首页
         index: {
-            version: '1',
+            version: '2',
             paths: ['custom/index/', 'data/index-cards.json']
         }
     },
@@ -139,21 +139,14 @@ self.addEventListener('install', (event) => {
 
 // 监听激活事件
 self.addEventListener('activate', (event) => {
-    // 立即接管所有已打开的页面客户端
-    event.waitUntil(clients.claim());
-
-    // 清理旧版本的缓存
-    event.waitUntil(
-        caches.keys().then((cacheNames) => {
-            return Promise.all(
-                cacheNames.map((cacheName) => {
-                    if (cacheName !== CACHE_NAME) {
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
-    );
+    event.waitUntil((async () => {
+        // 清理结束后通知页面，避免 controllerchange 早于缓存清理导致状态残留。
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name)));
+        await clients.claim();
+        const pages = await clients.matchAll({ type: 'window' });
+        pages.forEach(page => page.postMessage({ type: 'MAERS_CACHE_CLEANED' }));
+    })());
 });
 
 /**
@@ -212,8 +205,18 @@ self.addEventListener('fetch', (event) => {
                 mode: 'cors',
                 credentials: event.request.credentials
             }).catch(() => {
-                // 离线回退
-                return fetch(event.request);
+                // 离线：先查版本化 URL（下载按钮存的），再查原始 URL
+                const matchOpts = { ignoreVary: true, ignoreSearch: true };
+                return caches.match(newUrl.toString(), matchOpts)
+                    .then(c => c || caches.match(event.request, matchOpts))
+                    .then(c => c || caches.match(url.href, matchOpts))
+                    .then(c => {
+                        if (c) return c;
+                        if (event.request.headers.get('accept')?.includes('text/html')) {
+                            return caches.match('/index.html', matchOpts);
+                        }
+                        return new Response('Offline', { status: 503 });
+                    });
             })
         );
     }

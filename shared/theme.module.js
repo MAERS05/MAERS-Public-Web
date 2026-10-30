@@ -10,7 +10,10 @@ import { toggleGlobalShrink, setupZoomTrigger, initZoomSystem } from './theme/th
 /**
  * Main Initialization Function
  */
+let initialized = false;
 export function initTheme() {
+    if (initialized) return;
+    initialized = true;
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
             _runInitTheme();

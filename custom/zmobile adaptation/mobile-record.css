@@ -17,6 +17,10 @@
         padding: 16px !important;
     }
 
+    body.cms-text-admin .grid-item {
+        aspect-ratio: 1 !important;
+    }
+
     /* 取消行数截断，允许长标题完整显示 */
     .grid-item .item-title {
         font-size: 1.4rem !important;

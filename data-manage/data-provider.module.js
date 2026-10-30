@@ -1,15 +1,87 @@
 /**
  * MAERS DataProvider - 统一数据访问层 (v4.0 ESM)
  * 职责：环境感知、数据策略分发、业务接口封装
- * 依赖：MAERS.ApiClient (暂时保留全局依赖，后续可进一步模块化)
+ * 依赖：通过 ES Module 导入 api 客户端
  * @version 4.0.0
  */
 
 import { api } from './api-client.module.js';
 
+/** 统一公开媒体入口；私密 URL 和外部绝对地址不做改写。 */
+export function publicMediaUrl(value) {
+    if (typeof value === 'string' && value.startsWith('/api/private/media/')) return value;
+    if (!value || /^https?:\/\//i.test(value)) return value;
+    const key = value.replace(/^\/+/, '');
+    const base = (window.MAERS?.Config?.MEDIA_PUBLIC_BASE || '').replace(/\/+$/, '');
+    if (!/^photos\/(images|thumbnails|previews)\//.test(key)) return value;
+    const encoded = key.split('/').map(encodeURIComponent).join('/');
+    return base && key.startsWith('photos/images/') ? `${base}/${encoded}` : encoded;
+}
+
+/** 保留真实文件键；URL 路径仅解码一次，以便匹配完整 CDN 地址。 */
+function mediaKeys(value, fromUrl = true) {
+    if (typeof value !== 'string' || !value) return [];
+    const clean = path => path.replace(/\\/g, '/').replace(/^(?:\.\.\/|\.\/)+/, '').replace(/^\/+/, '');
+    const keys = [clean(value)];
+    if (fromUrl) try {
+        const path = clean(decodeURIComponent(new URL(value, window.location.href).pathname));
+        keys.push(path);
+        const media = path.match(/(?:^|\/)(photos\/(?:images|previews|thumbnails)\/.*)$/);
+        if (media) keys.push(media[1]);
+    } catch { /* 无效 URL 仍可按真实文件键查找。 */ }
+    return keys;
+}
+
 export const DataProvider = {
     // 缓存数据
     _cache: {},
+    _coverIndex: new Map(),
+    _coverIndexLoaded: false,
+    _coverIndexRequest: null,
+
+    /** 共用页面内封面索引；管理端重新载入时刷新，失败后允许重试。 */
+    loadCoverIndex({ refresh = false } = {}) {
+        if (this._coverIndexRequest) return this._coverIndexRequest;
+        if (this._coverIndexLoaded && !refresh) return Promise.resolve(true);
+        this._coverIndexRequest = Promise.resolve().then(async () => {
+            try {
+                const response = await fetch('data/photos-data.json', { cache: 'no-cache' });
+                if (!response.ok) throw new Error(`图片索引请求失败：${response.status}`);
+                const data = await response.json();
+                if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('图片索引格式无效');
+                const index = new Map();
+                for (const rows of Object.values(data)) {
+                    if (!Array.isArray(rows)) continue;
+                    for (const row of rows) {
+                        if (!row || typeof row !== 'object') continue;
+                        for (const key of mediaKeys(row.path, false)) index.set(key, row);
+                    }
+                }
+                this._coverIndex = index;
+                this._coverIndexLoaded = true;
+                return true;
+            } catch (error) {
+                this._coverIndexLoaded = false;
+                console.warn('[DataProvider] 封面索引加载失败，使用原图：', error);
+                return false;
+            } finally {
+                this._coverIndexRequest = null;
+            }
+        });
+        return this._coverIndexRequest;
+    },
+
+    /** 使用显式私密地址、索引的真实衍生路径或原图，禁止推测文件名。 */
+    getCoverUrl(node, size = 'preview') {
+        if (!node) return null;
+        const explicit = size === 'thumb' ? node.coverThumb || node.coverPreview : node.coverPreview || node.coverThumb;
+        if (explicit) return explicit;
+        for (const key of mediaKeys(node.coverImage)) {
+            const row = this._coverIndex.get(key);
+            if (row) return publicMediaUrl(row[size] || row[size === 'thumb' ? 'preview' : 'thumb'] || node.coverImage) || null;
+        }
+        return publicMediaUrl(node.coverImage) || null;
+    },
 
     // 环境判定
     get isLocal() {
@@ -60,10 +132,12 @@ export const DataProvider = {
      */
     async uploadImage(category, file) {
         if (!this.isLocal) throw new Error("Permission denied: Not local environment");
-        return api.upload('/upload', file, {
+        const result = await api.upload('/upload', file, {
             category: category,
             name: encodeURIComponent(file.name)
         });
+        if (result.sync?.state === 'pending') window.MAERS?.Toast?.warning('图片已保存到本机，云端同步待完成，请在后台备份与恢复中重试');
+        return result;
     },
 
     /**

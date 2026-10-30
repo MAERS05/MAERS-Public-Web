@@ -1,0 +1,267 @@
+/* 图表卡片、全屏按钮与全屏视口样式。 */
+/* 鼠标点击不显示默认焦点框，键盘导航保留可见提示。 */
+svg[data-mindmap] [data-mindmap-node]:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* 导图容器：保留极简细边框标定显示范围，0内边距最大化可用空间 */
+.cms-diagram-card:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-mindmap:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-markmap:not(.cms-diagram-card--fullscreen),
+.markdown-body .language-mindmap:not(.cms-diagram-card--fullscreen),
+.markdown-body .language-markmap:not(.cms-diagram-card--fullscreen) {
+  margin: 16px 0 !important;
+  padding: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+html.light-mode .cms-diagram-card:not(.cms-diagram-card--fullscreen),
+.light-mode .cms-diagram-card:not(.cms-diagram-card--fullscreen),
+html.light-mode .vditor-reset .language-mindmap:not(.cms-diagram-card--fullscreen),
+html.light-mode .vditor-reset .language-markmap:not(.cms-diagram-card--fullscreen),
+html.light-mode .markdown-body .language-mindmap:not(.cms-diagram-card--fullscreen),
+html.light-mode .markdown-body .language-markmap:not(.cms-diagram-card--fullscreen) {
+  background: transparent !important;
+  border: 1px solid rgba(15, 23, 42, 0.1) !important;
+  box-shadow: none !important;
+}
+
+
+
+.cms-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  margin: 18px 0;
+  border-radius: 12px;
+}
+
+.cms-table-wrap table {
+  margin: 0 !important;
+}
+
+.markdown-body pre.cms-diagram-pre,
+.vditor-reset pre.cms-diagram-pre,
+.vditor-reset pre:has(.cms-diagram-card) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.cms-diagram-card {
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 导图右上角全屏切换按钮（引用 ui/full-screen.svg） */
+.cms-diagram-card,
+.vditor-reset .language-mindmap,
+.vditor-reset .language-markmap,
+.markdown-body .language-mindmap,
+.markdown-body .language-markmap {
+  position: relative !important;
+}
+
+.cms-diagram-fs-btn {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  width: 30px !important;
+  height: 30px !important;
+  padding: 6px !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(24, 24, 27, 0.75) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer !important;
+  z-index: 25 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cms-diagram-fs-btn:hover {
+  background: rgba(39, 39, 42, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  transform: scale(1.06);
+}
+
+.cms-diagram-fs-btn:active {
+  transform: scale(0.95);
+}
+
+
+
+.cms-diagram-fs-icon {
+  width: 15px !important;
+  height: 15px !important;
+  display: block !important;
+  pointer-events: none !important;
+  filter: invert(1) brightness(1.2);
+  transition: transform 0.2s ease;
+}
+
+/* 浅色模式适配 */
+html.light-mode .cms-diagram-fs-btn,
+.light-mode .cms-diagram-fs-btn {
+  border-color: rgba(15, 23, 42, 0.12) !important;
+  background: rgba(255, 255, 255, 0.85) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+html.light-mode .cms-diagram-fs-btn:hover,
+.light-mode .cms-diagram-fs-btn:hover {
+  background: #ffffff !important;
+  border-color: rgba(15, 23, 42, 0.22) !important;
+}
+
+html.light-mode .cms-diagram-fs-icon,
+.light-mode .cms-diagram-fs-icon {
+  filter: opacity(0.78);
+}
+
+html.light-mode .cms-diagram-fs-btn:hover .cms-diagram-fs-icon,
+.light-mode .cms-diagram-fs-btn:hover .cms-diagram-fs-icon {
+  filter: opacity(1);
+}
+
+/* 沉浸式全屏状态：覆盖全屏，ECharts自适应重绘 */
+.cms-diagram-fs-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  isolation: isolate;
+}
+
+.cms-diagram-card.cms-diagram-card--fullscreen,
+.language-mindmap.cms-diagram-card--fullscreen,
+.language-markmap.cms-diagram-card--fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  transform: none !important;
+  transition: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  z-index: 999999 !important;
+  background: #0f131a !important;
+  box-sizing: border-box !important;
+  padding: 12px !important;
+}
+
+html.light-mode .cms-diagram-card.cms-diagram-card--fullscreen,
+.light-mode .cms-diagram-card.cms-diagram-card--fullscreen,
+html.light-mode .language-mindmap.cms-diagram-card--fullscreen,
+.light-mode .language-mindmap.cms-diagram-card--fullscreen,
+html.light-mode .language-markmap.cms-diagram-card--fullscreen,
+.light-mode .language-markmap.cms-diagram-card--fullscreen {
+  background: #ffffff !important;
+}
+
+
+
+.cms-diagram-card.cms-diagram-card--fullscreen .cms-diagram-fs-btn {
+
+  top: 14px !important;
+
+  right: 14px !important;
+
+}
+
+
+
+body.cms-diagram-fs-open {
+  overflow: hidden !important;
+}
+
+.markdown-body img.cms-diagram-fs-icon,
+.vditor-reset img.cms-diagram-fs-icon,
+.cms-diagram-fs-btn img.cms-diagram-fs-icon {
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* SVG renderers share the full content area without stretching their diagrams. */
+.cms-diagram-card.cms-diagram-card--fullscreen > svg {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.cms-svg-interactive {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  overflow: hidden;
+}
+.cms-svg-interactive.cms-svg-dragging {
+  cursor: grabbing;
+}
+
+/* Use the whole card as the SVG viewport in BOTH sizes. Renderer inline
+   max-width and Vditor's width:auto must not leave a narrow clipped SVG inside it. */
+.cms-diagram-card.cms-svg-interactive:not(.cms-diagram-card--fullscreen) {
+  height: 420px !important;
+}
+.cms-diagram-card.cms-svg-interactive > svg {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  overflow: hidden;
+}
+
+
+
+/* Diagram label metrics must not inherit the prose theme's tracking/line spacing.
+   Keep this on the diagram so the same metrics apply in its fullscreen portal. */
+.language-mermaid {
+  letter-spacing: normal;
+  line-height: 1.2;
+}
+
+
+/* Mermaid 的常规节点使用思维导图同款圆角，判断节点等形状保持原样。 */
+.language-mermaid :is(.node, .classGroup) > rect,
+.language-mermaid rect.actor {
+  rx: 6px;
+  ry: 6px;
+}
+
+/* PlantUML 是外部 SVG 文档，深色模式单独转换其底色与线条。 */
+html:not(.light-mode) .language-plantuml > object {
+  filter: invert(0.9) hue-rotate(180deg);
+}

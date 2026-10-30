@@ -1,12 +1,13 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN" class="fixed-layout-page">
 
 <head>
   <script src="shared/flash-guard.js"></script>
+  <script src="custom/config.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport"
     content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes" />
-  <title>MAERS Admin - CMS</title>
+  <title>MAERS Public Admin - CMS</title>
   <!-- 🚀 Resource Preloading -->
   <link rel="preload" href="static-style/theme.css" as="style" />
   <link rel="preload" href="static-style/components.css" as="style" />
@@ -19,9 +20,10 @@
   <link rel="stylesheet" href="custom/cms/viewer/cms-base.css" />
   <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css" />
   <link rel="stylesheet" href="static-style/admin-modal.css" />
+  <link rel="stylesheet" href="static-style/sync-ui.css" />
 
   <!-- Module-specific CSS will be injected by admin-main.module.js -->
-  <script src="plugins/vditor-assets/index.min.js"></script>
+  <script src="plugins/vditor-assets/index.min.js?v=20261022-9"></script>
   <script src="plugins/marked.min.js"></script>
   <script type="module" src="shared/utils.module.js"></script>
   <script type="module" src="shared/module-config.module.js"></script>
@@ -42,6 +44,8 @@
   </script>
   <link rel="stylesheet" href="custom/cms/admin/cms-editor.css" />
   <link rel="stylesheet" href="static-style/splash.css" />
+  <link rel="stylesheet" href="static-style/responsive.css" />
+  <link rel="stylesheet" href="custom/zmobile adaptation/mobile-cms.css" />
 </head>
 
 <body>

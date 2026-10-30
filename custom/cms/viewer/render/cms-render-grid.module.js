@@ -3,9 +3,23 @@
  * @description CMS 网格渲染 - 卡片生成与分片渲染优化
  * @version 1.0.0 - ES6 Module
  */
+import { localFetch } from '../../../../data-manage/api-client.module.js';
+import { DataProvider, publicMediaUrl } from '../../../../data-manage/data-provider.module.js';
 
-import { AdminButtonHelper } from '../../../../data-manage/admin-base.module.js';
+import { AdminButtonHelper } from '../../../../data-manage/admin/admin-base.module.js';
+import { renderLockedCard, cryptoIconHtml, setupLockActionButton } from '../../../../data-manage/encrypt/admin-lock.module.js';
 import { setupTagDragAndMenu } from '../../admin/tag-interactions.module.js';
+
+const REMOVE_COVER_ICON = new URL('../../../../ui/remove-cover.svg', import.meta.url).href;
+
+// 工具函数：判断当前是否有本地 Python 后端（localhost / 局域网）
+function _isLocalBackend() {
+    const host = window.location.hostname;
+    return (
+        ['localhost', '127.0.0.1', '[::1]', ''].includes(host) ||
+        /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(host)
+    );
+}
 
 // Dependency injection
 let State = null;
@@ -51,32 +65,6 @@ function isFiltering() {
     return (State.AppState.searchQuery || (State.AppState.activeFilters && State.AppState.activeFilters.size > 0));
 }
 
-function getCoverUrl(node, moduleName) {
-    if (!node.coverImage) return null;
-
-    // Games Module: Map to previews/gamecovers/*.avif
-    if (moduleName === 'games') {
-        const pathParts = node.coverImage.split('/');
-        const filename = pathParts[pathParts.length - 1];
-        const basename = filename.replace(/\.[^/.]+$/, "");
-        return `photos/previews/gamecovers/${basename}.avif`;
-    }
-
-    // Videos Module: Map to previews/videocovers/*.avif
-    if (moduleName === 'videos') {
-        const pathParts = node.coverImage.split('/');
-        const filename = pathParts[pathParts.length - 1];
-        const basename = filename.replace(/\.[^/.]+$/, "");
-        return `photos/previews/videocovers/${basename}.avif`;
-    }
-
-    // Literature Module: legacy logic (photos/previews/literaturecovers/....avif)
-    const pathParts = node.coverImage.split('/');
-    const filename = pathParts[pathParts.length - 1];
-    const basename = filename.replace(/\.[^/.]+$/, "");
-    return `photos/previews/literaturecovers/${basename}.avif`;
-}
-
 export function createGridItem(node, State, index) {
     const el = document.createElement("div");
     let className = `grid-item type-${node.type}`;
@@ -117,7 +105,10 @@ export function createGridItem(node, State, index) {
             const btn = document.createElement('span');
             btn.className = 'maers-admin-btn';
             btn.title = title;
-            btn.textContent = icon;
+            if (icon === '🔒') btn.innerHTML = cryptoIconHtml(node._private_id ? 'decryption' : 'encryption');
+            else if (icon === 'remove-cover') btn.innerHTML = `<img class="maers-admin-icon--remove-cover" src="${REMOVE_COVER_ICON}" width="18" height="18" alt="" aria-hidden="true">`;
+            else if (icon === '✎') btn.innerHTML = '<span class="maers-admin-edit-icon">✎</span>';
+            else btn.textContent = icon;
             btn.addEventListener('click', onClick);
             return btn;
         };
@@ -128,20 +119,30 @@ export function createGridItem(node, State, index) {
         }
         wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
 
+        wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
+
         // Delete button always visible (works in both normal and filtered mode)
         const delIcon = isDeleted ? '↺' : '✕';
         const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
         if (isDeleted) delBtn.classList.add('btn-delete-active');
         wrapper.appendChild(delBtn);
-
-        wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
-
         if (isLitModule) {
             if (!node.coverImage) {
                 wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
             } else {
-                wrapper.appendChild(createBtn('🗑️', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
+                wrapper.appendChild(createBtn('remove-cover', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
             }
+        }
+
+        if (Admin.uiLock) {
+            const lockTitle = node._private_id ? '取消对外加密' : node._private ? '随上级对外加密' : '对外加密' + (node.type === 'folder' ? '（含全部子文档）' : '');
+            const lockBtn = createBtn('🔒', lockTitle, (e) => Admin.uiLock(e, node.id));
+            setupLockActionButton(lockBtn, {
+                isLocked: Boolean(node._private_id),
+                title: lockTitle,
+                onClick: (e) => Admin.uiLock(e, node.id)
+            });
+            wrapper.appendChild(lockBtn);
         }
 
         el.appendChild(wrapper);
@@ -156,7 +157,7 @@ export function createGridItem(node, State, index) {
     const showCover = currentModule === 'literature' || currentModule === 'games' || currentModule === 'videos';
 
     if (showCover) {
-        const coverUrl = getCoverUrl(node, currentModule);
+        const coverUrl = DataProvider.getCoverUrl(node, 'preview');
         const coverDiv = document.createElement('div');
         coverDiv.className = coverUrl ? 'item-cover' : 'item-cover placeholder';
 
@@ -173,8 +174,13 @@ export function createGridItem(node, State, index) {
             img.decoding = 'async';
             img.className = 'item-cover-img';
             img.onload = () => coverDiv.classList.add('loaded');
-            // Error fallback: hide image or show placeholder
+            // 错误回退：优先降级至 Cloudflare R2 原图 CDN，若依然失败再展示占位图
             img.onerror = () => {
+                if (!img.dataset.hasFallenBack && node.coverImage) {
+                    img.dataset.hasFallenBack = "true";
+                    img.src = publicMediaUrl(node.coverImage);
+                    return;
+                }
                 img.style.display = 'none';
                 coverDiv.classList.add('placeholder');
             };
@@ -223,22 +229,27 @@ export function createGridItem(node, State, index) {
                 const oldTags = [...(currentNode.tags || [])];
                 currentNode.tags = newTags;
 
-                // Call update API
+                // 线上无后端，仅内存更新后直接刷新视图
+                if (!_isLocalBackend()) {
+                    if (typeof Controller?.refreshView === 'function') {
+                        Controller.refreshView(false, true);
+                    }
+                    return false;
+                }
+
+                // 本地环境：将标签变更请求写入后端数据库
                 const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
                 try {
-                    const res = await fetch(`/api/cms/update_tags?module=${module}`, {
+                    const res = await localFetch(`/api/cms/update_tags?module=${module}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ id: node.id, tags: newTags })
                     });
 
                     if (res.ok) {
-                        // Refresh view to update filter bar and grid (matching photos/space behavior)
                         if (typeof Controller?.refreshView === 'function') {
                             Controller.refreshView(false, true);
                         }
-                        // Return false: DOM will be rebuilt by refreshView, so tag-interactions
-                        // should NOT try to update now-stale DOM elements
                         return false;
                     } else {
                         currentNode.tags = oldTags;
@@ -302,7 +313,10 @@ function patchGridItem(el, node, State, index) {
             const btn = document.createElement('span');
             btn.className = 'maers-admin-btn';
             btn.title = title;
-            btn.textContent = icon;
+            if (icon === '🔒') btn.innerHTML = cryptoIconHtml(node._private_id ? 'decryption' : 'encryption');
+            else if (icon === 'remove-cover') btn.innerHTML = `<img class="maers-admin-icon--remove-cover" src="${REMOVE_COVER_ICON}" width="18" height="18" alt="" aria-hidden="true">`;
+            else if (icon === '✎') btn.innerHTML = '<span class="maers-admin-edit-icon">✎</span>';
+            else btn.textContent = icon;
             btn.addEventListener('click', onClick);
             return btn;
         };
@@ -313,20 +327,30 @@ function patchGridItem(el, node, State, index) {
         }
         wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
 
+        wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
+
         // Delete button always visible (works in both normal and filtered mode)
         const delIcon = isDeleted ? '↺' : '✕';
         const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
         if (isDeleted) delBtn.classList.add('btn-delete-active');
         wrapper.appendChild(delBtn);
-
-        wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
-
         if (isLitModule) {
             if (!node.coverImage) {
                 wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
             } else {
-                wrapper.appendChild(createBtn('🗑️', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
+                wrapper.appendChild(createBtn('remove-cover', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
             }
+        }
+
+        if (Admin.uiLock) {
+            const lockTitle = node._private_id ? '取消对外加密' : node._private ? '随上级对外加密' : '对外加密' + (node.type === 'folder' ? '（含全部子文档）' : '');
+            const lockBtn = createBtn('🔒', lockTitle, (e) => Admin.uiLock(e, node.id));
+            setupLockActionButton(lockBtn, {
+                isLocked: Boolean(node._private_id),
+                title: lockTitle,
+                onClick: (e) => Admin.uiLock(e, node.id)
+            });
+            wrapper.appendChild(lockBtn);
         }
 
         if (oldWrapper) {
@@ -341,7 +365,7 @@ function patchGridItem(el, node, State, index) {
     const showCover = currentModule === 'literature' || currentModule === 'games' || currentModule === 'videos';
 
     if (showCover) {
-        const newCoverUrl = getCoverUrl(node, currentModule);
+        const newCoverUrl = DataProvider.getCoverUrl(node, 'preview');
         const existingCoverDiv = el.querySelector('.item-cover');
 
         if (existingCoverDiv) {
@@ -414,21 +438,26 @@ function patchGridItem(el, node, State, index) {
                     const oldTags = [...(currentNode.tags || [])];
                     currentNode.tags = newTags;
 
+                    // 线上无后端，仅内存更新后直接刷新视图
+                    if (!_isLocalBackend()) {
+                        if (typeof Controller?.refreshView === 'function') {
+                            Controller.refreshView(false, true);
+                        }
+                        return false;
+                    }
+
                     const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
                     try {
-                        const res = await fetch(`/api/cms/update_tags?module=${module}`, {
+                        const res = await localFetch(`/api/cms/update_tags?module=${module}`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ id: node.id, tags: newTags })
                         });
 
                         if (res.ok) {
-                            // Refresh view to update filter bar and grid (matching photos/space behavior)
                             if (typeof Controller?.refreshView === 'function') {
                                 Controller.refreshView(false, true);
                             }
-                            // Return false: DOM will be rebuilt by refreshView, so tag-interactions
-                            // should NOT try to update now-stale DOM elements
                             return false;
                         } else {
                             currentNode.tags = oldTags;
@@ -444,6 +473,42 @@ function patchGridItem(el, node, State, index) {
             });
         }
     }
+}
+
+/**
+ * 创建加密节点的锁定占位卡片（仅 Admin）
+ * 注意：不写 data-id，避免被事件委托/补丁渲染当成普通节点
+ */
+function createLockedCard(lockedNode) {
+    return renderLockedCard({
+        className: 'grid-item locked-card',
+        variant: 'cms',
+        label: '私密内容',
+        dataset: { lockedId: lockedNode.id },
+        onUnlock: () => Admin.uiUnlock(lockedNode.id),
+        onDelete: () => Admin.uiDeleteLocked?.(lockedNode.id)
+    });
+}
+
+/**
+ * 在当前目录网格末尾追加锁定占位卡片（先清除旧的，筛选/搜索中不显示）
+ * @returns {number} 追加的卡片数
+ */
+function renderLockedCards(container) {
+    container.querySelectorAll('.locked-card').forEach(el => el.remove());
+    if (!State.IS_ADMIN || !Admin?.uiUnlock || isFiltering()) return 0;
+
+    const locked = State.AppState.lockedNodes || [];
+    if (locked.length === 0) return 0;
+
+    const cur = State.AppState.pathStack[State.AppState.pathStack.length - 1];
+    const parentId = cur === 'root' ? 'root' : cur.id;
+    const mine = locked.filter(n => n.parentId === parentId);
+    mine.forEach(n => container.appendChild(createLockedCard(n)));
+
+    // 有锁定卡片时不再显示空列表提示
+    if (mine.length > 0) container.querySelector('.empty-tip')?.remove();
+    return mine.length;
 }
 
 export function renderGrid(list, isSearch = false, shouldResetManager = false, skipSync = false) {
@@ -463,6 +528,7 @@ export function renderGrid(list, isSearch = false, shouldResetManager = false, s
         if (State.IS_ADMIN && Admin && !skipSync) {
             Admin.syncManagerList?.([], true);
         }
+        renderLockedCards(container);
         return;
     }
 
@@ -496,11 +562,15 @@ export function renderGrid(list, isSearch = false, shouldResetManager = false, s
 
             if (index < total) {
                 requestAnimationFrame(renderBatch);
+            } else {
+                renderLockedCards(container);
             }
         }
         renderBatch();
     } else {
         // Patch Render (Preserves cover images to avoid reload flicker)
+        // 先移除锁定卡片，避免影响下标定位，渲染完成后再重新追加
+        container.querySelectorAll('.locked-card').forEach(el => el.remove());
         const existingNodes = new Map();
         Array.from(container.children).forEach(el => {
             if (el.dataset.id) existingNodes.set(el.dataset.id, el);
@@ -530,5 +600,6 @@ export function renderGrid(list, isSearch = false, shouldResetManager = false, s
         while (container.children.length > sortedList.length) {
             container.lastElementChild.remove();
         }
+        renderLockedCards(container);
     }
 }

@@ -14,7 +14,7 @@ let Events = null;
 let Lightbox = null;
 let Admin = null;
 let Controller = null;
-let Editor = null;
+let Reader = null;
 let CustomView = null;
 
 export function initView(modules) {
@@ -26,7 +26,7 @@ export function initView(modules) {
     Lightbox = modules.Lightbox;
     Admin = modules.Admin;
     Controller = modules.Controller;
-    Editor = modules.Editor;
+    Reader = modules.Reader;
     CustomView = modules.CustomView;
 }
 
@@ -113,12 +113,12 @@ export const View = {
     uiRemoveCover: (e, id) => Admin?.uiRemoveCover(e, id),
     refreshView: (...args) => Admin?.refreshView(...args),
 
-    // Editor / Viewer
+    // Reader / Viewer
     openFile: (node) => {
         if (CustomView && CustomView.openNode) {
             CustomView.openNode(node);
         } else {
-            Editor?.open(node);
+            Reader?.open(node);
         }
     }
 };
@@ -147,12 +147,12 @@ export function setupViewEventListeners() {
     // Drawer List interaction is now handled by event delegation in cms-tags.module.js
 
 
-    // Editor Close (Static binding, dynamic ones handled in Editor.open)
+    // Reader Close (Static binding, dynamic ones handled in Reader.open)
     const editorCloseBtns = document.querySelectorAll(".close-btn");
     editorCloseBtns.forEach((btn) => {
         btn.addEventListener(
             "click",
-            () => Editor?.close()
+            () => Reader?.close()
         );
     });
 }

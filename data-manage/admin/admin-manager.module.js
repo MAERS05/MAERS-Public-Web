@@ -19,7 +19,7 @@ export class BatchItemManager {
     getSnapshot() {
         try {
             return JSON.stringify(this.list, (key, value) => {
-                if (key === 'parent' || key === 'domElement') return undefined;
+                if (key === 'parent' || key === 'domElement' || key === 'content') return undefined;
                 return value;
             });
         } catch (e) {

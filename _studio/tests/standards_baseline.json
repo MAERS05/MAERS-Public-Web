@@ -1,0 +1,3 @@
+{
+  "_说明": "代码规范技术债台账：只允许减少，禁止手工新增条目。修复后运行 python -B _studio/tests/run_tests.py --shrink-baseline 自动收缩。"
+}

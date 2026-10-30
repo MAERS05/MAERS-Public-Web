@@ -5,6 +5,7 @@
  */
 
 import { loadFlowOrder } from './literature-flow-data.module.js';
+import { DataProvider } from '../../../../data-manage/data-provider.module.js';
 
 /**
  * Pre-process and prepare the list of books to be shown in the flow
@@ -111,8 +112,6 @@ export function updateMetrics(engine) {
         }
         engine.slotMapping = mapping;
     }
-
-    console.log(`[Flow] Scattered: Spacing=15px, Slots=${engine.slotCount}, Data=${bookCount}`);
 }
 
 /**
@@ -204,7 +203,7 @@ export function startLoop(engine) {
     let lastTime = performance.now();
 
     const update = (time) => {
-        if (engine.isGridMode) {
+        if (engine.isGridMode || engine.books.length === 0) {
             engine.rafId = requestAnimationFrame(update);
             return;
         }
@@ -257,14 +256,8 @@ export function startLoop(engine) {
 
                     book.el.dataset.bookData = JSON.stringify(data);
 
-                    if (data && data.coverImage && !data.isPlaceholder) {
-                        const pathParts = data.coverImage.split('/');
-                        const basename = pathParts[pathParts.length - 1].replace(/\.[^/.]+$/, "");
-                        const webpUrl = `photos/thumbnails/literaturecovers/${basename}.webp`;
-                        coverEl.style.backgroundImage = `url('${webpUrl}')`;
-                    } else {
-                        coverEl.style.backgroundImage = '';
-                    }
+                    const coverUrl = data && !data.isPlaceholder ? DataProvider.getCoverUrl(data, 'thumb') : null;
+                    coverEl.style.backgroundImage = coverUrl ? `url(${JSON.stringify(coverUrl)})` : '';
                 }
 
                 // Apply Transforms

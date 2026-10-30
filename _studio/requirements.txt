@@ -1,0 +1,10 @@
+# 当前测试环境的直接与传递依赖；升级时整体更新并运行全量测试。
+Pillow==12.1.0
+pillow-avif-plugin==1.5.2
+boto3==1.43.111
+botocore==1.43.111
+s3transfer==0.19.2
+jmespath==1.1.0
+python-dateutil==2.9.0.post0
+six==1.17.0
+urllib3==2.6.3

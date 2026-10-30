@@ -22,5 +22,7 @@
                 }
             ]
         }
-    ]
+    ],
+    "buildCommand": "node _studio/tooling/build-site.mjs",
+    "outputDirectory": "dist"
 }

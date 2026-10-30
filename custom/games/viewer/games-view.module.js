@@ -5,9 +5,10 @@
  */
 
 import { State } from '../../cms/viewer/cms-state.module.js';
-import { Editor } from '../../cms/admin/cms-editor.module.js';
+import { Reader } from '../../cms/viewer/cms-reader.module.js';
 import { Recent } from '../../cms/viewer/cms-recent.module.js';
 import { createGridItem } from '../../cms/viewer/render/cms-render-grid.module.js';
+import { DataProvider } from '../../../data-manage/data-provider.module.js';
 
 const MODES = { PLAYING: 'playing', PLAYED: 'played' };
 const LABELS = { playing: 'Playing', played: 'Played' };
@@ -130,7 +131,7 @@ export const GamesView = {
             if (this._isAnimating || State.IS_ADMIN) return;
             e.stopPropagation();
             Recent?.addToHistory(node);
-            Editor?.open(node);
+            Reader?.open(node);
         });
 
         this._cardWrapper.appendChild(cardEl);
@@ -139,9 +140,7 @@ export const GamesView = {
     // ─── Animation helpers ────────────────────────────────────────────────────
 
     _getCoverUrl(node) {
-        if (!node.coverImage) return null;
-        const basename = node.coverImage.split('/').pop().replace(/\.[^/.]+$/, '');
-        return `photos/previews/gamecovers/${basename}.avif`;
+        return DataProvider.getCoverUrl(node, 'preview');
     },
 
     // Build (or refresh) the invisible DOM frame stack for opacity-swap animation

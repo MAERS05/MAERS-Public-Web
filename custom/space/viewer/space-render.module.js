@@ -4,6 +4,8 @@
  * @version 1.0.0 - ES6 Module
  */
 
+import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+
 let State = null;
 
 export function initSpaceRender(deps) {
@@ -21,7 +23,10 @@ export function renderSpaceGrid(nodes, container) {
     container.innerHTML = '';
     container.className = 'space-grid grid-layout';
 
-    nodes.forEach(node => {
+    // 过滤加密节点：_enc 字段存在的节点完全不渲染
+    const visibleNodes = nodes.filter(n => !isEncryptedRecord(n));
+
+    visibleNodes.forEach(node => {
         if (node.type === 'directory') {
             renderFolderCard(node, container);
         } else if (node.type === 'link') {

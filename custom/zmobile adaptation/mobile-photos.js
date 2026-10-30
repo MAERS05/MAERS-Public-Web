@@ -63,6 +63,4 @@
         touchStartX = null;
         touchStartY = null;
     });
-
-    console.log('[Mobile Adaptation] Photos lightbox touch events initialized.');
 })();

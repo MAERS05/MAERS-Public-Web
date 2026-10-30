@@ -4,8 +4,11 @@
  * 依赖: Render, Control, Utils (通过 import)
  * @version 4.0.0 - ES6 Module
  */
+import { Toast } from '../../../shared/toast.module.js';
+import { localFetch } from '../../../data-manage/api-client.module.js';
 
 import { Utils } from '../../../shared/utils.module.js';
+import { revealInPlace } from '../../../data-manage/encrypt/secret-unlock.module.js';
 
 let Render, Control, Search, Player;
 
@@ -43,13 +46,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 export async function loadMusicData() {
     try {
-        const response = await fetch('data/music-data.json?t=' + Date.now());
+        const response = await localFetch('data/music-data.json', { cache: 'no-cache' });
         if (response.ok) UI.libraryData = await response.json();
         else throw new Error("JSON load failed");
     } catch (err) {
         if (typeof musicData !== 'undefined') UI.libraryData = musicData;
         else UI.libraryData = [];
     }
+
+    // 已有会话密钥时，在内存中还原密文记录（分类→合集→专辑）
+    await revealInPlace(UI.libraryData, { getChildren: (n) => n.collections || n.albums });
 
     migrateData();
     buildSearchIndex();
@@ -72,24 +78,25 @@ function migrateData() {
 }
 
 export function saveData() {
+    // file:// 协议下无同源后端，API 地址统一读取 custom/config.js
     const API_BASE = (window.location.protocol === 'file:')
-        ? (window.MAERS?.Config?.API_BASE || 'http://localhost:8000')
+        ? (window.MAERS?.Config?.API_BASE || '')
         : '';
 
-    // [Clean] Remove runtime fields starting with '_' (e.g., _searchStr, _deleted)
+    // [Clean] 移除运行时字段（以 _ 开头），但保留 _enc（加密标记，属于持久化数据）
     const cleanData = JSON.parse(JSON.stringify(UI.libraryData, (key, value) => {
-        if (key.startsWith('_')) return undefined;
+        if (key.startsWith('_') && key !== '_enc') return undefined;
         return value;
     }));
 
-    fetch(`${API_BASE}/api/save_music`, {
+    localFetch(`${API_BASE}/api/save_music`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(cleanData)
     }).then(response => {
-        if (!response.ok) alert("❌ 保存失败！");
+        if (!response.ok) Toast.error("❌ 保存失败！");
     }).catch(err => {
-        alert("❌ 网络错误");
+        Toast.error("❌ 网络错误");
     });
 }
 

@@ -124,3 +124,45 @@
         /* Hidden on mobile: use swipe gestures instead */
     }
 }
+/* 后台图片工具栏按行换行，避免文字被挤成竖排。 */
+@media (max-width: 1024px) {
+    .photos-admin-page .page-header-bar {
+        flex-wrap: wrap;
+        gap: 12px;
+        height: auto;
+    }
+
+    .photos-admin-page .header-actions {
+        flex: 1 0 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    .photos-admin-page .header-actions > *,
+    .photos-admin-page .header-action-btn,
+    .photos-admin-page .back-btn {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+}
+
+/* 窄屏（约 520px 以下）收紧后台图片工具栏，避免“上传图片”被单独挤到下一行。 */
+@media (max-width: 520px) {
+    .photos-admin-page .page-header-bar {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .photos-admin-page .header-actions {
+        gap: 6px;
+    }
+
+    .photos-admin-page .header-action-btn {
+        padding: 0 10px;
+    }
+
+    .photos-admin-page .header-actions > .maers-toolbar-btn {
+        padding: 7px 10px;
+    }
+}

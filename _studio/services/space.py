@@ -1,10 +1,17 @@
+"""
+空间模块服务：外链元数据抓取与 space 数据维护。
+"""
+
+from __future__ import annotations
+from .contracts import JsonObject
+
 import os
 import json
 import urllib.request
 import urllib.parse
 import re
 from html.parser import HTMLParser
-from . import cms
+from . import cms, storage
 
 # ================= 配置 =================
 SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -105,7 +112,7 @@ def fetch_url_metadata(url):
             'google_icon': google_icon  # 提供备选方案
         }
         
-    except Exception as e:
+    except (OSError, ValueError, UnicodeError) as e:
         print(f"  [ SPACE ] ⚠️  URL 抓取失败 | Fetch failed: {url} - {e}")
         # 返回基础信息
         try:
@@ -117,7 +124,7 @@ def fetch_url_metadata(url):
                 'icon_url': f"https://www.google.com/s2/favicons?sz=128&domain={domain}",
                 'google_icon': f"https://www.google.com/s2/favicons?sz=128&domain={domain}"
             }
-        except:
+        except ValueError:
             return {
                 'title': url,
                 'description': '',
@@ -126,42 +133,25 @@ def fetch_url_metadata(url):
             }
 
 # ================= JSON 数据操作 =================
-def load_collections():
+def load_collections() -> list[JsonObject]:
     """加载 space-collections.json"""
     if not os.path.exists(SPACE_JSON_PATH):
         return []
-    try:
-        with open(SPACE_JSON_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"  [ SPACE ] ❌ 加载失败 | Load failed: {e}")
-        return []
+    with open(SPACE_JSON_PATH, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    if not isinstance(data, list) or any(not isinstance(item, dict) for item in data):
+        raise ValueError('Invalid collections source')
+    return data
 
-def save_collections(data):
-    """保存 space-collections.json"""
-    try:
-        os.makedirs(os.path.dirname(SPACE_JSON_PATH), exist_ok=True)
-        
-        # Atomic write
-        temp_path = SPACE_JSON_PATH + '.tmp'
-        with open(temp_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-            
-        if os.path.exists(SPACE_JSON_PATH):
-            os.remove(SPACE_JSON_PATH)
-        os.rename(temp_path, SPACE_JSON_PATH)
-        
-        print(f"  [ SPACE ] 💾 数据已保存 | Data saved")
-        return True
-    except Exception as e:
-        print(f"  [ SPACE ] ❌ 保存失败 | Save failed: {e}")
-        if os.path.exists(temp_path):
-            try: os.remove(temp_path)
-            except: pass
-        return False
+@storage.serialized
+
+def save_collections(data: list[JsonObject]) -> bool:
+    storage.write_json(SPACE_JSON_PATH, data)
+    return True
 
 # ================= CRUD 操作 =================
-def add_collection(item_data):
+@storage.serialized
+def add_collection(item_data: JsonObject) -> bool:
     """添加新的收藏项"""
     collections = load_collections()
     
@@ -177,12 +167,16 @@ def add_collection(item_data):
         return True
     return False
 
-def update_collection(item_id, update_data):
+@storage.serialized
+def update_collection(item_id: str, update_data: JsonObject) -> bool:
     """更新收藏项"""
     collections = load_collections()
     
     for item in collections:
         if item['id'] == item_id:
+            if 'id' in update_data and (not isinstance(update_data['id'], str) or not update_data['id']
+                    or any(c['id'] == update_data['id'] and c is not item for c in collections)):
+                raise ValueError('Invalid or duplicate collection id')
             # 更新字段
             for key, value in update_data.items():
                 item[key] = value # 允许修改 ID
@@ -194,7 +188,8 @@ def update_collection(item_id, update_data):
             
     raise ValueError(f"Item with ID '{item_id}' not found")
 
-def delete_collection(item_id):
+@storage.serialized
+def delete_collection(item_id: str) -> bool:
     """删除收藏项"""
     collections = load_collections()
     
@@ -209,9 +204,12 @@ def delete_collection(item_id):
         return True
     return False
 
-def reorder_collections(id_list):
+@storage.serialized
+def reorder_collections(id_list: list[str]) -> bool:
     """重新排序收藏项"""
     collections = load_collections()
+    if len(set(id_list)) != len(id_list):
+        raise ValueError('Duplicate collection id')
     
     # 创建 ID -> Item 映射
     items_map = {item['id']: item for item in collections}
@@ -233,28 +231,24 @@ def reorder_collections(id_list):
     return False
 
 # ================= Tree Operations =================
-def load_tree():
+def load_tree() -> JsonObject:
     """Load space-tree.json"""
     tree_path = os.path.join(DATA_DIR, 'space-tree.json')
     if not os.path.exists(tree_path):
         return {"root": []}
-    try:
-        with open(tree_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"  [ SPACE ] ❌ Load Tree failed: {e}")
-        return {"root": []}
+    data = cms.load_json(tree_path)
+    from . import validation
+    validation.tree(data)
+    return data
 
-def save_tree(data):
-    """Save space-tree.json"""
-    tree_path = os.path.join(DATA_DIR, 'space-tree.json')
-    try:
-        cms.save_json(tree_path, data)
-        return True
-    except Exception as e:
-        print(f"  [ SPACE ] ❌ Save Tree failed: {e}")
-        return False
+@storage.serialized
+def save_tree(data: JsonObject) -> bool:
+    from . import validation
+    validation.tree(data)
+    cms.save_json(os.path.join(DATA_DIR, 'space-tree.json'), data)
+    return True
 
+@storage.serialized
 def update_node_tags(node_id, tags):
     """Recursively find node and update tags"""
     data = load_tree()
@@ -271,6 +265,6 @@ def update_node_tags(node_id, tags):
 
     if find_and_update(data.get('root', [])):
         if save_tree(data):
-            print(f"  [ SPACE ] 🏷️  Tags Updated: {node_id} -> {tags}")
+            print(f"  [ SPACE ] 🏷️  Tags Updated: {node_id} ({len(tags)})")
             return True
     return False

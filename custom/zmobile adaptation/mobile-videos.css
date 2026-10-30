@@ -1,0 +1,25 @@
+/* 影视模块响应式布局。 */
+@media (min-width: 769px) {
+    .folder-grid {
+        grid-template-columns: repeat(auto-fill, 140px) !important;
+        /* Matches Literature card width */
+        justify-content: center;
+        gap: 30px !important;
+        padding: 25px 40px !important;
+    }
+}
+
+/* 后台常驻按钮需要足够的卡片宽度；公开展示仍使用原来的海报密度。 */
+@media (max-width: 1024px) {
+    .folder-grid:has(> .grid-item > .maers-admin-action-group) {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)) !important;
+        padding: 12px 10px !important;
+        gap: 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .folder-grid:has(> .grid-item > .maers-admin-action-group) {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+}

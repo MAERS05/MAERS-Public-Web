@@ -5,6 +5,7 @@
  */
 
 import { initSpatialNav } from './spatial-nav.module.js';
+import { guardCurrentPage } from '../data-manage/encrypt/secret-unlock.module.js';
 
 export function injectThemeSwitch() {
     if (document.querySelector('.theme-switch-wrapper')) return;
@@ -12,8 +13,11 @@ export function injectThemeSwitch() {
     const html = `
     <div class="theme-switch-wrapper">
         <label class="theme-switch-label" for="checkbox">
-            <input type="checkbox" id="checkbox" class="theme-switch-checkbox" />
-            <div class="ball"><img id="mode-icon" src="ui/moon.svg" alt="mode" /></div>
+            <input type="checkbox" id="checkbox" class="theme-switch-checkbox" ${document.documentElement.classList.contains('light-mode') ? '' : 'checked'} />
+            <div class="ball">
+                <img id="mode-icon" src="ui/moon.svg" alt="" aria-hidden="true" />
+                <img class="mode-icon-sun" src="ui/sun.svg" alt="" aria-hidden="true" />
+            </div>
         </label>
     </div>`;
 
@@ -76,6 +80,7 @@ export function renderPageHeader(title, backUrl = "index.html", backText = "Back
  * Replaces the DOMContentLoaded listener in original layout.js
  */
 export function initLayout() {
+    guardCurrentPage(); // 首页卡片已加锁的页面，未解锁访客直接访问时显示 404
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {
             _runInit();

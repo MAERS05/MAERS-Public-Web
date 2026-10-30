@@ -1,0 +1,33 @@
+name: MAERS checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    env:
+      MAERS_VERSION_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: _studio/tooling/package-lock.json
+      - run: python -m pip install -r _studio/requirements.txt
+      - run: npm ci --prefix _studio/tooling
+      - run: npm run vendor:check --prefix _studio/tooling
+      - run: python -B _studio/tests/run_tests.py
+      - run: npx --prefix _studio/tooling playwright install --with-deps chromium
+      - run: npm run test:e2e --prefix _studio/tooling
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-artifacts
+          path: _studio/tooling/test-results/
+          retention-days: 7

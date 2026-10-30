@@ -8,7 +8,6 @@
     body .container {
         padding: 10px;
         padding-bottom: 80px;
-        /* More space for bottom player if exists */
     }
 
     body .main-card {
@@ -29,7 +28,7 @@
         min-width: 0;
     }
 
-    /* header-title 是 flex 容器，text-overflow 无效；改用 clamp() 字号自适应 + flex 收缩 */
+    /* header-title 自适应字号 + flex 收缩 */
     body .header-title {
         flex: 1;
         min-width: 0;
@@ -43,7 +42,7 @@
 
     body .header-tools-row {
         width: 100%;
-        justify-content: space-between;
+        justify-content: flex-end;
     }
 
     /* Search Box */
@@ -51,7 +50,6 @@
         width: 100%;
         min-width: unset;
         font-size: 16px;
-        /* Prevent iOS zoom */
     }
 
     /* Grid Layout Optimization */
@@ -71,30 +69,59 @@
 
     /* Reader View */
     body .reader-toolbar {
-        padding: 0 15px;
-        height: 50px;
+        padding: 0 12px;
+        height: 52px;
+        gap: 8px;
     }
 
     body .reader-scroll-area {
-        padding-top: 20px;
+        padding: 10px 10px 40px !important;
     }
 
     body .paper-sheet {
-        padding: 0 10px;
-        margin-bottom: 60px;
+        padding: 20px 16px !important;
+        margin: 0 auto 20px !important;
         font-size: 0.95rem;
-        max-width: 100%;
-        /* 确保不超出视口 */
-        box-sizing: border-box;
-        /* padding 计入总宽度 */
+        max-width: 100% !important;
+        width: 100% !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(15, 23, 42, 0.07) !important;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+        box-sizing: border-box !important;
+    }
+
+    html:not(.light-mode) body .paper-sheet {
+        border: 1px solid rgba(255, 255, 255, 0.07) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    body .cms-diagram-card:not(.cms-diagram-card--fullscreen),
+    body .language-mindmap:not(.cms-diagram-card--fullscreen),
+    body .language-markmap:not(.cms-diagram-card--fullscreen),
+    body .language-mermaid:not(.cms-diagram-card--fullscreen),
+    body .language-echarts:not(.cms-diagram-card--fullscreen) {
+        margin: 12px 0 !important;
+        padding: 0 !important;
+        border: 1px solid rgba(15, 23, 42, 0.1) !important;
+        border-radius: 8px !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+        height: 320px !important;
+    }
+
+    html:not(.light-mode) body .cms-diagram-card,
+    html:not(.light-mode) body .language-mindmap,
+    html:not(.light-mode) body .language-markmap,
+    html:not(.light-mode) body .language-mermaid,
+    html:not(.light-mode) body .language-echarts {
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     /* Markdown Content Responsive Styles */
     body .markdown-body {
         max-width: 100% !important;
-        /* 覆盖 900px 限制 */
         overflow-x: auto;
-        /* 允许水平滚动以防内容被裁剪 */
         word-wrap: break-word;
     }
 
@@ -104,7 +131,6 @@
         width: 100%;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        /* iOS 平滑滚动 */
         font-size: 0.85rem;
     }
 
@@ -129,5 +155,200 @@
         right: 15px;
         width: 40px;
         height: 40px;
+    }
+
+    /* ==========================================================================
+       CMS Admin Mobile Adaptation (管理后台、纯粹阅读器与源码抽屉移动端适配)
+       ========================================================================== */
+
+    /* 1. Header & Sync Button */
+    body .header-tools-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        height: auto;
+    }
+
+    body .header-tools-row .search-box {
+        flex: 1 1 100px;
+        min-width: 0;
+    }
+
+    body .header-tools-row .search-box .search-input,
+    body .header-tools-row .search-box .search-input:focus {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        max-width: 100%;
+        flex: 1 1 0;
+    }
+
+    body .header-tools-row .tag-toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    #maers-sync-btn {
+        padding: 5px 10px !important;
+        font-size: 12px !important;
+        border-radius: 16px !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* 2. Breadcrumb & Action Toolbar */
+    body #breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding: 6px 0 12px;
+    }
+
+    body #breadcrumb::-webkit-scrollbar {
+        display: none;
+    }
+
+    .cms-create-btn {
+        padding: 5px 12px !important;
+        font-size: 12px !important;
+        height: 32px;
+        line-height: 20px;
+        border-radius: 16px !important;
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 4px !important;
+    }
+
+    /* 3. Grid Admin Action Group Touch Targets */
+    .maers-admin-action-group {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        justify-content: flex-end !important;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        padding: 0;
+        gap: 2px;
+    }
+
+    .maers-admin-btn {
+        min-width: 32px !important;
+        min-height: 32px !important;
+        font-size: 13px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border-radius: 8px !important;
+    }
+
+    /* 4. 后台纯粹阅读器移动端顶栏与全屏源码抽屉 */
+    .immersive-layer {
+        height: 100vh !important;
+        height: 100dvh !important;
+    }
+
+    .reader-title-input {
+        font-size: 1rem !important;
+        padding: 4px 6px !important;
+    }
+
+    .reader-admin-btn {
+        padding: 5px 10px !important;
+        font-size: 12px !important;
+        height: 32px !important;
+        border-radius: 16px !important;
+    }
+
+    .cms-source-drawer {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        z-index: 1060 !important;
+    }
+
+    /* 5. Sync Modal Mobile Optimization */
+    #maers-sync-modal .modal-content {
+        width: 92% !important;
+        max-width: 440px !important;
+        margin: 20px auto !important;
+        border-radius: 16px !important;
+        padding: 0 !important;
+    }
+}
+
+/* 管理按钮固定三列，避免卡片临界变窄后挤成两列三行。 */
+@media (max-width: 1024px) {
+    .folder-grid .grid-item > .maers-admin-action-group {
+        display: flex !important;
+        flex-wrap: wrap;
+        justify-content: flex-end !important;
+        width: 104px;
+        max-width: calc(100% - 10px) !important;
+        gap: 4px !important;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        padding: 0;
+    }
+
+    .folder-grid .grid-item > .maers-admin-action-group > .maers-admin-btn {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        margin: 0;
+    }
+}
+
+/* 阅读器与编辑器断点规则：由 CMS 样式入口统一加载。 */
+@media (max-width: 768px) {
+  .markdown-body img {
+    max-height: 100px;
+  }
+}
+@media (max-width: 1099px) {
+  .reader-outline-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 260px;
+    background: rgba(15, 18, 25, 0.95);
+    box-shadow: 12px 0 36px rgba(0, 0, 0, 0.45);
+  }
+  html.light-mode .reader-outline-panel,
+  .light-mode .reader-outline-panel {
+    background: rgba(255, 255, 255, 0.96);
+    box-shadow: 12px 0 36px rgba(15, 23, 42, 0.1);
+  }
+  .reader-outline-panel.collapsed {
+    width: 260px;
+    padding: 28px 14px;
+    transform: translateX(-100%);
+  }
+}
+@media (max-width: 900px) {
+  .cms-diagram-card.cms-svg-interactive:not(.cms-diagram-card--fullscreen) {
+    height: 320px !important;
+  }
+}
+@media (max-width: 768px) {
+    .maers-admin-action-group {
+        opacity: 1 !important;
+        pointer-events: auto !important;
     }
 }

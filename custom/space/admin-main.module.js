@@ -1,5 +1,10 @@
+/**
+ * MAERS Space Admin Main - 空间模块管理端入口
+ * 复用 CMS 标签 / 最近 / 导航组件，经 space-cms-adapter 适配后挂载空间管理逻辑。
+ */
 // 导入 CMS 通用模块
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin/admin-base.module.js';
+import { syncManager } from '../../data-manage/sync/sync-manager.module.js';
 import { initLayout } from '../../shared/layout.module.js';
 import { initTheme } from '../../shared/theme.module.js';
 import { initTags, Tags } from '../cms/viewer/cms-tags.module.js';
@@ -29,11 +34,11 @@ const AdminCore = {
 
 // DOM 为空或未就绪时推迟初始化
 const init = async () => {
+    syncManager.injectSyncButton(document.querySelector('.header-tools-row'));
     // 预加载标签数据
     await preloadTagCategories(AppState, 'space');
 
     // 初始化 CMS 共享模块
-    console.log("Initializing CMS Tags with StateWrapper", StateWrapper);
     initTags(StateWrapper, mockController, mockSearch);
 
     const mockRender = {

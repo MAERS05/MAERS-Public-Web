@@ -1,6 +1,11 @@
+"""
+非 CMS 模块（Photos / Space）的标签分类策略实现。
+"""
+
 import os
 import json
 import sqlite3
+from . import storage, private_photos, private_session
 from .cms_tags import TagStrategy
 
 # ================= 特殊模块策略 (Photos, Space) =================
@@ -14,22 +19,28 @@ class PhotosTagStrategy(TagStrategy):
         return os.path.join(tags_dir, f'{module}-tag-categories.json')
 
     def get_categories(self, module):
+        private = private_photos.tags(module.removeprefix('photos-'))
+        if private is not None:
+            return private
         filepath = self._get_tags_file(module)
         if not os.path.exists(filepath): return []
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f: return json.load(f)
-        except: return []
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
     def save_categories(self, data, module):
-        filepath = self._get_tags_file(module)
-        try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+        if private_photos.tags(module.removeprefix('photos-'), data) is not None:
             return True
-        except: return False
+        filepath = self._get_tags_file(module)
+        storage.write_json(filepath, data)
+        return True
 
     def rename_tag(self, module, old_name, new_name):
         category = module.replace('photos-', '')
+        private = private_photos.transform_tags(category, lambda tags: [new_name if tag == old_name else tag for tag in tags])
+        if private is not None:
+            return private
+        from . import photos
+        photos.rebuild_cache()
         gallery_db_path = os.path.join(self.context['DATA_DIR'], 'gallery.db')
         
         if not os.path.exists(gallery_db_path):
@@ -60,32 +71,17 @@ class PhotosTagStrategy(TagStrategy):
         conn.commit()
         conn.close()
 
-        # Also rename the tag inside the tag-categories JSON file
-        cats_file = self._get_tags_file(module)
-        if os.path.exists(cats_file):
-            try:
-                with open(cats_file, 'r', encoding='utf-8') as f:
-                    categories = json.load(f)
-                changed = False
-                for cat in categories:
-                    if old_name in cat.get('tags', []):
-                        cat['tags'] = [new_name if t == old_name else t for t in cat['tags']]
-                        # Deduplicate in case new_name already existed
-                        seen = set()
-                        cat['tags'] = [t for t in cat['tags'] if not (t in seen or seen.add(t))]
-                        changed = True
-                if changed:
-                    with open(cats_file, 'w', encoding='utf-8') as f:
-                        json.dump(categories, f, ensure_ascii=False, indent=2)
-            except Exception as e:
-                print(f"  [ CMS ] ⚠️ Failed to update tag categories file on rename: {e}")
-        
         from . import photos
         photos.sync_gallery_js()
         return updated_count
 
     def delete_tag(self, module, tag_name):
         category = module.replace('photos-', '')
+        private = private_photos.transform_tags(category, lambda tags: [tag for tag in tags if tag != tag_name])
+        if private is not None:
+            return private
+        from . import photos
+        photos.rebuild_cache()
         gallery_db_path = os.path.join(self.context['DATA_DIR'], 'gallery.db')
         
         if not os.path.exists(gallery_db_path):
@@ -115,6 +111,11 @@ class PhotosTagStrategy(TagStrategy):
 
     def cleanup_tags(self, module):
         category = module.replace('photos-', '')
+        private = private_photos.transform_tags(category)
+        if private is not None:
+            return private
+        from . import photos
+        photos.rebuild_cache()
         gallery_db_path = os.path.join(self.context['DATA_DIR'], 'gallery.db')
         print(f"  [ CMS ] 📸 连接 gallery.db, category={category}")
         
@@ -145,24 +146,20 @@ class SpaceTagStrategy(TagStrategy):
     def get_categories(self, module):
         filepath = self._get_tags_file(module)
         if not os.path.exists(filepath): return []
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f: return json.load(f)
-        except: return []
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return json.load(f)
 
     def save_categories(self, data, module):
         filepath = self._get_tags_file(module)
-        try:
-            with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
-            return True
-        except: return False
+        storage.write_json(filepath, data)
+        return True
 
     def rename_tag(self, module, old_name, new_name):
         space_path = os.path.join(self.context['PROJECT_ROOT'], 'data', 'space-tree.json')
         if not os.path.exists(space_path): return 0
         
         with open(space_path, 'r', encoding='utf-8') as f:
-            space_data = json.load(f)
+            space_data = private_session.read(space_path, json.load(f))
         
         updated_count = 0
         def rename_in_nodes(nodes):
@@ -184,8 +181,7 @@ class SpaceTagStrategy(TagStrategy):
         
         rename_in_nodes(space_data.get('root', []))
         
-        with open(space_path, 'w', encoding='utf-8') as f:
-            json.dump(space_data, f, ensure_ascii=False, indent=2)
+        storage.write_json(space_path, space_data)
         return updated_count
 
     def delete_tag(self, module, tag_name):
@@ -193,7 +189,7 @@ class SpaceTagStrategy(TagStrategy):
         if not os.path.exists(space_path): return 0
         
         with open(space_path, 'r', encoding='utf-8') as f:
-            space_data = json.load(f)
+            space_data = private_session.read(space_path, json.load(f))
         
         updated_count = 0
         def delete_in_nodes(nodes):
@@ -207,8 +203,7 @@ class SpaceTagStrategy(TagStrategy):
         
         delete_in_nodes(space_data.get('root', []))
         
-        with open(space_path, 'w', encoding='utf-8') as f:
-            json.dump(space_data, f, ensure_ascii=False, indent=2)
+        storage.write_json(space_path, space_data)
         return updated_count
 
     def cleanup_tags(self, module):
@@ -219,7 +214,7 @@ class SpaceTagStrategy(TagStrategy):
         if not os.path.exists(space_path): return used_tags
         
         with open(space_path, 'r', encoding='utf-8') as f:
-            space_data = json.load(f)
+            space_data = private_session.read(space_path, json.load(f))
             
         def collect_space_tags(nodes):
             for node in nodes:

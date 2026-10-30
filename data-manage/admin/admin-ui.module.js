@@ -120,22 +120,17 @@ export const SaveButton = {
      * @param {Function} onJointCancel - Async function to cancel all contents
      */
     initUnified(getManagers, onJointSave, onJointCancel) {
-        console.log("[DEBUG] SaveButton.initUnified called");
         this.init(document.body, async () => {
-            console.log("[DEBUG] SaveButton: onJointSave triggered");
             try {
                 await onJointSave();
-                console.log("[DEBUG] SaveButton: onJointSave completed");
                 this.checkUnifiedDirty(getManagers);
             } catch (e) {
                 console.error("[DEBUG] Unified Save Failed", e);
                 Feedback.notifySaveFail("保存失败: " + e.message);
             }
         }, async () => {
-            console.log("[DEBUG] SaveButton: onJointCancel triggered");
             try {
                 await onJointCancel();
-                console.log("[DEBUG] SaveButton: onJointCancel completed");
                 this.checkUnifiedDirty(getManagers);
             } catch (e) {
                 console.error("[DEBUG] Unified Cancel Failed", e);
@@ -188,14 +183,12 @@ export const SaveButton = {
 
 export const Feedback = {
     toast(msg, type = 'info') {
-        console.log(`[DEBUG] Feedback.toast called: ${msg} (${type})`);
         if (Toast) {
             Toast[type](msg);
         } else if (window.MAERS?.Toast) {
             window.MAERS.Toast[type](msg);
         } else {
-            console.log(`[${type}] ${msg}`);
-            if (type === 'error') alert(msg);
+            console.warn(`[MAERS.Feedback] ${type}: ${msg}`);
         }
     },
 

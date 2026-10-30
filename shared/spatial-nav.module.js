@@ -1,16 +1,8 @@
 /**
- * MAERS Spatial Navigation (spatial-nav.module.js)
- * Adds 3D floating navigation cards to the sides of the screen.
- * Dynamically fetches content from index.html to ensure synchronization.
- * Includes fallback data if fetch fails (e.g. local file system restrictions).
+ * MAERS 空间导航 (spatial-nav.module.js)
+ * 生成全站空间导航，与首页复用导航 JSON 请求，失败可重试。
  * @version 2.0.0 - ES6 Module
  */
-
-const NAV_CONFIG = {
-    // Keep legacy ID mapping if needed for specific logic,
-    // otherwise we rely on dynamic data order.
-    // If IDs are found in JSON, we can respect them.
-};
 
 // Helper to create element
 function u(tag, className, html) {
@@ -20,20 +12,21 @@ function u(tag, className, html) {
     return el;
 }
 
-async function getNavData() {
-    try {
-        // Fetch source of truth JSON
-        const response = await fetch('data/index-cards.json?v=' + Date.now());
-        if (response.ok) {
-            const data = await response.json();
-            if (Array.isArray(data) && data.length > 0) {
+let navDataRequest = null;
+
+/** 同一页面共用一次导航请求，返回独立卡片副本，失败后允许重试。 */
+export function getNavData() {
+    if (!navDataRequest) {
+        navDataRequest = fetch('data/index-cards.json')
+            .then(async response => {
+                if (!response.ok) throw new Error(`导航数据请求失败：${response.status}`);
+                const data = await response.json();
+                if (!Array.isArray(data)) throw new Error('导航数据必须为数组');
                 return data;
-            }
-        }
-    } catch (e) {
-        console.warn('Spatial Nav: JSON fetch failed', e);
+            })
+            .catch(error => { navDataRequest = null; throw error; });
     }
-    return [];
+    return navDataRequest.then(data => data.map(card => ({ ...card })));
 }
 
 function createCardElement(data) {
@@ -108,7 +101,13 @@ export async function initSpatialNav() {
     if (window.self !== window.top) return;
     if (document.getElementById('spatial-nav-container')) return;
 
-    const navData = await getNavData();
+    let navData;
+    try {
+        navData = await getNavData();
+    } catch (error) {
+        console.warn('空间导航加载失败：', error);
+        return;
+    }
     if (!navData || navData.length === 0) return;
 
     const container = u('div');

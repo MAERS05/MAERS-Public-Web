@@ -7,11 +7,11 @@
 import { FlowEngine, setEditor } from './flow/literature-flow-engine.module.js';
 
 // Dependency Injection
-let Editor = null;
+let Reader = null;
 
 export function initLiteratureView(deps) {
-    Editor = deps.Editor;
-    setEditor(deps.Editor);
+    Reader = deps.Reader;
+    setEditor(deps.Reader);
 }
 
 // View 对象
@@ -52,7 +52,7 @@ export const LiteratureView = {
         if (this.engine) {
             this.engine.pauseAnimation();
             this.engine.viewport.style.display = 'none';
-            if (Editor) Editor.open(node);
+            if (Reader) Reader.open(node);
         }
     }
 };

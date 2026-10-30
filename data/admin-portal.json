@@ -2,44 +2,37 @@
   {
     "title": "图片管理",
     "icon": "ui/album-icon.svg",
-    "url": "admin-album.html?type=photos",
-    "style": "custom/album/admin/album-admin.css"
+    "url": "admin-album.html?type=photos"
   },
   {
     "title": "音乐管理",
     "icon": "ui/music-icon.svg",
-    "url": "admin-music.html",
-    "style": "custom/music/admin/music-admin.css"
+    "url": "admin-music.html"
   },
   {
     "title": "影视管理",
     "icon": "ui/music-icon.svg",
-    "url": "admin-cms.html?module=videos",
-    "style": "custom/videos/viewer/videos.css"
+    "url": "admin-cms.html?module=videos"
   },
   {
     "title": "笔记管理",
     "icon": "ui/notes-icon.svg",
-    "url": "admin-cms.html?module=notes",
-    "style": "custom/notes/viewer/notes.css"
+    "url": "admin-cms.html?module=notes"
   },
   {
     "title": "文学管理",
     "icon": "ui/literature-icon.svg",
-    "url": "admin-cms.html?module=literature",
-    "style": "custom/literature/viewer/literature.css"
+    "url": "admin-cms.html?module=literature"
   },
   {
     "title": "记录管理",
     "icon": "ui/record-icon.svg",
-    "url": "admin-cms.html?module=record",
-    "style": "custom/record/viewer/record.css"
+    "url": "admin-cms.html?module=record"
   },
   {
     "title": "游戏管理",
     "icon": "ui/games-icon.svg",
-    "url": "admin-cms.html?module=games",
-    "style": "custom/games/viewer/games.css"
+    "url": "admin-cms.html?module=games"
   },
   {
     "title": "空间管理",

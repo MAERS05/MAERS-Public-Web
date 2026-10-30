@@ -4,6 +4,8 @@
  * @version 1.0.0
  */
 
+import { Toast } from '../../../shared/toast.module.js';
+
 // Dependency Injection
 let State = null;
 let Controller = null;
@@ -25,6 +27,16 @@ export function initRecent(state, controller, view) {
     State = state;
     Controller = controller;
     View = view;
+
+    // 清除旧版本可能留下的私密或已经无法访问的标题。
+    const publicIds = new Set((State?.AppState?.allNodes || controller?.AppState?.allNodes || [])
+        .filter(node => !node._private).map(node => node.id));
+    for (const key of [getStorageKey(), getPinnedKey()]) {
+        try {
+            const items = JSON.parse(localStorage.getItem(key) || '[]');
+            localStorage.setItem(key, JSON.stringify(items.filter(item => publicIds.has(item.id))));
+        } catch { localStorage.removeItem(key); }
+    }
 
     injectUI();
     setupListeners();
@@ -101,7 +113,7 @@ export function toggleDrawer() {
 }
 
 export function addToHistory(node) {
-    if (!node || !node.id) return;
+    if (!node || !node.id || node._private) return;
 
     // Check if pinned
     const pinned = getPinned();
@@ -282,7 +294,7 @@ async function openRecentFile(id) {
             }
         }
     } else {
-        alert('File not found (might be deleted)');
+        Toast.error('File not found (might be deleted)');
         // Remove from history
         let history = getHistory();
         history = history.filter(i => i.id !== id);

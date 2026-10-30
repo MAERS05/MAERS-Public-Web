@@ -9,7 +9,7 @@ let State = null;
 let Render = null;
 let Admin = null;
 let Tags = null;
-let Editor = null;
+let Reader = null;
 let LiteratureView = null;
 let Recent = null;
 
@@ -18,7 +18,7 @@ export function initEvents(state, render, admin = null, tags = null, editor = nu
     Render = render;
     Admin = admin;
     Tags = tags;
-    Editor = editor;
+    Reader = editor;
     LiteratureView = literatureView;
     Recent = recent;
 }
@@ -75,7 +75,9 @@ export function setupImmersiveBackground() {
         if (!card) return;
 
         let imgUrl = null;
-        const imgEl = card.querySelector('.item-cover-img') || card.querySelector('img:not(.card-icon):not(.nav-icon-img)');
+        // 仅使用内容封面或照片，不能将管理按钮里的 SVG 当成背景。
+        const imgEl = card.querySelector('.item-cover-img') ||
+            (card.matches('.photo-item') ? card.querySelector(':scope > img') : null);
         if (imgEl) {
             imgUrl = imgEl.src || imgEl.getAttribute('data-src');
         } else {
@@ -235,10 +237,10 @@ export function setupGridEventDelegation() {
                 }
 
                 // 1. Open Note Immediately
-                if (Editor?.openNote) {
-                    Editor.openNote(node);
-                } else if (Editor?.open) {
-                    Editor.open(node);
+                if (Reader?.openNote) {
+                    Reader.openNote(node);
+                } else if (Reader?.open) {
+                    Reader.open(node);
                 }
 
                 // 2. Handle Navigation Logic ONLY if in Search/Filter Context

@@ -14,7 +14,7 @@
 html {
     height: 100%;
     background-color: var(--bg-base);
-    transition: background-color 1.2s ease;
+    transition: background-color 300ms ease;
 }
 
 html.light-mode {
@@ -28,11 +28,11 @@ body {
     min-height: 100vh;
     position: relative;
     background: transparent;
-    transition: color 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: color 300ms ease;
 }
 
 
-/* 3. Theme Mask (Animated Background) */
+/* 3. Theme Mask (Uniform Fade) */
 #theme-mask {
     position: fixed;
     top: 0;
@@ -46,11 +46,11 @@ body {
         url('data:image/svg+xml;charset=utf-8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.02"/%3E%3C/svg%3E'),
         radial-gradient(80% 80% at 50% -20%, rgba(40, 40, 55, 0.4) 0%, transparent 60%),
         linear-gradient(180deg, #141417 0%, #0a0a0c 100%);
-    clip-path: circle(150% at 100% 0%);
-    transition: clip-path 1.6s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity: 1;
+    transition: opacity 300ms ease;
     /* GPU 硬件加速 */
     transform: translateZ(0);
-    will-change: clip-path;
+    will-change: opacity;
 }
 
 #theme-mask::after {
@@ -115,9 +115,9 @@ body {
     }
 }
 
-/* 内联CSS的 !important 会覆盖这个，允许动画正常工作 */
+/* Fade the whole background together; no directional reveal. */
 html.light-mode #theme-mask {
-    clip-path: circle(0% at 100% 0%);
+    opacity: 0;
 }
 
 html.light-mode #theme-mask::after {
@@ -165,7 +165,6 @@ html.shrink-view .container {
 html.shrink-view .main-card,
 html.shrink-view .home-container {
     transform: scale(0.65);
-    /* Slightly larger for better visibility */
     transform-origin: center center;
     border-radius: 40px;
     box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
@@ -177,7 +176,6 @@ html.shrink-view .home-container {
 html.shrink-view .zoom-trigger-icon,
 html.shrink-view .zoom-trigger-whole {
     z-index: 9999;
-    /* filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5)) !important; Removed glow */
 }
 
 html.shrink-view::after {
@@ -325,4 +323,56 @@ html.light-mode .folder-grid::-webkit-scrollbar-thumb:hover,
 html.light-mode .gallery-content::-webkit-scrollbar-thumb:hover,
 html.light-mode .admin-content::-webkit-scrollbar-thumb:hover {
     background-color: rgba(0, 0, 0, 0.8);
+}
+/* Enabled only for an actual theme change, so ordinary UI animations keep their
+   own timing. Animate colors together without introducing layout movement. */
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+    transition-property: background-color, color, border-color, box-shadow, fill, stroke, opacity !important;
+    transition-duration: 500ms !important;
+    transition-timing-function: ease !important;
+    transition-delay: 0s !important;
+}
+
+/* 兼容模式下为主题滑块保留位移过渡，避免全站颜色规则覆盖 transform。 */
+html.theme-switching .theme-switch-label .ball {
+    transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1), background-color 500ms ease !important;
+}
+
+
+
+/* A single page snapshot fade gives the backdrop and cards one timeline.
+   Suspend element transitions so the new snapshot contains final theme colors. */
+html.theme-crossfade,
+html.theme-crossfade *,
+html.theme-crossfade *::before,
+html.theme-crossfade *::after {
+    transition: none !important;
+}
+html.theme-crossfade::view-transition-group(root) {
+    animation: none;
+}
+html.theme-crossfade::view-transition-old(root) {
+    animation: none;
+    mix-blend-mode: normal;
+    opacity: 1;
+}
+html.theme-crossfade::view-transition-new(root) {
+    animation: theme-page-fade 500ms ease both;
+    mix-blend-mode: normal;
+}
+/* 滑块单独捕获位置与图标，不随整页快照直接跳到终点。 */
+html.theme-crossfade::view-transition-group(theme-switch-knob) {
+    animation-duration: 500ms;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.theme-crossfade::view-transition-old(theme-switch-knob),
+html.theme-crossfade::view-transition-new(theme-switch-knob) {
+    animation-duration: 500ms;
+}
+@keyframes theme-page-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }

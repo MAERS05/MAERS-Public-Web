@@ -100,12 +100,14 @@ export function initLightbox() {
     // 全局图片点击代理
     document.addEventListener("click", (e) => {
         const target = e.target;
+        if (target.closest("a[href]")) return;
         if (target.tagName === "IMG") {
             if (
                 target.classList.contains("zoom-trigger-icon") ||
                 target.closest(".header-title") ||
                 target.closest(".brand-logo") ||
                 target.closest("button") ||
+                target.closest(".maers-admin-btn") ||
                 target.closest(".tag-toggle-btn") ||
                 target.closest(".spatial-card") ||
                 target.closest("#spatial-nav-container") ||

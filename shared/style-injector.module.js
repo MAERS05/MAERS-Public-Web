@@ -10,7 +10,7 @@ let _modulesConfigCache = null;
 async function getModulesConfig() {
     if (_modulesConfigCache) return _modulesConfigCache;
     try {
-        const res = await fetch(`data/admin-portal.json?v=${Date.now()}`);
+        const res = await fetch('data/admin-portal.json', { cache: 'no-cache' });
         if (!res.ok) throw new Error('Failed to load modules config');
         _modulesConfigCache = await res.json();
         return _modulesConfigCache;
@@ -58,7 +58,6 @@ async function injectModuleStyle(targetIdentifier = null) {
             link.href = targetModule.style;
             link.id = 'dynamic-module-style';
             document.head.appendChild(link);
-            console.log(`[MAERS.StyleInjector] 🎨 Loaded skin: ${targetModule.style} for [${targetModule.title}]`);
         }
     } else {
         if (targetIdentifier) console.warn(`[MAERS.StyleInjector] No style found for: ${targetIdentifier}`);

@@ -1,10 +1,10 @@
-﻿/**
+/**
  * MAERS Album - Admin Entry Point
  * @version 3.0.0 - ES6 Module
  */
 
 // 导入所有模�?
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin/admin-base.module.js';
 import { initLayout } from '../../shared/layout.module.js';
 import { initTheme } from '../../shared/theme.module.js';
 import { AlbumAdmin, initAlbumAdmin, uiToggleSelect, uiToggleDelete, uiEdit, addNewCategory } from './admin/album-admin.module.js';
