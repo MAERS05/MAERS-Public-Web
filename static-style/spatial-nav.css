@@ -18,6 +18,12 @@
 }
 
 /* --- Brand Header Styles --- */
+[data-secret-unlock] {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+}
+
 .spatial-brand-header {
     position: absolute;
     top: 2vh;

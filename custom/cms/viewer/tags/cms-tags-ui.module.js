@@ -4,6 +4,8 @@
  * @version 1.0.0
  */
 
+import { Toast } from '../../../../shared/toast.module.js';
+
 // Inject styles for tag context menu
 if (!document.getElementById('tag-drawer-context-menu-styles')) {
     const style = document.createElement('style');
@@ -112,7 +114,7 @@ export const TagsUI = {
     startTagReorder(tagNames, categoryName, onReorderComplete) {
         this.cancelTagReorder();
         if (categoryName === '_UNCATEGORIZED_') {
-            alert('未分类的标签无法排序');
+            Toast.error('未分类的标签无法排序');
             return;
         }
 

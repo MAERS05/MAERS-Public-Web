@@ -1,350 +1,366 @@
+"""
+CMS 节点操作：增删改移与排序、.md 文件联动、加解锁、外部编辑器打开。
+"""
+
+from __future__ import annotations
+from .contracts import JsonObject, CmsContext
+
 import os
 import json
-import time
+import hashlib
 import re
+import subprocess
+import uuid
+from . import storage, cms_store
 
-# ================= 业务动作 (节点管理) =================
+# 沙盒测试钩子：用于在自动化测试中拦截外部软件唤醒调用，避免弹窗阻塞测试
+_EXTERNAL_OPEN_HOOK = None
+
+
+def _ensure_photos_junction(module_dir, project_root):
+    """在 data/{module}/ 下按需创建指向项目根目录 photos 的目录联接，使外部编辑器直接解析 photos/... 相对图片路径"""
+    if not module_dir or not project_root:
+        return
+    photos_root = os.path.abspath(os.path.join(project_root, 'photos'))
+    link_path = os.path.abspath(os.path.join(module_dir, 'photos'))
+    if not os.path.isdir(photos_root) or os.path.exists(link_path) or os.path.islink(link_path):
+        return
+    try:
+        if os.name == 'nt':
+            subprocess.run(
+                ['cmd', '/c', 'mklink', '/J', link_path, photos_root],
+                capture_output=True,
+                timeout=3
+            )
+        else:
+            os.symlink(photos_root, link_path, target_is_directory=True)
+    except (OSError, subprocess.SubprocessError):
+        pass
+
+
+@storage.serialized
+def open_external_node(module: str, node_id: str, context: CmsContext) -> bool:
+    """调用系统默认关联的外部软件（如 Typora / Obsidian）直接打开节点对应的物理 .md 文件"""
+    if not node_id or not isinstance(node_id, str):
+        raise ValueError("Invalid node id")
+
+    DATA_DIR = os.path.abspath(context['DATA_DIR'])
+    PROJECT_ROOT = os.path.abspath(context['PROJECT_ROOT'])
+    tree = context['load_tree'](module)
+    row = next((node for node in cms_store.walk(tree['root']) if node['id'] == node_id), None)
+
+    if not row:
+        raise ValueError("Node not found")
+    if row.get('_enc'):
+        raise ValueError("Node is locked")
+    if row.get('_private'):
+        raise ValueError('私密正文仅在浏览器内编辑，避免外部编辑器另存明文副本')
+
+    rel_path = row['content']
+    if not rel_path or not isinstance(rel_path, str) or not rel_path.endswith('.md'):
+        raise ValueError("Node has no valid markdown file")
+
+    # 严格校验路径边界，防止路径穿越攻击
+    norm_parts = rel_path.replace('\\', '/').split('/')
+    if '..' in norm_parts:
+        raise ValueError("Path traversal detected")
+
+    full_md_path = os.path.abspath(os.path.join(DATA_DIR, rel_path))
+    try:
+        common = os.path.commonpath([DATA_DIR, full_md_path])
+    except ValueError:
+        raise ValueError("Path traversal detected")
+
+    if common != DATA_DIR or not full_md_path.startswith(DATA_DIR + os.sep):
+        raise ValueError("Path traversal detected")
+
+    if not os.path.isfile(full_md_path):
+        raise ValueError("Markdown file not found on disk")
+
+    # 按需创建 photos 目录联接，保障外部软件原生预览相对路径图片
+    _ensure_photos_junction(os.path.dirname(full_md_path), PROJECT_ROOT)
+
+    # 唤醒外部默认 Markdown 软件（支持沙盒测试拦截）
+    if _EXTERNAL_OPEN_HOOK is not None:
+        _EXTERNAL_OPEN_HOOK(full_md_path)
+    elif os.environ.get('MAERS_NO_STARTFILE') == '1':
+        pass
+    elif hasattr(os, 'startfile'):
+        os.startfile(full_md_path)
+    else:
+        subprocess.Popen(['xdg-open', full_md_path])
+
+    print(f"  [ CMS ] 🖥️ 已调用外部软件打开文档: {rel_path}")
+    return True
+
 
 def sanitize_filename(title):
-    # Remove invalid chars
-    return re.sub(r'[\\/*?:"<>|]', "", title).strip() or "Untitled"
+    return re.sub(r'[\\/*?:"<>|]', '', title).strip().rstrip('.') or 'Untitled'
 
-def add_node(module, parent_id, node_type, title, context):
-    """添加新节点"""
-    get_db = context['get_db']
-    DATA_DIR = context['DATA_DIR']
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    new_id = f"{node_type[0]}_{int(time.time()*1000)}"
-    created_at = time.time()
-    
-    # 新节点通常插入在最前面 (sort_order = -1 或重排)
-    # 简单策略：获取当前最小 sort_order - 1
-    cursor.execute("SELECT MIN(sort_order) FROM nodes WHERE module=? AND parent_id=?", (module, parent_id))
-    min_order = cursor.fetchone()[0]
-    new_order = (min_order if min_order is not None else 0) - 1
 
-    cursor.execute('''
-        INSERT INTO nodes (id, module, parent_id, type, title, content, tags, created_at, sort_order)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (new_id, module, parent_id, node_type, title, "", "[]", created_at, new_order))
-    
-    # Create empty MD file for notes
+def _find(tree, node_id):
+    def search(nodes):
+        for index, node in enumerate(nodes):
+            if node['id'] == node_id:
+                return nodes, index, node
+            found = search(node.get('children') or [])
+            if found:
+                return found
+        return None
+    found = search(tree['root'])
+    if not found:
+        raise ValueError('Node not found')
+    return found
+
+
+def _children(tree, parent_id):
+    if parent_id == 'root':
+        return tree['root']
+    node = _find(tree, parent_id)[2]
+    if node.get('type') != 'folder' or node.get('_enc'):
+        raise ValueError('Parent must be an unlocked folder')
+    return node.setdefault('children', [])
+
+
+def _md_path(context, relative):
+    root = os.path.realpath(context['DATA_DIR'])
+    path = os.path.realpath(os.path.join(root, relative))
+    if not relative.endswith('.md') or os.path.commonpath([root, path]) != root:
+        raise ValueError('Invalid markdown path')
+    return path
+
+
+def _new_md(module, title, content, context):
+    base = sanitize_filename(title)
+    relative = f'{module}/{base}.md'
+    index = 1
+    while os.path.exists(_md_path(context, relative)):
+        relative = f'{module}/{base} ({index}).md'
+        index += 1
+    storage.write_text(_md_path(context, relative), content)
+    return relative
+
+
+@storage.transactional
+def add_node(module: str, parent_id: str, node_type: str, title: str, context: CmsContext, node_id: str | None = None) -> bool:
+    if node_type not in ('note', 'folder') or not isinstance(title, str) or not title.strip():
+        raise ValueError('Invalid node type or title')
+    tree = context['load_tree'](module)
+    node_id = node_id or f'{node_type[0]}_{uuid.uuid4().hex}'
+    if any(node['id'] == node_id for node in cms_store.walk(tree['root'])):
+        raise ValueError('Node id already exists')
+    children = _children(tree, parent_id)
+    node = {'id': node_id, 'type': node_type, 'title': title, 'tags': [],
+            'content': '', 'coverImage': None, 'children': [] if node_type == 'folder' else None}
+    private = parent_id != 'root' and _find(tree, parent_id)[2].get('_private')
+    if private:
+        node['_private'] = True
     if node_type == 'note':
-        try:
-            safe_title = sanitize_filename(title)
-            filename = f"{safe_title}.md"
-            file_dir = os.path.join(DATA_DIR, module)
-            if not os.path.exists(file_dir): os.makedirs(file_dir)
-            
-            # Handle duplicates
-            counter = 1
-            base_name = safe_title
-            while os.path.exists(os.path.join(file_dir, filename)):
-                filename = f"{base_name} ({counter}).md"
-                counter += 1
-                
-            filepath = os.path.join(file_dir, filename)
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write("")
-                
-            # Update DB with relative path
-            rel_path = f"{module}/{filename}"
-            cursor.execute("UPDATE nodes SET content=? WHERE id=?", (rel_path, new_id))
-        except Exception as e:
-            print(f"  [ CMS ] ⚠️ Failed to create MD file: {e}")
-
-    conn.commit()
-    conn.close()
-    print(f"  [ CMS ] 🆕 节点已添加 | Node added: {title} ({module})")
-    
-    # Sync JS
-    if context.get('sync_js_file'):
-        context['sync_js_file'](module)
-        
+        if private:
+            from . import private_session
+            node['_private'] = True
+            node['content'] = private_session.new_document(module, node_id)
+        else:
+            node['content'] = _new_md(module, title, '', context)
+    children.insert(0, node)
+    context['save_tree'](module, tree)
     return True
 
-def delete_node(module, node_id, context):
-    """删除节点及其子树"""
-    get_db = context['get_db']
-    PROJECT_ROOT = context['PROJECT_ROOT']
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # 级联删除 (简单的递归删除 children)
-    # 1. 找到所有子节点 ID (递归)
-    ids_to_delete = [node_id]
-    
-    # 递归查找所有后代节点
-    while True:
-        placeholders = ','.join('?' for _ in ids_to_delete)
-        cursor.execute(f"SELECT id FROM nodes WHERE parent_id IN ({placeholders}) AND id NOT IN ({placeholders})", ids_to_delete + ids_to_delete)
-        children = [r[0] for r in cursor.fetchall()]
-        if not children:
-            break
-        ids_to_delete.extend(children)
 
-    # 2. Delete cover images for all nodes before deleting the nodes
-    # Import photos module for cover deletion
-    try:
-        from . import photos
-        photo_handler = photos
-    except ImportError:
-        photo_handler = None
-    
-    if photo_handler:
-        for del_id in ids_to_delete:
-            cursor.execute("SELECT coverImage FROM nodes WHERE id=?", (del_id,))
-            row = cursor.fetchone()
-            if row and row['coverImage']:
-                cover_path = row['coverImage']
-                print(f"  [ CMS ] 🗑️  正在删除封面图 | Deleting cover image for node {del_id}: {cover_path}")
-                try:
-                    photo_handler.handle_delete({'path': cover_path})
-                except Exception as e:
-                    print(f"  [ CMS ] ⚠️  封面图删除失败 | Failed to delete cover {cover_path}: {e}")
+def _remove_markdown(nodes, context):
+    for node in cms_store.walk(nodes):
+        if not node.get('_enc') and str(node.get('content') or '').endswith('.md'):
+            storage.remove(_md_path(context, node['content']))
 
-    # 3. Delete MD files for all nodes
-    for del_id in ids_to_delete:
-        cursor.execute("SELECT content FROM nodes WHERE id=?", (del_id,))
-        row = cursor.fetchone()
-        if row and row['content'] and str(row['content']).endswith('.md'):
-            md_path = os.path.join(PROJECT_ROOT, 'data', row['content'])
-            if os.path.exists(md_path):
-                try:
-                    os.remove(md_path)
-                    print(f"  [ CMS ] 🗑️  Deleted MD file: {md_path}")
-                except Exception as e:
-                    print(f"  [ CMS ] ⚠️ Failed to delete MD file: {e}")
 
-    # 4. Execute deletion from DB
-    placeholders = ','.join('?' for _ in ids_to_delete)
-    cursor.execute(f"DELETE FROM nodes WHERE id IN ({placeholders})", ids_to_delete)
-    
-    conn.commit()
-    conn.close()
-    print(f"  [ CMS ] 🗑️  节点及子树已删除 | Node & sub-tree deleted: {node_id}")
-    
-    # Sync JS
-    if context.get('sync_js_file'):
-        context['sync_js_file'](module)
-        
+@storage.transactional
+def delete_node(module: str, node_id: str, context: CmsContext) -> bool:
+    tree = context['load_tree'](module)
+    siblings, index, node = _find(tree, node_id)
+    del siblings[index]
+    context['save_tree'](module, tree)
+    _remove_markdown([node], context)
+    # 图片可能被其他正文或封面复用，解除引用后统一交由垃圾清理回收。
     return True
 
-def update_node(module, node_id, update_data, context):
-    """更新节点信息 (重命名/更改内容/标签/封面)"""
-    get_db = context['get_db']
-    PROJECT_ROOT = context['PROJECT_ROOT']
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    allowed_fields = {'title', 'content', 'tags', 'coverImage'}
-    updates = []
-    params = []
-    
-    try:
-        from . import photos
-        photo_handler = photos
-    except ImportError:
-        photo_handler = None
 
-    for k, v in update_data.items():
-        if k in allowed_fields:
-            if k == 'tags': v = json.dumps(v, ensure_ascii=False)
-            
-            # Special Logic: Use Photos Module for Cover Deletion
-            if k == 'coverImage' and v is None and photo_handler:
-                # 1. Fetch old value
-                cursor.execute("SELECT coverImage FROM nodes WHERE id=?", (node_id,))
-                row = cursor.fetchone()
-                if row and row['coverImage']:
-                    old_path = row['coverImage']
-                    print(f"  [ CMS ] 🗑️  正在清理旧封面 | Purging old cover: {old_path}")
-                    photo_handler.handle_delete({'path': old_path})
-
-            # Handle Title Rename (Rename File)
-            if k == 'title':
-                cursor.execute("SELECT content, title FROM nodes WHERE id=?", (node_id,))
-                row = cursor.fetchone()
-                
-                # Only rename if title actually changed (and content path exists)
-                if row and row['title'] != v and row['content'] and str(row['content']).endswith('.md'):
-                    old_rel_path = row['content']
-                    old_full_path = os.path.join(PROJECT_ROOT, 'data', old_rel_path)
-                    
-                    if os.path.exists(old_full_path):
-                        # Construct new filename
-                        new_safe_title = sanitize_filename(v)
-                        new_filename = f"{new_safe_title}.md"
-                        # Keep same module dir
-                        module_dir = os.path.dirname(old_full_path)
-                        new_full_path = os.path.join(module_dir, new_filename)
-                        
-                        # Handle collision
-                        norm_new = os.path.normpath(new_full_path)
-                        norm_old = os.path.normpath(old_full_path)
-                        
-                        counter = 1
-                        base_name = new_safe_title
-                        
-                        while os.path.exists(new_full_path) and norm_new.lower() != norm_old.lower():
-                             new_filename = f"{base_name} ({counter}).md"
-                             new_full_path = os.path.join(module_dir, new_filename)
-                             norm_new = os.path.normpath(new_full_path)
-                             counter += 1
-                        
-                        try:
-                            # Only rename if paths differ
-                            if norm_new.lower() != norm_old.lower():
-                                os.rename(old_full_path, new_full_path)
-                                # Update content path in DB
-                                new_rel_path = f"{module}/{new_filename}" 
-                                cursor.execute("UPDATE nodes SET content=? WHERE id=?", (new_rel_path, node_id))
-                                print(f"  [ CMS ] 📛 Renamed file: {old_rel_path} -> {new_rel_path}")
-                        except Exception as e:
-                            print(f"  [ CMS ] ⚠️ Failed to rename file: {e}")
-
-            updates.append(f"{k}=?")
-            params.append(v)
-            
-    # Handle Content Update (Write to File)
-    # We should NOT update the 'content' column in DB with this text.
-    
-    content_to_write = None
-    
-    # Reset updates/params for SQL
-    sql_updates = []
-    sql_params = []
-    
-    for k, v in update_data.items():
-        if k == 'content':
-            content_to_write = v
-            continue # Don't add to SQL
-            
-        if k in allowed_fields:
-            if k == 'tags': v = json.dumps(v, ensure_ascii=False)
-            sql_updates.append(f"{k}=?")
-            sql_params.append(v)
-
-    if content_to_write is not None:
-        # Get current file path
-        cursor.execute("SELECT content FROM nodes WHERE id=?", (node_id,))
-        row = cursor.fetchone()
-        if row and row['content'] and str(row['content']).endswith('.md'):
-             md_path = os.path.join(PROJECT_ROOT, 'data', row['content'])
-             try:
-                 with open(md_path, 'w', encoding='utf-8') as f:
-                     f.write(content_to_write)
-                 print(f"  [ CMS ] 📝 Content written to {md_path}")
-             except Exception as e:
-                 print(f"  [ CMS ] ❌ Failed to write content: {e}")
-
-    if sql_updates:
-        sql_params.append(node_id)
-        sql = f"UPDATE nodes SET {', '.join(sql_updates)} WHERE id=?"
-        cursor.execute(sql, sql_params)
-        conn.commit()
-        print(f"  [ CMS ] ✎  节点已更新 | Node updated: {node_id}")
-        
-    conn.close()
-    
-    # Sync JS
-    if context.get('sync_js_file'):
-        context['sync_js_file'](module)
-        
-    return True
-
-def reorder_nodes(module, ids, context):
-    """节点重排序"""
-    if not ids: return True
-    get_db = context['get_db']
-    
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        for idx, node_id in enumerate(ids):
-            cursor.execute("UPDATE nodes SET sort_order=? WHERE id=?", (idx, node_id))
-        conn.commit()
-    except:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
-    print(f"  [ CMS ] ↕️  节点重排序完成 | Nodes reordered ({module})")
-    
-    # Sync JS
-    if context.get('sync_js_file'):
-        context['sync_js_file'](module)
-        
-    return True
-
-def move_node(module, node_id, target_parent_id, context):
-    """移动节点 (跨父级)"""
-    # 防止循环引用
-    if node_id == target_parent_id:
-        raise ValueError("Cannot move node into itself")
-        
-    get_db = context['get_db']
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    # 检查 target_parent_id 是否在 node_id 的子树中
-    if target_parent_id != 'root':
-        curr = target_parent_id
-        while curr != 'root' and curr is not None:
-            if curr == node_id:
-                conn.close()
-                raise ValueError("Circular reference")
-            cursor.execute("SELECT parent_id FROM nodes WHERE id=?", (curr,))
-            res = cursor.fetchone()
-            curr = res[0] if res else None
-
-    # 执行移动：插入到最前面
-    cursor.execute("SELECT MAX(sort_order) FROM nodes WHERE module=? AND parent_id=?", (module, target_parent_id))
-    max_order = cursor.fetchone()[0]
-    new_order = (max_order if max_order is not None else 0) + 1
-
-    cursor.execute("UPDATE nodes SET parent_id=?, sort_order=? WHERE id=?", (target_parent_id, new_order, node_id))
-    
-    conn.commit()
-    conn.close()
-    print(f"  [ CMS ] 🚚 节点已跨级移动 | Node moved: {node_id} -> {target_parent_id}")
-    
-    # Sync JS
-    if context.get('sync_js_file'):
-        context['sync_js_file'](module)
-        
-    return True
-
-def update_node_tags(module, node_id, tags, context):
-    """更新单个节点的标签"""
-    get_db = context['get_db']
-    conn = get_db()
-    cursor = conn.cursor()
-    
-    try:
-        tags_json = json.dumps(tags, ensure_ascii=False)
-        cursor.execute("UPDATE nodes SET tags=? WHERE id=? AND module=?", (tags_json, node_id, module))
-        
-        if cursor.rowcount == 0:
-            conn.close()
-            return False
-            
-        conn.commit()
-        conn.close()
-        
-        print(f"  [ CMS ] 🏷️  Tags Updated: {node_id} -> {tags}")
-        
-        # Sync JS
-        if context.get('sync_js_file'):
-            context['sync_js_file'](module)
-            
+@storage.transactional
+def update_node(module: str, node_id: str, update_data: JsonObject, context: CmsContext) -> bool:
+    if not isinstance(update_data, dict):
+        raise ValueError('data must be an object')
+    tree = context['load_tree'](module)
+    node = _find(tree, node_id)[2]
+    if node.get('_enc'):
+        raise ValueError('Node is locked')
+    old_path = node.get('content') or ''
+    expected = update_data.get('expectedRevision')
+    if node.get('_private'):
+        from . import private_session, private_cms, photos
+        private_cms.validate_edit(node, update_data)
+        path = _md_path(context, old_path) if node['type'] == 'note' else None
+        if 'content' in update_data:
+            if path is None or not isinstance(update_data['content'], str):
+                raise ValueError('Invalid private markdown')
+            original = private_session.document(path)
+            if original is None:
+                raise ValueError('私密正文未载入，保存已停止')
+            if expected is not None and hashlib.sha256(original.encode()).hexdigest() != expected:
+                raise ValueError('正文已变化，请重新读取后保存')
+            private_session.write_document(path, update_data['content'])
+        for key in ('title', 'tags', 'coverImage'):
+            if key in update_data:
+                node[key] = photos.normalize_media_reference(update_data[key]) if key == 'coverImage' and update_data[key] else update_data[key]
+        context['save_tree'](module, tree)
         return True
-    except Exception as e:
-        print(f"  [ CMS ] ❌ Tag update failed: {e}")
-        conn.close()
+    if expected is not None and 'content' in update_data and old_path.endswith('.md'):
+        with open(_md_path(context, old_path), 'rb') as source:
+            if expected != hashlib.sha256(source.read()).hexdigest():
+                raise ValueError('正文已被其他编辑更新，请重新读取后合并；本次保存未覆盖原文')
+    renamed = 'title' in update_data and update_data['title'] != node['title'] and old_path.endswith('.md')
+    if 'title' in update_data and (not isinstance(update_data['title'], str) or not update_data['title'].strip()):
+        raise ValueError('Title must be non-empty')
+    content = update_data.get('content')
+    if content is not None and not isinstance(content, str):
+        raise ValueError('Content must be text')
+    if renamed:
+        if content is None:
+            with open(_md_path(context, old_path), encoding='utf-8', newline='') as source:
+                content = source.read()
+        node['content'] = _new_md(module, update_data['title'], content, context)
+    elif content is not None:
+        if old_path.endswith('.md'):
+            storage.write_text(_md_path(context, old_path), content)
+        elif node['type'] == 'note':
+            node['content'] = _new_md(module, node['title'], content, context)
+        else:
+            raise ValueError('Folder cannot contain markdown content')
+    for key in ('title', 'tags', 'coverImage'):
+        if key in update_data:
+            node[key] = update_data[key]
+    context['save_tree'](module, tree)
+    if renamed:
+        storage.remove(_md_path(context, old_path))
+    return True
+
+
+@storage.transactional
+def reorder_nodes(module: str, ids: list[str], context: CmsContext) -> bool:
+    tree = context['load_tree'](module)
+    if not ids:
+        return True
+    if len(ids) != len(set(ids)):
+        raise ValueError('Duplicate node ids')
+    siblings = _find(tree, ids[0])[0]
+    if any(_find(tree, node_id)[0] is not siblings for node_id in ids):
+        raise ValueError('Reordering requires sibling nodes')
+    order = {node_id: index for index, node_id in enumerate(ids)}
+    siblings.sort(key=lambda node: order.get(node['id'], len(ids)))
+    context['save_tree'](module, tree)
+    return True
+
+
+@storage.transactional
+def move_node(module: str, node_id: str, target_parent_id: str, context: CmsContext) -> bool:
+    tree = context['load_tree'](module)
+    siblings, index, node = _find(tree, node_id)
+    if target_parent_id in {child['id'] for child in cms_store.walk([node])}:
+        raise ValueError('Circular reference')
+    if target_parent_id != 'root' and _find(tree, target_parent_id)[2].get('_private') and not node.get('_private'):
+        from . import private_cms
+        private_cms.protect(module, node_id)
+        tree = context['load_tree'](module)
+        siblings, index, node = _find(tree, node_id)
+    destination = _children(tree, target_parent_id)
+    del siblings[index]
+    destination.append(node)
+    context['save_tree'](module, tree)
+    return True
+
+
+@storage.transactional
+def update_node_tags(module, node_id, tags, context):
+    tree = context['load_tree'](module)
+    try:
+        node = _find(tree, node_id)[2]
+    except ValueError:
         return False
+    if node.get('_enc'):
+        raise ValueError('Node is locked')
+    node['tags'] = tags
+    context['save_tree'](module, tree)
+    return True
+
+
+def lock_sources(node, context):
+    """以正文与结构计算加锁前置版本，拒绝打包后已发生的外部修改。"""
+    result = []
+    for item in cms_store.walk([node]):
+        if item.get('_enc'):
+            data = {'id': item['id'], '_enc': item['_enc']}
+        else:
+            content = item.get('content') or ''
+            if content.endswith('.md'):
+                from . import private_session
+                path = _md_path(context, content)
+                memory = private_session.document(path)
+                if memory is None:
+                    with open(path, encoding='utf-8', newline='') as source:
+                        memory = source.read()
+                content = memory
+            data = {'id': item['id'], 'type': item['type'], 'title': item['title'],
+                    'tags': item.get('tags') or [], 'coverImage': item.get('coverImage'),
+                    'md': content, 'children': [child['id'] for child in item.get('children') or []]}
+        encoded = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode('utf-8')
+        result.append({'id': item['id'], 'revision': hashlib.sha256(encoded).hexdigest()})
+    return result
+
+
+def verify_lock_sources(module, node_id, sources, context):
+    tree = context['load_tree'](module)
+    node = _find(tree, node_id)[2]
+    if sources != lock_sources(node, context):
+        raise ValueError('加锁前内容已变化，请重新读取后重试；原文未删除')
+
+
+@storage.transactional
+def lock_node(module: str, node_id: str, enc: str, context: CmsContext) -> bool:
+    if not isinstance(enc, str) or not enc.startswith('enc:'):
+        raise ValueError('Invalid lock payload')
+    tree = context['load_tree'](module)
+    siblings, index, node = _find(tree, node_id)
+    if node.get('_enc'):
+        raise ValueError('Node already locked')
+    media_version = 0 if any(child.get('_enc') and child.get('mediaVersion') != 1
+                             for child in cms_store.walk([node])) else 1
+    siblings[index] = {'id': node_id, 'type': 'locked', '_enc': enc, 'children': None,
+                       'mediaVersion': media_version}
+    # 先发布完整密文，再移除明文；异常时恢复 JSON 和正文。
+    context['save_tree'](module, tree)
+    _remove_markdown([node], context)
+    return True
+
+
+@storage.transactional
+def unlock_node(module: str, node_id: str, tree: JsonObject, context: CmsContext) -> bool:
+    if not isinstance(tree, dict) or tree.get('id') != node_id:
+        raise ValueError('Invalid unlock payload')
+    current = context['load_tree'](module)
+    siblings, index, node = _find(current, node_id)
+    if not node.get('_enc'):
+        raise ValueError('Node is not locked')
+
+    def restore(source):
+        if source.get('_enc'):
+            return {'id': source['id'], 'type': 'locked', '_enc': source['_enc'], 'children': None}
+        target = {key: source[key] for key in ('id', 'type', 'title', 'tags', 'coverImage') if key in source}
+        target.setdefault('type', 'note')
+        target.setdefault('title', 'Untitled')
+        target.setdefault('tags', [])
+        target['content'] = ''
+        if source.get('md') is not None:
+            target['content'] = _new_md(module, target['title'], source['md'], context)
+        target['children'] = [restore(child) for child in source.get('children') or []] if target['type'] == 'folder' else None
+        return target
+    siblings[index] = restore(tree)
+    context['save_tree'](module, current)
+    return True

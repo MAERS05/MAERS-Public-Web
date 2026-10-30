@@ -3,6 +3,10 @@
  * 依赖: UI, Player, AdminCore (通过 import)
  * @version 4.0.0 - ES6 Module
  */
+import { Toast } from '../../../shared/toast.module.js';
+
+import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+import { lockRecord, unlockRecord, mountUnlockAllButton, refreshUnlockAllButton, unlockListDeep, countEncryptedDeep } from '../../../data-manage/encrypt/admin-lock.module.js';
 
 let UI, Player, AdminCore;
 
@@ -10,6 +14,27 @@ export function initAdmin(uiModule, playerModule, adminCoreModule) {
     UI = uiModule;
     Player = playerModule;
     AdminCore = adminCoreModule;
+
+    // 注册「解锁全部」按钮（递归 分类→合集→专辑）
+    const getKids = (n) => n.collections || n.albums;
+    mountUnlockAllButton({
+        source: 'music-data.json',
+        getCount: () => countEncryptedDeep(UI?.libraryData, getKids, isEncryptedRecord),
+        onUnlockAll: async () => {
+            const n = await unlockListDeep(UI.libraryData, getKids, isEncryptedRecord);
+            if (n > 0) {
+                const mgr = ensureManager(0);
+                if (mgr) mgr.updateSaveState();
+                if (UI.refreshCurrentView) UI.refreshCurrentView();
+            }
+            return n;
+        }
+    });
+}
+
+/** 供渲染模块在每次渲染后调用，刷新「解锁全部」按钮 */
+export function refreshUnlockAll() {
+    refreshUnlockAllButton();
 }
 
 const API_BASE = window.API_BASE || '';
@@ -73,12 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function cleanDeletedItems(list) {
     if (!list) return;
-    // Filter current level
+    // 从后往前遍历，删除标记删除的项（跳过 _enc 加密记录，它们没有子结构）
     for (let i = list.length - 1; i >= 0; i--) {
+        if (list[i]._enc) continue; // 加密记录不处理子结构
         if (list[i]._deleted) {
             list.splice(i, 1);
         } else {
-            // Recursively clean children
+            // 递归清理子节点
             if (list[i].collections) cleanDeletedItems(list[i].collections);
             if (list[i].albums) cleanDeletedItems(list[i].albums);
         }
@@ -86,6 +112,11 @@ function cleanDeletedItems(list) {
 }
 
 // --- UI Bridges ---
+
+// 获取指定层级的 manager（供 render 模块调用）
+export function getManager(level) {
+    return managers[level] || null;
+}
 
 export function getItemClass(level, index) {
     const mgr = ensureManager(level);
@@ -112,6 +143,49 @@ export function uiDelete(e, level, index) {
     e.stopPropagation();
     const mgr = ensureManager(level);
     if (mgr) mgr.toggleDelete(index);
+}
+
+export function isDeleted(level, index) {
+    const mgr = ensureManager(level);
+    return mgr ? mgr.isDeleted(index) : false;
+}
+
+/**
+ * 加锁：将指定层级索引的记录加密
+ * @param {number} level - 0=分类 1=合集 2=专辑
+ * @param {number} index
+ */
+export async function uiLock(level, index) {
+    const mgr = ensureManager(level);
+    if (!mgr) return;
+    const original = mgr.list[index];
+    if (!original || isEncryptedRecord(original)) return;
+
+    const enc = await lockRecord(original);
+    if (!enc) return;
+
+    mgr.list[index] = enc;
+    mgr.updateSaveState();
+    if (UI.refreshCurrentView) UI.refreshCurrentView();
+}
+
+/**
+ * 解锁：将加密记录恢复为原始记录
+ * @param {number} level
+ * @param {number} index
+ */
+export async function uiUnlock(level, index) {
+    const mgr = ensureManager(level);
+    if (!mgr) return;
+    const enc = mgr.list[index];
+    if (!isEncryptedRecord(enc)) return;
+
+    const original = await unlockRecord(enc);
+    if (!original) return;
+
+    mgr.list[index] = original;
+    mgr.updateSaveState();
+    if (UI.refreshCurrentView) UI.refreshCurrentView();
 }
 
 export function uiRename(e, level, index) { // Generic rename for Cat/Col
@@ -164,7 +238,7 @@ async function handleComplexEdit(alb, mgr) {
             return;
         } catch (e) {
             if (AdminCore.Feedback) AdminCore.Feedback.notifyError("获取失败，仅能手动编辑");
-            else alert("获取失败，仅能手动编辑");
+            else Toast.error("获取失败，仅能手动编辑");
         }
     }
 
@@ -193,7 +267,7 @@ export function uiDeletePart(e, albIdx, trackIdx) {
     if (!confirm("确定要删除吗？")) return;
     const alb = ensureManager(2).list[albIdx];
     const mapping = alb.page_mapping || Array.from({ length: parseInt(alb.total) || 1 }, (_, k) => k + 1);
-    if (mapping.length <= 1) return alert("最后一个不可删除");
+    if (mapping.length <= 1) return Toast.error("最后一个不可删除");
     mapping.splice(trackIdx, 1);
     if (alb.custom_parts) alb.custom_parts.splice(trackIdx, 1);
     alb.page_mapping = mapping;
@@ -228,7 +302,7 @@ export async function uiResetTracks(e, catIdx, colIdx, albIdx) {
         UI.refreshCurrentView();
         if (window.MAERS?.Toast) window.MAERS.Toast.success("已还原原始分P");
     } catch (err) {
-        alert("获取原始信息失败：" + err.message);
+        Toast.error("获取原始信息失败：" + err.message);
     }
 }
 
@@ -305,20 +379,11 @@ export async function addAlbum() {
 
     } catch (e) {
         if (AdminCore.Feedback) AdminCore.Feedback.notifyError("获取数据失败");
-        else alert("获取数据失败");
+        else Toast.error("获取数据失败");
     }
 }
 
 
-
-export function isDeleted(level, index) {
-    const mgr = ensureManager(level);
-    return mgr ? mgr.isDeleted(index) : false;
-}
-
-export function getManager(level) {
-    return ensureManager(level);
-}
 
 // 导出所有函数
 export const Admin = {
@@ -332,6 +397,9 @@ export const Admin = {
     uiEditAlbum,
     uiRenamePart,
     uiDeletePart,
+    uiLock,
+    uiUnlock,
+    refreshUnlockAll,
     uiResetTracks,
     addCategory,
     addCollection,

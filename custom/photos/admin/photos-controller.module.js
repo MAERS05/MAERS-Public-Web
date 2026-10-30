@@ -2,8 +2,10 @@
  * MAERS Album Controller (photos-controller.module.js)
  * 职责：数据状态管理、API调用封装、业务逻辑
  * 依赖: DataProvider
- * @version 3.0.0 - ES6 Module
+ * @version 3.1.0 - 新增移动端 Cloudflare R2 直传支持
  */
+import { localFetch } from '../../../data-manage/api-client.module.js';
+import { publicMediaUrl } from '../../../data-manage/data-provider.module.js';
 
 // 依赖声明
 let DataProvider;
@@ -33,7 +35,18 @@ export async function reloadData() {
             console.error('DataProvider not initialized');
             return [];
         }
-        State.loadedData = await DataProvider.getGalleryData(State.category);
+        State.loadedData = [...await DataProvider.getGalleryData(State.category)];
+        // 远程管理页恢复已上传但尚未合并进静态快照的图片；访客仍读取已发布数据。
+        if (State.isAdmin && !isLocalEnv()) {
+            const { syncManager } = await import('../../../data-manage/sync/sync-manager.module.js');
+            await syncManager.applyPendingPhotos(State.category, State.loadedData);
+        }
+        // 访客侧：公共数据中不存在该分类且会话已解锁时，尝试解密私密相册
+        if (!State.isAdmin && (!State.loadedData || State.loadedData.length === 0)) {
+            const { revealPrivateCategory } = await import('../../../data-manage/encrypt/private-media.module.js');
+            const revealed = await revealPrivateCategory(State.category);
+            if (revealed) State.loadedData = revealed;
+        }
         State.originalHash = generateHash(State.loadedData);
         State.hasChanges = false;
         return State.loadedData;
@@ -55,14 +68,10 @@ export async function saveChanges(deletePaths, newOrder) {
         if (!DataProvider) {
             throw new Error('DataProvider not initialized');
         }
-        // 1. Deletions
         for (let path of deletePaths) {
             await DataProvider.deleteImage(path);
         }
-        // 2. Reorder
         await DataProvider.reorderGallery(State.category, newOrder);
-
-        // Reload
         await reloadData();
         return { success: true };
     } catch (e) {
@@ -71,10 +80,10 @@ export async function saveChanges(deletePaths, newOrder) {
     }
 }
 
-// Update tags helper
+// 更新标签
 async function updateTags(id, tags) {
     try {
-        const res = await fetch('/api/photos/update_tags', {
+        const res = await localFetch('/api/photos/update_tags', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: id, tags: tags })
@@ -86,7 +95,28 @@ async function updateTags(id, tags) {
     }
 }
 
+/**
+ * 判断当前是否在本地环境（localhost / 局域网 IP）
+ */
+function isLocalEnv() {
+    const host = window.location.hostname;
+    return ['localhost', '127.0.0.1', '[::1]', ''].includes(host) ||
+        /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(host);
+}
+
+/**
+ * 上传图片
+ * - 本地电脑端：走 Python 后端 /upload 接口
+ * - 手机端 / 非本地环境：走 Cloudflare R2 直传，上传结果实时插入前端 State
+ */
 export async function uploadFiles(files, tags = []) {
+    // ── 手机端 / 远程环境：委托 syncManager 走 Cloudflare R2 直传 ────────────
+    if (!isLocalEnv()) {
+        const { syncManager } = await import('../../../data-manage/sync/sync-manager.module.js');
+        return syncManager.uploadPhotosBatch(files, State.category, State.loadedData);
+    }
+
+    // ── 本地电脑端：走原有 Python 后端 ──────────────────────────────────────
     try {
         if (!DataProvider) {
             throw new Error('DataProvider not initialized');
@@ -97,12 +127,8 @@ export async function uploadFiles(files, tags = []) {
             if (res && res.msg === 'duplicate_found') {
                 dupCount++;
             } else if (tags && tags.length > 0) {
-                // Apply tags to new image
-                // Use ID returned from server
                 if (res.id) {
-                    console.log(`[Upload] Trying to apply tags to ID: ${res.id}`, tags);
                     const success = await updateTags(res.id, tags);
-                    console.log(`[Upload] Tag update result for ${res.id}: ${success}`);
                 } else {
                     console.warn(`[Upload] Server did not return ID for ${f.name}, cannot apply tags.`);
                 }
@@ -118,8 +144,21 @@ export async function uploadFiles(files, tags = []) {
 
 export function fixPath(p, category, subDir = 'images') {
     if (!p) return p;
-    if (p.startsWith('photos/')) return p;
-    return `photos/${subDir}/${category || State.category}/${p}`;
+    if (p.startsWith('/api/private/media/')) return p;
+    // 手机端直传 R2 返回的已是完整 URL，直接返回
+    if (p.startsWith('http://') || p.startsWith('https://')) return p;
+    // 原图路径分流至 R2 CDN
+    if (p.startsWith('photos/images/')) {
+        return publicMediaUrl(p);
+    }
+    if (p.startsWith('photos/')) return publicMediaUrl(p);
+
+    const targetSubDir = subDir || 'images';
+    const resolved = `photos/${targetSubDir}/${category || State.category}/${p}`;
+    if (targetSubDir === 'images') {
+        return publicMediaUrl(resolved);
+    }
+    return resolved;
 }
 
 // 导出 Controller 对象（向后兼容）

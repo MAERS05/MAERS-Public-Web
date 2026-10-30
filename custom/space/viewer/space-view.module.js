@@ -5,6 +5,7 @@
 
 import { initLayout } from '../../../shared/layout.module.js';
 import { initTheme } from '../../../shared/theme.module.js';
+import { revealInPlace } from '../../../data-manage/encrypt/secret-unlock.module.js';
 
 // Import CMS Core Modules
 import { State, initState as initStateModule } from '../../cms/viewer/cms-state.module.js';
@@ -81,13 +82,16 @@ initTheme();
 document.addEventListener('DOMContentLoaded', async () => {
     // Load Space Tree Data
     try {
-        const response = await fetch('data/space-tree.json?t=' + Date.now());
+        const response = await fetch('data/space-tree.json', { cache: 'no-cache' });
         if (response.ok) {
             SPACE_DATA = await response.json();
         }
     } catch (err) {
         console.error('Failed to load space data:', err);
     }
+
+    // 已有会话密钥时，在内存中递归还原密文节点
+    await revealInPlace(SPACE_DATA.root || [], { getChildren: (n) => n.children });
 
     SpaceController.AppState.root = SPACE_DATA.root || [];
 
@@ -237,7 +241,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 window.open(url, '_blank');
             } else {
                 // Folder navigation logic
-                console.log('Folder clicked');
             }
         });
     }

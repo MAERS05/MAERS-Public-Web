@@ -8,10 +8,10 @@ import { loadBooksFromBackend, promoteBook, saveFlowOrder } from './literature-f
 import { updateMetrics, generateBooks, startLoop } from './literature-flow-render.module.js';
 
 // Dependency Injection
-let Editor = null;
+let Reader = null;
 
 export function setEditor(editor) {
-    Editor = editor;
+    Reader = editor;
 }
 
 export class FlowEngine {
@@ -248,10 +248,10 @@ export class FlowEngine {
             coverImage: bookData.coverImage
         };
 
-        if (Editor) {
-            Editor.open(node);
+        if (Reader) {
+            Reader.open(node);
         } else {
-            console.error('[FlowEngine] Editor not injected. Call initLiteratureView(deps) first.');
+            console.error('[FlowEngine] Reader not injected. Call initLiteratureView(deps) first.');
         }
     }
 

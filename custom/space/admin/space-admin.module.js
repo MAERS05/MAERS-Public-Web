@@ -3,10 +3,12 @@
  * @description Space Admin - Fully Restored & Fixed (Batch Manager + Filters)
  * @version 4.1.0 - Filters restored, markDirty fixed.
  */
+import { api, localFetch } from '../../../data-manage/api-client.module.js';
 
 import { setupTagDragAndMenu } from '../../cms/admin/tag-interactions.module.js';
-
-import { AdminModal } from '../../../data-manage/admin-modal.module.js';
+import { AdminModal } from '../../../data-manage/admin/admin-modal.module.js';
+import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+import { lockRecord, unlockRecord, mountUnlockAllButton, refreshUnlockAllButton, unlockListDeep, countEncryptedDeep, renderLockedCard, cryptoIconHtml, setupLockActionButton } from '../../../data-manage/encrypt/admin-lock.module.js';
 
 let AdminCore = null;
 let grid = null;
@@ -46,6 +48,23 @@ async function init() {
 
     setupUI();
     render();
+
+    // 注册「解锁全部」按钮（递归整棵树，解锁目录后继续处理其子节点）
+    const getKids = (n) => n.children;
+    mountUnlockAllButton({
+        source: 'space-tree.json',
+        getCount: () => countEncryptedDeep(treeData.root, getKids, isEncryptedRecord),
+        onUnlockAll: async () => {
+            const n = await unlockListDeep(treeData.root, getKids, isEncryptedRecord);
+            if (n > 0) {
+                // 数组为原地修改，无需 updateCurrentLevel（避免 setList 重置脏检查快照）
+                syncToAppState();
+                if (manager) manager.updateSaveState();
+                render();
+            }
+            return n;
+        }
+    });
 }
 
 function setupUI() {
@@ -55,7 +74,7 @@ function setupUI() {
 
 async function loadData() {
     try {
-        const res = await fetch(`data/space-tree.json?v=${Date.now()}`);
+        const res = await localFetch('data/space-tree.json', { cache: 'no-cache' });
         if (res.ok) {
             treeData = await res.json();
         } else {
@@ -245,6 +264,12 @@ function render() {
     if (!nodes) return;
 
     nodes.forEach((node, index) => {
+        // 加密记录：渲染锁定占位卡片
+        if (isEncryptedRecord(node)) {
+            grid.appendChild(_renderLockedSpaceCard(index));
+            return;
+        }
+
         const card = document.createElement('div');
 
         let extraClasses = '';
@@ -294,21 +319,8 @@ function render() {
 
         // Render Buttons
         if (AdminCore?.AdminButtonHelper) {
-            const adminEl = AdminCore.AdminButtonHelper.render({
-                index: index,
-                isDeleted: node._deleted,
-                onSort: filtering ? null : (e) => uiToggleSelect(e, index),
-                onEdit: (e) => uiEdit(e, index),
-                onDelete: (e) => uiToggleDelete(e, index),
-                containerClass: 'admin-actions' // This might need adjustment if using specific styles
-            });
-
-            // Add Custom 'Add Tag' Button to the admin group
-            const addTagBtn = document.createElement('span');
-            addTagBtn.className = 'maers-admin-btn'; // Use global admin btn class
-            addTagBtn.innerHTML = '＋';
-            addTagBtn.title = 'Add Tag';
-            addTagBtn.onclick = async (e) => {
+            // 添加标签处理：乐观更新后调用细粒度接口，失败时回滚
+            const onAddTag = async (e) => {
                 e.stopPropagation();
                 const input = prompt("添加标签 (可使用 , 或 ， 分隔多个):");
                 if (input) {
@@ -334,9 +346,7 @@ function render() {
                             syncToAppState();
 
                             // Call Granular API
-                            if (await performUpdateTags(node.id, node.tags)) {
-                                // Success - UI already optimistic
-                            } else {
+                            if (!(await performUpdateTags(node.id, node.tags))) {
                                 // Revert on failure
                                 node.tags = oldTags;
                                 render();
@@ -345,9 +355,26 @@ function render() {
                     }
                 }
             };
-            // Append to the container returned by helper
-            // Note: AdminButtonHelper usually returns the wrapper div found in cms-render-grid
-            adminEl.appendChild(addTagBtn);
+
+            const adminEl = AdminCore.AdminButtonHelper.render({
+                index: index,
+                isDeleted: node._deleted,
+                onSort: filtering ? null : (e) => uiToggleSelect(e, index),
+                onEdit: (e) => uiEdit(e, index),
+                onAddTag: onAddTag,
+                onDelete: (e) => uiToggleDelete(e, index),
+                containerClass: 'admin-actions'
+            });
+
+            // 加锁按钮
+            const lockBtn = document.createElement('span');
+            lockBtn.className = 'maers-admin-btn';
+            setupLockActionButton(lockBtn, {
+                isLocked: Boolean(node._private_id),
+                title: node._private_id ? '取消此节点的对外加密' : node._private ? '随上级对外加密' : '对外加密此节点',
+                onClick: (e) => { e.stopPropagation(); uiLock(index); }
+            });
+            adminEl.appendChild(lockBtn);
 
             card.appendChild(adminEl);
         }
@@ -419,6 +446,7 @@ function render() {
     addCard.innerHTML = `<div style="font-size:48px; font-weight:300;">+</div><div style="font-size:12px; font-weight:600;">ADD NEW SITE</div>`;
     addCard.onclick = handleAdd;
     grid.appendChild(addCard);
+    refreshUnlockAllButton();
 }
 function openEditModal(node, index, isNew = false) {
     AdminModal.open({
@@ -522,7 +550,7 @@ async function saveToServer() {
     const cleanRoot = pruneDeleted(treeData.root);
     const dataToSave = { root: cleanRoot };
 
-    const res = await fetch('/api/space/save_tree', {
+    const res = await localFetch('/api/space/save_tree', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(dataToSave)
@@ -579,7 +607,7 @@ async function performCancel() {
 
 async function performUpdateTags(nodeId, tags) {
     try {
-        const res = await (window.MAERS?.ApiClient || { post: (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }) })
+        const res = await api
             .post('/api/space/update_tags', { id: nodeId, tags: tags });
 
         // Success - apply filters to update view and breadcrumb
@@ -609,3 +637,60 @@ export const SpaceAdmin = {
     performCancel,
     getManager: () => manager
 };
+
+// ── 加锁 / 解锁 ──
+
+/**
+ * 加锁：将当前层级指定索引的节点加密
+ * @param {number} index
+ */
+async function uiLock(index) {
+    const nodes = getRenderNodes();
+    const node = nodes[index];
+    if (!node || isEncryptedRecord(node)) return;
+
+    // 找到 currentLevelNodes 中对应的实际索引
+    const actualIdx = currentLevelNodes.findIndex(n => n === node || n.id === node.id);
+    const targetIdx = actualIdx !== -1 ? actualIdx : index;
+
+    const enc = await lockRecord(currentLevelNodes[targetIdx]);
+    if (!enc) return;
+
+    currentLevelNodes[targetIdx] = enc;
+    if (manager) manager.updateSaveState();
+    render();
+}
+
+/**
+ * 解锁：将加密节点恢复
+ * @param {number} index
+ */
+async function uiUnlock(index) {
+    const enc = currentLevelNodes[index];
+    if (!isEncryptedRecord(enc)) return;
+
+    const original = await unlockRecord(enc);
+    if (!original) return;
+
+    currentLevelNodes[index] = original;
+    if (manager) manager.updateSaveState();
+    render();
+}
+
+/**
+ * 渲染 Space 节点的锁定占位卡片
+ * @param {number} index
+ * @returns {HTMLElement}
+ */
+function _renderLockedSpaceCard(index) {
+    return renderLockedCard({
+        className: 'space-card locked-card',
+        label: '私密内容',
+        onUnlock: () => uiUnlock(index),
+        deleteEl: AdminCore?.AdminButtonHelper?.render({
+            index,
+            isDeleted: false,
+            onDelete: (e) => { e.stopPropagation(); uiToggleDelete(e, index); }
+        })
+    });
+}

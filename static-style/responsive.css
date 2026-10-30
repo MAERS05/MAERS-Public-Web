@@ -185,3 +185,9 @@
         border-color: #fff;
     }
 }
+/* 遵循系统减少动态效果偏好。 */
+@media (prefers-reduced-motion: reduce) {
+    html, body, #theme-mask {
+        transition: none !important;
+    }
+}

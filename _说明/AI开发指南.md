@@ -1,175 +1,154 @@
 # MAERS AI 辅助开发指南
 
-本文档即是为人类开发者准备的，也是为 AI 助手（如你）准备的。请严格遵守以下规则。
+本文档面向 AI 编程助手与人类开发者，说明在 MAERS 中**如何开展工作**。具体规则（代码怎么写、文件怎么建）只在 [开发规范](开发规范.md) 中定义，本文通过规则编号引用。
 
 ---
 
 ## 📋 目录 (Table of Contents)
 
-- [1. 角色认知](#1-角色认知)
-- [2. 关键守则 (Do's & Don'ts)](#2-关键守则-dos--donts)
-- [3. 代码生成规范](#3-代码生成规范)
-- [4. 修改现有代码](#4-修改现有代码)
-- [5. 内部链接与跨模块跳转](#5-内部链接与跨模块跳转)
+- [1. 项目定性](#1-项目定性)
+- [2. 标准工作流](#2-标准工作流)
+- [3. 必读文档索引](#3-必读文档索引)
+- [4. 高频要点速查](#4-高频要点速查)
+- [5. 常见误区（已废弃的写法）](#5-常见误区已废弃的写法)
+- [6. 内部链接与跨模块跳转](#6-内部链接与跨模块跳转)
+- [7. 自检清单](#7-自检清单)
 
 ---
 
-## 1. 角色认知
+## 1. 项目定性
 
-你正在维护的是一个**高度原生化**、**模块化**且**极其注重性能**的 Web 项目。
--   不要试图引入 React/Vue/jQuery。
--   不要引入 Webpack/Vite/Babel。
--   尊重现有的 HTML/CSS/JS 架构。
+MAERS 是一个**原生化、模块化、高内聚低耦合**的 Web + 原生桌面双模系统：
+
+- 访客端：纯静态部署（GitHub Pages / Vercel / Cloudflare），读取 `data/*.json` 快照与 `.md` 正文。
+- 管理端：由 `Maersy.exe` 拉起本地 Python 后端 `_studio/server.py`，负责物理文件、SQLite、图像流水线与同步。
+- 不引入任何前端框架（React / Vue / jQuery）或打包工具（Webpack / Vite / Babel），使用浏览器原生 ES Modules。
+- 代码注释与技术交流一律使用中文。
+- 本仓库是开源发布版本，每次更新保持现有版本号不变，遵守 STD-VER-01；原项目的自动递增流程不适用于本仓库。
+- 处于内测阶段，**不保留兼容旧版的包袱**。能彻底重构就重构，删除旧逻辑，不做“新旧并存”。
 
 ---
 
-## 2. 关键守则 (Do's & Don'ts)
+## 2. 标准工作流
 
-### ✅ Do's (必须做)
--   **必须**阅读文件功能说明书。
--   **必须**使用 ES6 Modules (`import/export`)。
--   **必须**检查文件后缀，确认为 `.module.js`。
--   **必须**遵循“基础设施扁平化”原则：共享 UI 逻辑置于 `shared/`，通用管理中台置于 `data-manage/`。
--   **必须**在修改 HTML 时检查是否破坏了关键渲染路径 (Flash Guard 路径为 `shared/flash-guard.js`)。
--   **必须**在修改后端 Python 服务时，使用标准化的**双语日志格式**进行回显：`print(f"  [ MODULE ] 图标 描述 | Description")`。
--   **必须**在实现复杂子管理模块时（如 CMS 标签），使用 `autoSaveBar: false` 将保存条控制权移交给中央调度器，避免 UI 冲突。
--   **必须**使用 `fetch` 替代 XHR。
--   **必须**使用 `querySelector` 和 `addEventListener`。
--   **必须**通过 `shared/namespace.module.js` 统一管理全局命名空间初始化，严禁散落挂载。
--   **必须**使用 `shared/templates.module.js` 构建复杂 DOM，替代 `innerHTML` 拼接，以防止 XSS 和提升可读性。
--   **必须**在复用 CMS 适配器（如 Photos Viewer, Space Viewer）时，**显式设定** `{ initialState: { IS_ADMIN: false } }`，防止管理 UI 泄露。
--   **必须**确保在 CMS 模块中执行增删改操作时，同步执行 `_studio/services/cms.py` 中的物理文件操作逻辑（如创建 `.md`、同步重命名）。
--   **必须**在查询 CMS 内容时，首先检查 `content` 字段是否以 `.md` 结尾。如果是，前端必须执行异步 `fetch` 获取内容，而不是直接使用数据库字段。
--   **必须**严格遵守 `data/<module>/<filename>.md` 的物理存放规则，禁止跨模块混放。
--   **必须**通过 `/api/cms/get_categories?module=xxx` 和 `/api/cms/save_categories` 接口管理标签分类，严禁试图在 `nodes` 表中查找 `_TAG_CONFIG` 节点。
--   **必须**在执行“出厂重置”或“清空数据”逻辑时，确保 `data/tags/` 目录下的 JSON 配置文件也被同步重置，并保持目录树 JSON 的 `{"root": []}` 初始结构。
--   **必须**使用 `loading="lazy"` 属性替代 `InteractionObserver` 方案来实现图片懒加载。
--   **必须**遵循 ADR-032 命名规范创建标签配置文件：`cms-{module}-tag-categories.json`。
-
-### ❌ Don'ts (禁止做)
--   **禁止**写入 HTML 内联事件 (`onclick="..."`)。
--   **禁止**使用 `var` 声明变量（全部使用 `const/let`）。
--   **禁止**向全局 `window` 对象挂载新变量（除非是 Explicit Debugging Interface）。
--   **禁止**删除 `shared/flash-guard.js` 的同步引用。
--   **禁止**在业务模块的主 CSS 文件中编写 `max-width` 媒体查询（必须去 `zmobile adaptation` 目录）。
--   **禁止**滥用 `!important`。**尽量**通过 CSS 权重管理（如 `body` 前缀策略）解决冲突，仅在覆盖行内样式或第三方库强样式等必要场景下使用。
--   **禁止**保留“僵尸代码”或无用注释。修改功能时，**必须删除**旧逻辑，绝不允许采取“保留旧代码但在下方通过新代码覆盖”的增量式写法。
--   **禁止**编写无意义的占位代码（如无效的 `0` 或 `none`）。每一行代码都必须有明确的运行时价值。
--   **禁止**随意猜测！不清楚就自己找具体文件或问我！。
----
-
-## 3. 代码生成规范
-
-### 3.1 模块模板
-生成新 JS 模块时，请遵循以下模板：
-
-```javascript
-/**
- * @module custom/example/example.module.js
- * @description 简要描述模块功能
- */
-
-import { api } from '../../data-manage/api-client.module.js';
-
-// 私有常量
-const DEFAULT_CONFIG = { ... };
-
-// 导出函数
-export function init() {
-    const el = document.querySelector('#example');
-    if (el) {
-        bindEvents(el);
-    }
-}
-
-// 私有函数
-function bindEvents(el) {
-    el.addEventListener('click', () => { ... });
-}
+```mermaid
+flowchart LR
+    A["阅读规范与文件说明"] --> B["定位模块与依赖链"]
+    B --> C["实现修改"]
+    C --> D["运行全量测试"]
+    D -->|失败| C
+    D -->|通过| E["保持版本号 / 更新文档"]
+    E --> F["总结与后续建议"]
 ```
 
-### 3.2 CSS 模板
-```css
-/* custom/example/viewer/example.css */
-.example-container {
-    /* 使用全局变量 */
-    background-color: var(--card-bg);
-    border: 1px solid var(--card-border);
-}
-```
-
-### 3.3 移动端适配 CSS 模板
-任何移动端 (`@media`) 样式**必须**写在 `custom/zmobile adaptation/` 对应的文件中。
-**关键规则**：必须在模块的主 CSS 文件头部使用 `@import` 引入适配文件，**禁止**在 HTML 中直接使用 `<link>` 标签引入。
-
-```css
-/* custom/example/viewer/example.css - 头两行 */
-@import "../../zmobile adaptation/mobile-example.css";
-
-.example-container { ... }
-```
-
-```css
-/* custom/zmobile adaptation/mobile-example.css */
-/* 必须加 body 前缀提升权重 */
-body .example-container {
-    flex-direction: column;
-}
-```
+1. **阅读**：先读 [开发规范](开发规范.md) 与 [文件功能说明](文件功能说明.md)，确认模块位置与职责。不要凭空猜测路径或接口名，不确定时检索代码库或向用户确认。
+2. **定位**：查看目标文件的 `import` / `export` 依赖链，以及它是否被其他模块复用（CMS 组件被 Photos / Space 通过适配器复用）。
+3. **实现**：遵守规范编号对应的规则。新文件按 [开发规范 §1.1](开发规范.md#11-新文件放在哪里) 选择位置。
+4. **验证**：运行 `python -B _studio/tests/run_tests.py`，必须全部通过。规范类失败的信息会带上规则编号（如 `[STD-JS-02]`），按编号查阅开发规范修复。
+5. **收尾**：
+   - 保持所有现有版本号不变（STD-VER-01）。旧版工具若提示递增，报告规则冲突，不得为通过检查改版本号。
+   - 新增或删除访客端静态文件时，同步维护 `offline-download.js` 的 `FRAMEWORK`（STD-VER-02）。
+   - 更新文档（STD-DOC-02）。
+   - 如果偿还了技术债，执行 `--shrink-baseline`。
+6. **汇报**：简洁说明改动、验证结果与可选的后续优化，主动提出值得深入的问题。
 
 ---
 
-## 4. 修改现有代码
+## 3. 必读文档索引
 
-在修改现有文件前，务必先**阅读文件的头部注释**和**导入部分**，理解其依赖关系。
-如果发现旧代码（如 `MAERS.xxx = ...`），请优先建议重构为 ES6 模块，而不是继续沿用旧模式（除非用户明确要求最小化修改）。
+| 文档 | 用途 |
+| :--- | :--- |
+| [开发规范](开发规范.md) | 强制规则（唯一来源）与自动化检查方式 |
+| [文件功能说明](文件功能说明.md) | 每个文件的职责与位置 |
+| [前端开发指南](前端开发指南.md) | 前端分层、关键渲染路径、加密 / 同步门面、样式体系 |
+| [后端开发指南](后端开发指南.md) | `_studio/` 分层、完整 API 表、日志与运维 |
+| [架构决策记录](架构决策记录.md) | 关键取舍的背景与理由（ADR） |
+| [细节设计说明](细节设计说明.md) | 具体机制的实现细节 |
 
 ---
 
-## 5. 内部链接与跨模块跳转
+## 4. 高频要点速查
 
-### 5.1 本地 Markdown 内链（同模块跳转）
+| 场景 | 要点 | 规则 |
+| :--- | :--- | :--- |
+| 新建 JS 文件 | kebab-case + `.module.js`，文件头写 `/** */` 中文职责注释 | STD-FILE-01/02, STD-JS-05 |
+| 声明变量 | 只用 `const` / `let` | STD-JS-02 |
+| 用户提示 | `window.MAERS.Toast` 或 `admin-modal`，禁止 `alert()` | STD-JS-04 |
+| 全局变量 | `window.MAERS` 只允许 `Toast` / `Theme` / `ModuleConfig` / `Config` | STD-ARCH-01 |
+| 加密 / 解密 | 只经由 `data-manage/encrypt/` 门面，业务代码禁止 `crypto.subtle` | STD-ARCH-02 |
+| 云同步 | 只经由 `data-manage/sync/sync-manager.module.js` 门面 | STD-ARCH-03 |
+| 访客端复用 CMS 适配器 | `{ initialState: { IS_ADMIN: false } }` | STD-ARCH-04 |
+| 子管理器保存条 | `autoSaveBar: false`，交给中央调度 | STD-ARCH-06 |
+| 移动端样式 | 写入 `custom/zmobile adaptation/`，由主 CSS 顶部 `@import` | STD-CSS-01 |
+| 浅色模式 | 新组件必须同时适配 `html.light-mode` | STD-CSS-03 |
+| HTML 头部 | `config.js` → `flash-guard.js`（同步）→ 样式 → 入口模块 | STD-HTML-01/03 |
+| 后端日志 | `print(f"  [ MODULE ] 图标 中文 \| English")` | STD-PY-03 |
+| 后端异常 | 禁止裸 `except:` | STD-PY-02 |
+| CMS 数据写入 | 只走 `POST /api/cms/node?action=...` | STD-DATA-03 |
+| 每次更新后 | 保持所有现有版本号不变，不运行自动递增工具 | STD-VER-01 |
+| 桌面启动器 | 修改 `_studio/tools/build_desktop_app.py` 后执行该脚本重新生成 `Maersy.exe` | — |
 
-MAERS 的阅读器和 Vditor 编辑器已内置了对本地 `.md` 链接的**拦截引擎**，无需特殊处理。
+---
 
-- **核心函数**：`_interceptMdLinks(container, currentNode)` 位于 `custom/cms/admin/cms-editor.module.js`。
-- **触发条件**：链接的 `href` 以 `.md` 结尾，且**不以** `http` 开头。
-- **匹配逻辑**：从链接路径中提取文件名（无扩展名），然后在 `Controller.AppState.allNodes` 中按 `title` 或 `content` 字段匹配目标节点，调用 `Editor.open(node)` 打开。
-- **书写格式示例**（同模块内跳转，直接写文件名即可）：
-  ```markdown
-  [另一篇笔记](另一篇笔记.md)
-  ```
+## 5. 常见误区（已废弃的写法）
 
-### 5.2 跨模块深度链接（`?openNote` 参数）
+| 误区 | 现状 |
+| :--- | :--- |
+| 在 CMS 中 `new Vditor(...)` 做所见即所得编辑 | CMS 已是**纯阅读器**（`cms-reader.module.js` v4），用 `Vditor.preview` 渲染，引擎缺失时通过 `textContent` 显示纯文本；正文可在源码抽屉保存，或通过 `open_external` 调用本地 Typora / Obsidian 编辑，窗口回焦后自动热刷新 |
+| 调用 `/api/cms/tree`、`/api/cms/upload_cover`、`/api/cms/upload_attachment` | 这些接口不存在。读取用 `GET /api/cms/fetch?module=`，写入用 `POST /api/cms/node?module=&action=` |
+| 引用 `shared/crypto.module.js`、`shared/sync-manager.module.js` 等 | 加密模块位于 `data-manage/encrypt/`，同步模块位于 `data-manage/sync/`，管理中台位于 `data-manage/admin/` |
+| 读写 `data/keyring.json` | 密钥环文件为 `data/crypto-keyring.json` |
+| 运行 `_studio/tools/run_tests.py` | 测试入口为 `_studio/tests/run_tests.py` |
+| 引用 `shared/namespace.module.js`、`shared/templates.module.js`、`clean-data.py`、`install_deps.py`、`.bat` 脚本 | 均已删除，test_01 会拦截残留引用 |
 
-当你需要在 Markdown 文章中链接**另一个模块**的内容时（如从 notes 链接到 games），使用以下规范：
+---
 
-- **格式**：`[链接文字](/目标模块.html?openNote=笔记完整标题)`
-- **工作原理**：由于链接以 `/` 或 `http` 开头，拦截器**不会拦截**，浏览器正常跳转到目标页面。目标页面在 `DOMContentLoaded` 初始化完成后，会自动读取 URL 中的 `openNote` 参数，在 `allNodes` 中查找对应节点并弹开。
-- **已支持的模块入口**：`notes.html`, `literature.html`, `games.html`, `videos.html`（以及对应的 `admin-cms.html?module=xxx`）。
-- **注意事项**：`openNote` 的值必须和树节点的 `title` 字段**完全一致**（包含书名号等特殊符号）。
+## 6. 内部链接与跨模块跳转
+
+### 6.1 同模块内链
+阅读器的 `_interceptMdLinks(container, currentNode)`（[`cms-reader.module.js`](../custom/cms/viewer/cms-reader.module.js)）会拦截 `.md` 相对链接，在页内无刷新打开目标笔记。支持两种写法：
 
 ```markdown
-<!-- 推荐：使用相对路径（本地测试和线上部署都能正常工作） -->
+[另一篇笔记](另一篇笔记.md)
+[[另一篇笔记]]
+[[另一篇笔记|显示文字]]
+```
+
+- 链接 `href` 必须以 `.md` 结尾，且不以 `http` 或 `/` 开头。
+- `[[双链]]` 在预处理阶段转换为 `.cms-wikilink` 链接。被引用笔记的反向链接由 `cms-backlinks.module.js` 展示。
+
+### 6.2 跨模块深度链接（`?openNote=`）
+
+```markdown
 [黑神话：悟空](/games.html?openNote=黑神话：悟空)
 [《北欧神话》](/literature.html?openNote=《北欧神话》)
-
-<!-- 后台管理员专用：直接跳转到 Admin 编辑器并自动打开 -->
-[后台编辑黑神话](/admin-cms.html?module=games&openNote=黑神话：悟空)
+[后台查看](/admin-cms.html?module=games&openNote=黑神话：悟空)
 ```
 
-### 5.3 新增模块时的接入规范
+- 已支持 `notes`、`literature`、`games`、`videos`、`record` 的访客入口与管理入口（test_04 校验）。
+- `openNote` 的值必须与节点 `title` **完全一致**，包括书名号等标点。
 
-如果将来新增一个模块（如 `record.html`），你必须在其对应的 `main.module.js` 的 `DOMContentLoaded` 事件中补充以下标准接入代码，否则该模块无法响应 `openNote` 跳转指令：
+### 6.3 新增 CMS 子模块的接入
+
+新模块的 `main.module.js` 在初始化完成后，必须响应 `openNote` 参数：
 
 ```javascript
-// [Feature] Auto-open specific note from URL ('?openNote=Title')
-const urlParams = new URLSearchParams(window.location.search);
-const openNoteTitle = urlParams.get('openNote');
+// 响应 URL 中的 ?openNote=标题，自动打开目标文章
+const openNoteTitle = new URLSearchParams(window.location.search).get('openNote');
 if (openNoteTitle && Controller?.AppState?.allNodes) {
     const targetNode = Controller.AppState.allNodes.find(n => n.type === 'note' && n.title === openNoteTitle);
-    if (targetNode && Editor) {
-        setTimeout(() => { Editor.open(targetNode); }, 100);
-    }
+    if (targetNode && Editor) setTimeout(() => Editor.open(targetNode), 100);
 }
 ```
+
+---
+
+## 7. 自检清单
+
+提交答复前逐项确认：
+
+- [ ] 全量测试通过，没有新增技术债（test_09 绿灯）。
+- [ ] 所有现有版本号保持原值，访客端文件增删已同步 `FRAMEWORK`。
+- [ ] 新代码有中文文件头注释，没有僵尸代码，也没有 `console.log` / `alert` / `var`。
+- [ ] 动态内容写入 `innerHTML` 前已转义，新组件已适配浅色模式。
+- [ ] 文件增删与接口变化已同步到文档。

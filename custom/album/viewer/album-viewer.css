@@ -149,6 +149,22 @@ html.light-mode .gallery-content {
   background: linear-gradient(135deg, #e57254 0%, #f0a68d 100%);
 }
 
+.card-city .card-bg-glow {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.card-humanity .card-bg-glow {
+  background: linear-gradient(135deg, #e6b980 0%, #eacda3 100%);
+}
+
+.card-ani .card-bg-glow {
+  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
+}
+
+.card-other .card-bg-glow {
+  background: linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%);
+}
+
 /* ==========================================================================
    Animations
    ========================================================================== */

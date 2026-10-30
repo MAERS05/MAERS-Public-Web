@@ -1,123 +1,263 @@
 /*!
- * Vditor - A markdown editor written in TypeScript.
- *
- * MIT License
- *
- * Copyright (c) 2018-present B3log 开源, b3log.org
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in all
- * copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
+ * MAERS Modern Dark Content Theme for Vditor Preview
  */
 .vditor-reset {
-    color: #d1d5da;
+    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    line-height: 1.8;
+    letter-spacing: 0.01em;
 }
 
-.vditor-reset a, .vditor-ir__link {
-    color: #4285f4;
+.vditor-reset h1,
+.vditor-reset h2 {
+    padding-bottom: 0.38em;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    color: #f8fafc;
+    font-weight: 700;
 }
 
-.vditor-reset h1, .vditor-reset h2 {
-    padding-bottom: 0.3em;
-    border-bottom: 1px solid #d1d5da
+.vditor-reset h3,
+.vditor-reset h4,
+.vditor-reset h5,
+.vditor-reset h6 {
+    color: #f1f5f9;
+    font-weight: 600;
 }
 
 .vditor-reset hr {
-    background-color: #d1d5da
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: none;
+    margin: 2em 0;
 }
 
-.vditor-reset blockquote {
-    padding: 0 1em;
-    color: #b9b9b9;
-    border-left: .25em solid #d1d5da
+.vditor-reset a,
+.vditor-ir__link {
+    color: #38bdf8;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.35);
+    transition: all 0.2s ease;
+}
+
+.vditor-reset a:hover {
+    color: #7dd3fc;
+    border-bottom-color: #7dd3fc;
+}
+
+.vditor-reset blockquote:not(.cms-alert) {
+    padding: 10px 18px;
+    margin: 16px 0;
+    color: #94a3b8;
+    background: rgba(255, 255, 255, 0.03);
+    border-left: 3px solid rgba(56, 189, 248, 0.55);
+    border-radius: 0 10px 10px 0;
 }
 
 .vditor-reset iframe {
-    border: 1px solid #141414
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+}
+
+.vditor-reset table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 18px 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(15, 18, 25, 0.65);
+    display: table;
 }
 
 .vditor-reset table tr {
-    background-color: #2f363d
+    background-color: transparent;
+    border-top: none;
+    transition: background-color 0.15s ease;
 }
 
-.vditor-reset table td, .vditor-reset table th {
-    border: 1px solid #dfe2e5
+.vditor-reset table th {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #f8fafc;
+    font-weight: 600;
+    text-align: left;
+    padding: 11px 16px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vditor-reset table td {
+    padding: 10px 16px;
+    color: #cbd5e1;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.vditor-reset table th:last-child,
+.vditor-reset table td:last-child {
+    border-right: none;
+}
+
+.vditor-reset table tbody tr:last-child td {
+    border-bottom: none;
 }
 
 .vditor-reset table tbody tr:nth-child(2n) {
-    background-color: #24292e
+    background-color: rgba(255, 255, 255, 0.018);
+}
+
+.vditor-reset table tbody tr:hover {
+    background-color: rgba(56, 189, 248, 0.06);
 }
 
 .vditor-reset code:not(.hljs):not(.highlight-chroma) {
-    background-color: rgba(66, 133, 244, .36);
+    background-color: rgba(148, 163, 184, 0.14);
+    color: #7dd3fc;
+    padding: 0.18em 0.45em;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    font-size: 0.88em;
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+
+.vditor-reset pre {
+    margin: 18px 0;
+    border-radius: 12px !important;
+    background: #0d1017 !important;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+}
+
+.vditor-reset pre > code {
+    padding: 18px 20px !important;
+    background: transparent !important;
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.9rem;
+    line-height: 1.65;
+}
+
+.vditor-reset .cms-diagram-card:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-mindmap:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-markmap:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-mermaid:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-echarts:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-flowchart:not(.cms-diagram-card--fullscreen),
+.vditor-reset .language-graphviz:not(.cms-diagram-card--fullscreen) {
+    margin: 16px 0 !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+}
+
+.vditor-reset .language-mindmap svg,
+.vditor-reset .language-markmap svg {
+    color: #f1f5f9;
 }
 
 .vditor-reset .language-abc svg,
 .vditor-reset .language-abc path {
     fill: currentColor;
-    color: #d1d5da;
+    color: #e2e8f0;
 }
 
 .language-graphviz polygon {
-    fill: rgba(66, 133, 244, .36);
+    fill: rgba(56, 189, 248, 0.25);
 }
 
 .vditor-reset kbd {
-    color: #d1d5da;
-    background-color: #2f363d;
-    border: 1px solid #141414;
-    box-shadow: inset 0 -1px 0 #141414
+    color: #e2e8f0;
+    background-color: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 5px;
+    padding: 2px 6px;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
 .vditor-copy svg {
-    color: #b9b9b9
+    color: #94a3b8;
 }
 
 .vditor-speech {
-    background-color: #1d2125;
-    border: 1px solid #141414;
-    color: #b9b9b9
+    background-color: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
 }
 
-.vditor-speech--current, .vditor-speech:hover {
-    color: #fff
+.vditor-speech--current,
+.vditor-speech:hover {
+    color: #fff;
 }
 
 .vditor-linkcard a {
-    background-color: #1d2125;
+    background-color: rgba(30, 41, 59, 0.65);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .vditor-linkcard a:visited .vditor-linkcard__abstract {
-    color: hsla(0, 0%, 72.5%, .36)
+    color: rgba(148, 163, 184, 0.5);
 }
 
 .vditor-linkcard__title {
-    color: #d1d5da
+    color: #f1f5f9;
 }
 
 .vditor-linkcard__abstract {
-    color: #b9b9b9
+    color: #94a3b8;
 }
 
 .vditor-linkcard__site {
-    color: #fff
+    color: #38bdf8;
 }
 
 .vditor-linkcard__image {
-    background-color: hsla(0, 0%, 72.5%, .36)
+    background-color: rgba(148, 163, 184, 0.2);
+}
+
+/* 消除导图外层 <pre> 的双框现象，确保单一圆角卡片容器 */
+.vditor-reset pre.cms-diagram-pre,
+.vditor-reset pre:has(.cms-diagram-card),
+.vditor-reset pre:has(.language-mindmap),
+.vditor-reset pre:has(.language-markmap),
+.vditor-reset pre:has(.language-mermaid),
+.vditor-reset pre:has(.language-echarts),
+.vditor-reset pre:has(.language-flowchart),
+.vditor-reset pre:has(.language-graphviz) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+}
+
+.vditor-reset .cms-diagram-card,
+.vditor-reset .language-mindmap,
+.vditor-reset .language-markmap,
+.vditor-reset .language-mermaid,
+.vditor-reset .language-echarts,
+.vditor-reset .language-flowchart,
+.vditor-reset .language-graphviz {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.cms-pill-icon {
+    width: 15px !important;
+    height: 15px !important;
+    min-width: 15px !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+}
+
+.cms-pill-text {
+    white-space: nowrap;
 }

@@ -4,6 +4,10 @@
  * @version 1.0.0 - ES6 Module
  */
 
+import { revealInPlace } from '../../../../data-manage/encrypt/secret-unlock.module.js';
+import { getRevealTransform } from '../../../../data-manage/encrypt/private-media.module.js';
+import { DataProvider } from '../../../../data-manage/data-provider.module.js';
+
 /**
  * Load books from backend JSON file
  * @param {FlowEngine} engine - Engine instance
@@ -18,6 +22,8 @@ export async function loadBooksFromBackend(engine) {
         if (response.ok) {
             const data = await response.json();
             if (data && data.root) {
+                // 已有会话密钥时，在内存中还原加密节点
+                await revealInPlace(data.root, { getChildren: (n) => n.children, transform: await getRevealTransform() });
                 const flattenBooks = (nodes) => {
                     nodes.forEach(node => {
                         if (node.type === 'note') {
@@ -26,7 +32,8 @@ export async function loadBooksFromBackend(engine) {
                                 title: node.title,
                                 content: node.content || '',
                                 tags: node.tags || [],
-                                coverImage: node.coverImage || null
+                                coverImage: node.coverImage || null,
+                                coverThumb: node.coverThumb || null
                             });
                         }
                         if (node.children && node.children.length > 0) {
@@ -43,6 +50,7 @@ export async function loadBooksFromBackend(engine) {
         console.error('[FlowEngine] Error loading JSON data:', e);
     }
 
+    if (allBooks.some(book => book.coverImage && !book.coverThumb)) await DataProvider.loadCoverIndex();
     engine.allBooksSource = allBooks;
     return [];
 }
@@ -101,7 +109,8 @@ export function promoteBook(engine, node) {
             title: node.title,
             content: node.content || '',
             tags: node.tags || [],
-            coverImage: node.coverImage || null
+            coverImage: node.coverImage || null,
+            coverThumb: node.coverThumb || null
         };
         engine.realBooks.unshift(newBook);
         engine.realBooks.pop();

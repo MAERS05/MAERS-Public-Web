@@ -3,6 +3,7 @@
 
 <head>
     <script src="shared/flash-guard.js"></script>
+    <script src="custom/config.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MAERS Space - About Me</title>
@@ -25,6 +26,7 @@
             align-items: center;
             text-align: center;
             color: var(--text-sub);
+            margin-bottom: 100px;
         }
 
         .placeholder-text {
@@ -34,32 +36,178 @@
             margin-top: 20px;
         }
 
+        .contact-form {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border-radius: 12px;
+            border: 1px solid rgba(128, 128, 128, 0.2);
+            background: var(--pill-bg);
+            /* Opaque solid */
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            background: var(--pill-hover-bg);
+            /* Opaque solid */
+        }
+
+        .form-textarea {
+            min-height: 120px;
+        }
+
+        .submit-btn {
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            background: var(--text-main);
+            color: var(--bg-base);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .contact-note {
+            font-size: 0.85rem;
+            color: var(--text-main);
+            margin-top: 15px;
+        }
+
         /* [Optimal] 消除移动端点击延迟 */
         a,
         button,
         input,
+        textarea,
         .photo-item,
         .list-item,
         .card-icon,
         .tech-pill {
             touch-action: manipulation;
         }
+
+        /* [Custom] Page-specific transparency */
+        .main-card {
+            background-color: rgba(20, 20, 23, 0) !important;
+        }
+
+        html.light-mode .main-card {
+            background-color: rgba(255, 255, 255, 0) !important;
+        }
+        /* [Icon Theme] 昼夜模式图标颜色自适应 */
+        .header-title img {
+            filter: invert(1); /* 默认黑夜模式：反转黑白 */
+            transition: filter 0.3s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        html.light-mode .header-title img {
+            filter: none; /* 白昼模式：恢复黑色 */
+        }
     </style>
 </head>
 
 <body>
     <div class="container">
-        <div class="main-card clean-layout">
+        <div class="main-card">
             <div class="placeholder-content">
-                <div style="font-size: 4rem;">☕️</div>
-                <div class="placeholder-text">还没想好...</div>
-                <p>Knowledge needs time to accumulate.</p>
+                <img src="ui/email.svg" style="width: 64px; height: 64px; margin-bottom: 15px;" alt="Email">
+                <div class="placeholder-text" style="font-size: 1.5rem; margin-top: 0;">Get in Touch</div>
+
+                <!-- 
+                     🔴 [IMPORTANT] 
+                     请将 action 中的 "YOUR_FORM_ID" 替换为您在 https://formspree.io/ 注册后获取的 ID。
+                     注册非常简单，通常不会被风控拦截。
+                -->
+                <form id="contact-form" class="contact-form" action="" method="POST">
+                    <input type="email" name="email" class="form-input" placeholder="Your Email (for reply)" required>
+                    <textarea name="message" class="form-textarea" placeholder="Say hello... (Min 10 chars)"
+                        minlength="10" required></textarea>
+                    <button type="submit" class="submit-btn" id="form-btn" disabled>Send Message</button>
+                    <p id="form-status" class="contact-note" style="display: none;"></p>
+                </form>
+
+
             </div>
         </div>
     </div>
     <script type="module">
         import { renderPageHeader } from './shared/simple-main.module.js';
-        renderPageHeader("About Me", "index.html", "Back");
+        renderPageHeader('<img src="ui/index.svg" alt="Index" class="title-icon" style="height: 1.5em; width: auto; vertical-align: middle; margin-right: 8px; position: relative; top: -0.2em;"> About Me', "index.html", "Back");
+
+        // [Advanced] AJAX Form Handling
+        const form = document.getElementById("contact-form");
+        const btn = document.getElementById("form-btn");
+        const status = document.getElementById("form-status");
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+            if (!form.getAttribute('action')) return;
+            const data = new FormData(event.target);
+
+            // UI Loading State
+            btn.disabled = true;
+            btn.innerText = "Sending...";
+            status.style.display = "none";
+            status.className = "contact-note"; // reset class
+
+            try {
+                const response = await fetch(event.target.action, {
+                    method: form.method,
+                    body: data,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    // Success
+                    status.innerHTML = "Message Sent Successfully!";
+                    status.style.color = "var(--text-main)";
+                    status.style.display = "block";
+                    btn.innerText = "Sent";
+                    form.reset();
+                } else {
+                    // Error (Domain block, etc.)
+                    const errorData = await response.json();
+                    status.innerHTML = "Failed: " + (errorData.error || "Submission rejected");
+                    status.style.color = "#ff4d4f";
+                    status.style.display = "block";
+                    btn.innerText = "Try Again";
+                    btn.disabled = false;
+                }
+            } catch (error) {
+                // Network Error
+                status.innerHTML = "Network error. Please try again.";
+                status.style.color = "#ff4d4f";
+                status.style.display = "block";
+                btn.innerText = "Try Again";
+                btn.disabled = false;
+            }
+        }
+
+        btn.disabled = !form.getAttribute('action');
+        if (btn.disabled) {
+            status.textContent = '联系表单尚未配置。请设置你自己的表单接收地址。';
+            status.style.display = 'block';
+        }
+        form.addEventListener("submit", handleSubmit);
     </script>
 </body>
 

@@ -31,6 +31,24 @@ export const AdminButtonHelper = {
                 pointer-events: auto;
             }
 
+            /* 已加密记录的开锁按钮常驻；其余操作仍随卡片悬停显示。 */
+            .maers-admin-action-group:has(.mlock-svg-icon--decryption) {
+                opacity: 1;
+                pointer-events: none;
+            }
+
+            .maers-admin-action-group:has(.mlock-svg-icon--decryption) > .maers-admin-btn {
+                visibility: hidden;
+                pointer-events: none;
+            }
+
+            .maers-admin-action-group > .maers-admin-btn:has(.mlock-svg-icon--decryption),
+            :is(.grid-item, .book-card, .category-card, .nav-card, .space-card, .list-item, .album-item):is(:hover, :focus-within)
+                .maers-admin-action-group:has(.mlock-svg-icon--decryption) > .maers-admin-btn {
+                visibility: visible;
+                pointer-events: auto;
+            }
+
             /* [Unified] Global Admin Button Style (Theme Adapted) */
             .maers-admin-action-group .maers-admin-btn {
                 display: inline-flex;
@@ -53,6 +71,10 @@ export const AdminButtonHelper = {
             }
             
             /* Light Mode Override */
+            .maers-admin-edit-icon {
+                opacity: 0.85;
+            }
+
             .light-mode .maers-admin-action-group .maers-admin-btn {
                 background: #ffffff;
                 color: #333333;
@@ -78,10 +100,29 @@ export const AdminButtonHelper = {
                 border-color: rgba(0, 0, 0, 0.2);
             }
 
+            /* 按钮内的图片图标不得成为点击目标，否则会被全局图片预览代理拦截 */
+            .maers-admin-action-group .maers-admin-btn > img { pointer-events: none; }
+
+            /* 删除封面图标源文件为深灰，深色主题下反相提亮；浅色主题保持原色 */
+            .maers-admin-icon--remove-cover { filter: invert(1) brightness(1.25); }
+            .light-mode .maers-admin-icon--remove-cover { filter: none; }
+
             .maers-admin-action-group .maers-admin-btn.btn-delete-active {
                 color: #2ed573;
                 border-color: #2ed573; /* Also color current border */
                 font-weight: bold;
+            }
+
+            /* 禁用按钮样式（例如线上环境的加密/加锁按钮变灰） */
+            .maers-admin-action-group .maers-admin-btn.maers-admin-btn--disabled {
+                opacity: 0.35 !important;
+                filter: grayscale(1) !important;
+                cursor: not-allowed !important;
+            }
+
+            .maers-admin-action-group .maers-admin-btn.maers-admin-btn--disabled:hover {
+                transform: none !important;
+                box-shadow: none !important;
             }
 
             /* Music Module Specific Fixes */
@@ -100,12 +141,13 @@ export const AdminButtonHelper = {
         this.styleInjected = true;
     },
 
-    // options: { onSort, onEdit, onDelete, index, isDeleted, extraClass, containerClass }
+    // options: { onSort, onEdit, onAddTag, onDelete, index, isDeleted, extraClass, containerClass }
+    // 按钮顺序固定为：排序 → 重命名 → 添加标签 → 删除
     // NOW RETURNS: HTMLElement (not string)
     // Callbacks should be FUNCTIONS, not strings
     render(options) {
         this.injectStyles();
-        const { index, onSort, onEdit, onDelete, isDeleted, extraClass = '', containerClass = '' } = options;
+        const { index, onSort, onEdit, onAddTag, onDelete, isDeleted, extraClass = '', containerClass = '' } = options;
 
         const container = document.createElement('div');
         container.className = `maers-admin-action-group ${containerClass}`;
@@ -128,8 +170,18 @@ export const AdminButtonHelper = {
             const btn = document.createElement('span');
             btn.className = 'maers-admin-btn';
             btn.title = '重命名';
-            btn.textContent = '✎';
+            btn.innerHTML = '<span class="maers-admin-edit-icon">✎</span>';
             btn.addEventListener('click', onEdit);
+            container.appendChild(btn);
+        }
+
+        // Add Tag Button（固定在删除按钮之前）
+        if (onAddTag) {
+            const btn = document.createElement('span');
+            btn.className = 'maers-admin-btn';
+            btn.title = 'Add Tag';
+            btn.textContent = '＋';
+            btn.addEventListener('click', onAddTag);
             container.appendChild(btn);
         }
 

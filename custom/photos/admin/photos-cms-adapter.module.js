@@ -7,6 +7,7 @@
  * @module custom/photos/admin/photos-cms-adapter.module.js
  * @version 1.1.0 - Refactored to use Shared Adapter
  */
+import { localFetch } from '../../../data-manage/api-client.module.js';
 
 import { setupBaseAdapter, preloadTagCategories } from '../../cms/cms-adapter.module.js';
 import { tagFilterMode } from '../../cms/viewer/tags/cms-tags-filter.module.js';
@@ -23,7 +24,7 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, Photo
     const controllerOverrides = {
         updateNodeTags: async (nodeId, tags) => {
             try {
-                const res = await fetch('/api/photos/update_tags', {
+                const res = await localFetch('/api/photos/update_tags', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ id: nodeId, tags: tags })

@@ -14,10 +14,10 @@
 .playlist-window,
 .search-results {
     transition:
-        background-color 0.5s ease,
-        border-color 0.5s ease,
-        box-shadow 0.5s ease,
-        color 0.4s ease,
+        background-color 300ms ease,
+        border-color 300ms ease,
+        box-shadow 300ms ease,
+        color 300ms ease,
         transform 0.4s ease;
     backface-visibility: hidden;
     contain: layout style;
@@ -110,7 +110,8 @@ body {
     background-color: #ffffff;
     color: #ffa500;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
-    transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background-color 0.3s ease;
+    transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1), background-color 500ms ease;
+    view-transition-name: theme-switch-knob;
     z-index: 2;
     cursor: pointer;
     will-change: transform;
@@ -122,12 +123,33 @@ body {
     color: #f1c40f;
 }
 
-#mode-icon {
+#mode-icon,
+.mode-icon-sun {
     display: block;
+    position: absolute;
     width: 14px;
     height: 14px;
-    transition: transform 0.4s ease;
+    transition: opacity 500ms ease, transform 500ms ease;
     user-select: none;
+    pointer-events: none;
+}
+
+/* 两个图标常驻，由实际主题决定显隐，避免更换 src 时快照仍捕获旧图。 */
+#mode-icon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+}
+.mode-icon-sun {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.6);
+}
+html.light-mode #mode-icon {
+    opacity: 0;
+    transform: rotate(90deg) scale(0.6);
+}
+html.light-mode .mode-icon-sun {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
 }
 
 /* --- 5. Auto Mode Button & Popover --- */
@@ -417,7 +439,6 @@ html.light-mode .icon-btn:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
-/* --- 10. Immersive Background Layer --- */
 .immersive-bg {
     position: fixed;
     top: 0;
@@ -428,7 +449,6 @@ html.light-mode .icon-btn:hover {
     pointer-events: none;
     background: transparent;
     transition: background 0.5s ease;
-    /* fade-out of dark fallback */
 }
 
 /* Only add dark fallback while actively showing images (prevents layer leakage during transitions) */
@@ -448,11 +468,9 @@ html.light-mode .icon-btn:hover {
     will-change: opacity;
 }
 
-/* Bottom sub-layer: blurred cover — fills the screen and hides letterboxing edges */
 .imm-blur {
     position: absolute;
-    inset: -30px;
-    /* overshoot to hide blur-edge artifacts */
+    inset: -30px; /* overshoot hides blur-edge artifacts */
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -487,7 +505,6 @@ html.light-mode .icon-btn:hover {
     opacity: 1;
 }
 
-/* When active: main-card becomes transparent so background shows through */
 body.immersive-active .main-card {
     background: transparent !important;
     box-shadow: none !important;

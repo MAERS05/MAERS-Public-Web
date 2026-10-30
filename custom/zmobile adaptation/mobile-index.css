@@ -2,6 +2,13 @@
    📱 Mobile Index Styles
    ========================================================================== */
 
+@media (max-width: 380px) {
+   body .cl-admin-trigger {
+      top: 65px;
+      left: 20px;
+   }
+}
+
 @media (max-width: 768px) {
 
    /* 核心修复：移动端缩放时，强制以顶部为基准，防止顶部Logo被裁剪 */

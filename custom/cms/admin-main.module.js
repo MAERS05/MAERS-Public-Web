@@ -3,6 +3,8 @@
  * @version 1.0.0 - ES6 Module
  */
 
+import { Toast } from '../../shared/toast.module.js';
+
 // Import all CMS modules
 import { initTheme } from '../../shared/theme.module.js';
 import { initLayout } from '../../shared/layout.module.js';
@@ -19,8 +21,8 @@ import { LiteratureView } from '../literature/viewer/literature-view.module.js';
 import { GamesView } from '../games/viewer/games-view.module.js';
 import { Controller, AppState, CONFIG, bootstrap } from './admin/cms-controller.module.js';
 import { Drag, initDrag } from './admin/cms-drag.module.js';
-import { Editor, initEditor } from './admin/cms-editor.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
+import { Reader, initReader } from './viewer/cms-reader.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin/admin-base.module.js';
 
 
 // Initialize dependency injection
@@ -34,11 +36,12 @@ initLayout();
 initTheme();
 initStateModule(Controller);
 const currentMod = Controller.CONFIG.CURRENT_MODULE;
+document.body.classList.toggle('cms-text-admin', currentMod === 'notes' || currentMod === 'record');
 const CustomView = currentMod === 'literature' ? LiteratureView : (currentMod === 'games' ? GamesView : null);
 
 initSearch(State, Render, Tags, CustomView);
 initAdmin(State, Controller, Render, Search);
-initEvents(State, Render, Admin, Tags, Editor, CustomView, Recent);
+initEvents(State, Render, Admin, Tags, Reader, CustomView, Recent);
 initTags(State, Controller, Search);
 initDrag(Admin, Controller, State);
 initRender(State, Admin, Controller, Events, Drag, CustomView, Search);
@@ -51,10 +54,10 @@ initViewModule({
     Lightbox,
     Admin,
     Controller,
-    Editor,
+    Reader,
     CustomView
 });
-initEditor(Controller);
+initReader(Controller);
 // Bootstrap on DOMContentLoaded with Error Handling
 document.addEventListener('DOMContentLoaded', async () => {
     try {
@@ -119,12 +122,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // [New Feature] Auto-open specific note from URL ('?openNote=Title')
         const urlParams = new URLSearchParams(window.location.search);
         const openNoteTitle = urlParams.get('openNote');
-        if (openNoteTitle && Controller?.AppState?.allNodes) {
-            const targetNode = Controller.AppState.allNodes.find(n => n.type === 'note' && n.title === openNoteTitle);
-            if (targetNode && Editor) {
+        const openNoteId = urlParams.get('openNoteId');
+        if ((openNoteId || openNoteTitle) && Controller?.AppState?.allNodes) {
+            const targetNode = Controller.AppState.allNodes.find(n => n.type === 'note' && (openNoteId ? n.id === openNoteId : n.title === openNoteTitle));
+            if (targetNode && Reader) {
                 // Give the grid a moment to render before opening properly
                 setTimeout(() => {
-                    Editor.open(targetNode);
+                    Reader.open(targetNode);
                 }, 100);
             }
         }
@@ -136,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (window.MAERS?.Toast) {
             window.MAERS.Toast.error("CMS Initialization Failed: " + error.message);
         } else {
-            alert("CMS Initialization Failed. Please reload the page.\n" + error.message);
+            Toast.error("CMS Initialization Failed. Please reload the page.\n" + error.message);
         }
     }
 });

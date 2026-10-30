@@ -1,12 +1,19 @@
-from . import cms
+"""
+音乐数据服务：data/music-data.json 读写。
+"""
 
-MUSIC_JSON_FILE = 'data/music-data.json'
+from . import cms, storage
+import config
 
+MUSIC_JSON_FILE = config.MUSIC_DATA
+
+@storage.serialized
 def save_music_data(data):
     """保存音乐数据"""
     cms.save_json(MUSIC_JSON_FILE, data)
     return {}
 
+@storage.serialized
 def delete_track(body):
     """删除指定音轨"""
     c, l, a, t = body['catIdx'], body['colIdx'], body['albIdx'], body['trackIdx']
@@ -22,12 +29,13 @@ def delete_track(body):
             if t < len(alb['custom_parts']): alb['custom_parts'].pop(t)
             alb['total'] = len(alb['page_mapping'])
             cms.save_json(MUSIC_JSON_FILE, m)
-            print(f"  [ MUSIC ] 🗑️  音轨 {t+1} 已剔除 | Track {t+1} popped from: {alb.get('title', 'Unknown Album')}")
+            print(f"  [ MUSIC ] 🗑️  音轨 {t+1} 已剔除 | Track {t+1} removed")
         return {}
     except (IndexError, KeyError) as e:
         print(f"  [ MUSIC ] ❌ 删除音轨出错 | Delete track error: {e}")
         raise e
 
+@storage.serialized
 def reset_tracks(body):
     """重置专辑音轨"""
     c, l, a = body['catIdx'], body['colIdx'], body['albIdx']
@@ -40,7 +48,7 @@ def reset_tracks(body):
         alb['total'] = orig
         alb['custom_parts'] = []
         cms.save_json(MUSIC_JSON_FILE, m)
-        print(f"  [ MUSIC ] ♻️  音轨已重置 ({orig}) | Tracks reset to original ({orig}) for: {alb.get('title', 'Album')}")
+        print(f"  [ MUSIC ] ♻️  音轨已重置 ({orig}) | Tracks reset to original ({orig})")
         return {}
     except (IndexError, KeyError) as e:
         print(f"  [ MUSIC ] ❌ 重置音轨出错 | Reset tracks error: {e}")

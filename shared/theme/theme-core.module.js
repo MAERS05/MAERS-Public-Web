@@ -30,9 +30,9 @@ function safeLoadConfig() {
         const data = JSON.parse(raw);
 
         if (!data.version || data.version < CONFIG_VERSION) {
-            let mode = "system";
-            if (data.enabled === true) mode = "auto";
-            else if (data.enabled === false) mode = "manual";
+            let mode = ["system", "auto", "manual"].includes(data.mode) ? data.mode : "system";
+            if (!data.mode && data.enabled === true) mode = "auto";
+            else if (!data.mode && data.enabled === false) mode = "manual";
             const migrated = {
                 ...DEFAULT_CONFIG,
                 ...data,
@@ -50,39 +50,73 @@ function safeLoadConfig() {
     }
 }
 
-export function applyTheme(theme) {
-    try {
-        requestAnimationFrame(() => {
-            const isDark = theme === "dark-mode";
+const THEME_TRANSITION_MS = 500;
+let themeTransitionTimer = null;
+let themeViewTransition = null;
+let themeRequestId = 0;
+let requestedTheme = null;
+let themeCoreInitialized = false;
 
-            document.documentElement.classList.remove("light-mode");
-            document.documentElement.style.removeProperty("background-color");
-            document.documentElement.style.removeProperty("color");
+export function applyTheme(theme, { animate = true } = {}) {
+    requestedTheme = theme;
+    const requestId = ++themeRequestId;
+    const apply = () => {
+        if (requestId !== themeRequestId) return;
+        try {
+            const isDark = theme === 'dark-mode';
+            const root = document.documentElement;
+            const changed = root.classList.contains('light-mode') === isDark;
+            const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+            const update = () => {
+                if (requestId !== themeRequestId) return;
+                root.classList.toggle('light-mode', !isDark);
+                root.style.removeProperty('background-color');
+                root.style.removeProperty('color');
+                const toggleSwitch = document.querySelector('.theme-switch-checkbox');
+                if (toggleSwitch) toggleSwitch.checked = isDark;
+                localStorage.setItem('theme', theme);
+            };
 
-            if (!isDark) {
-                document.documentElement.classList.add("light-mode");
+            // Skip old snapshots; outdated callbacks cannot overwrite the latest target.
+            themeViewTransition?.skipTransition();
+            themeViewTransition = null;
+            clearTimeout(themeTransitionTimer);
+            root.classList.remove('theme-crossfade', 'theme-switching');
+            if (animate && changed && !reduceMotion && typeof document.startViewTransition === 'function') {
+                root.classList.add('theme-crossfade');
+                const transition = document.startViewTransition(update);
+                themeViewTransition = transition;
+                transition.finished.catch(() => {}).finally(() => {
+                    if (themeViewTransition !== transition) return;
+                    themeViewTransition = null;
+                    root.classList.remove('theme-crossfade');
+                });
+            } else {
+                if (animate && changed && !reduceMotion) {
+                    root.classList.add('theme-switching');
+                    void root.offsetWidth;
+                    themeTransitionTimer = setTimeout(() => {
+                        root.classList.remove('theme-switching');
+                        themeTransitionTimer = null;
+                    }, THEME_TRANSITION_MS + 50);
+                }
+                update();
             }
-
-            const toggleSwitch = document.querySelector(".theme-switch-checkbox");
-            const modeIcon = document.getElementById("mode-icon");
-
-            if (toggleSwitch) toggleSwitch.checked = isDark;
-            if (modeIcon) modeIcon.src = isDark ? "ui/moon.svg" : "ui/sun.svg";
-
-            localStorage.setItem("theme", theme);
-        });
-    } catch (err) {
-        console.error("[MAERS.Theme] Theme switch failed:", err);
-        if (window.MAERS?.Toast?.show) {
-            window.MAERS.Toast.show('主题切换失败，请刷新页面重试', 'error');
+        } catch (err) {
+            console.error('[MAERS.Theme] Theme switch failed:', err);
+            if (window.MAERS?.Toast?.show) {
+                window.MAERS.Toast.show('主题切换失败，请刷新页面重试', 'error');
+            }
         }
-    }
+    };
+    if (animate) requestAnimationFrame(apply);
+    else apply();
 }
 
-export function checkThemeStrategy() {
+export function checkThemeStrategy({ animate = true } = {}) {
     if (config.mode === "system") {
         const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-        applyTheme(prefersDark ? "dark-mode" : "light-mode");
+        applyTheme(prefersDark ? "dark-mode" : "light-mode", { animate });
     } else if (config.mode === "auto") {
         const now = new Date();
         const mins = now.getHours() * 60 + now.getMinutes();
@@ -92,11 +126,11 @@ export function checkThemeStrategy() {
         const end = parseInt(nh) * 60 + parseInt(nm);
 
         const isDay = mins >= start && mins < end;
-        applyTheme(isDay ? "light-mode" : "dark-mode");
+        applyTheme(isDay ? "light-mode" : "dark-mode", { animate });
     } else {
         const saved = localStorage.getItem("theme");
-        if (saved) applyTheme(saved);
-        else applyTheme("dark-mode");
+        if (saved) applyTheme(saved, { animate });
+        else applyTheme("dark-mode", { animate });
     }
 }
 
@@ -193,29 +227,27 @@ export function initHomeControls() {
 }
 
 export function initThemeCore() {
-    const toggleSwitch = document.querySelector(".theme-switch-checkbox");
-    if (toggleSwitch) {
-        const saved = localStorage.getItem("theme");
-        toggleSwitch.checked = saved === "dark-mode" || !saved;
-        const modeIcon = document.getElementById("mode-icon");
-        if (modeIcon) modeIcon.src = toggleSwitch.checked ? "ui/moon.svg" : "ui/sun.svg";
-
-        toggleSwitch.addEventListener("change", (e) => {
-            if (config.mode !== "manual") {
-                config.mode = "manual";
-                localStorage.setItem("autoThemeConfig", JSON.stringify(config));
-                const btn = document.getElementById("auto-btn");
-                if (btn) {
-                    btn.textContent = "M";
-                    btn.classList.remove("active");
-                }
+    if (themeCoreInitialized) return;
+    themeCoreInitialized = true;
+    // 后台可能先初始化主题、后注入布局，委托监听不依赖按钮创建顺序。
+    document.addEventListener("change", (e) => {
+        if (!e.target?.matches?.('.theme-switch-checkbox')) return;
+        if (config.mode !== "manual") {
+            config.mode = "manual";
+            localStorage.setItem("autoThemeConfig", JSON.stringify(config));
+            const btn = document.getElementById("auto-btn");
+            if (btn) {
+                btn.textContent = "M";
+                btn.classList.remove("active");
             }
-            const target = e.target.checked ? "dark-mode" : "light-mode";
-            applyTheme(target);
-        });
-    }
+        }
+        const target = requestedTheme === 'dark-mode' ? 'light-mode' : 'dark-mode';
+        // 原生勾选先于主题快照发生；先还原当前位置，由主题更新统一驱动滑块。
+        e.target.checked = !document.documentElement.classList.contains('light-mode');
+        applyTheme(target);
+    });
 
-    checkThemeStrategy();
+    checkThemeStrategy({ animate: false });
 
     if (window.matchMedia) {
         const systemThemeMedia = window.matchMedia("(prefers-color-scheme: dark)");

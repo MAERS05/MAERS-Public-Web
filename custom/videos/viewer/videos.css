@@ -1,3 +1,4 @@
+@import "../../zmobile adaptation/mobile-videos.css";
 /* Video Custom Style - Based on Literature/Games Grid Mode */
 .music-mode-btn {
     cursor: pointer;
@@ -194,15 +195,7 @@
     display: none !important;
 }
 
-@media (min-width: 769px) {
-    .folder-grid {
-        grid-template-columns: repeat(auto-fill, 140px) !important;
-        /* Matches Literature card width */
-        justify-content: center;
-        gap: 30px !important;
-        padding: 25px 40px !important;
-    }
-}
+
 
 html.light-mode .theme-switch-label {
     background-color: rgba(0, 0, 0, 0.1) !important;

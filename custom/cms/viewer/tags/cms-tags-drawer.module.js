@@ -4,10 +4,12 @@
  * @version 2.0.0 - Refactored
  */
 
+import { Toast } from '../../../../shared/toast.module.js';
+
 import { TagsApi } from '../../admin/cms-tags-api.module.js';
 import { TagsRender } from './cms-tags-render.module.js';
 import { TagsUI } from './cms-tags-ui.module.js';
-import { SaveButton } from '../../../../data-manage/admin-base.module.js';
+import { SaveButton } from '../../../../data-manage/admin/admin-base.module.js';
 
 // Dependency injection
 let State = null;
@@ -251,13 +253,13 @@ async function handleRename(oldName, refreshCallback) {
             Controller.AppState.tagCategories = categories;
         }
 
-        alert(`✅ 标签已重命名: ${oldName} → ${newName.trim()}\n已更新 ${res.count} 个项目`);
+        Toast.success(`✅ 标签已重命名: ${oldName} → ${newName.trim()}\n已更新 ${res.count} 个项目`);
         if (refreshCallback) refreshCallback();
         categoryManager?.setList(Controller.AppState.tagCategories);
         if (typeof Controller?.refreshView === 'function') Controller.refreshView(false, true);
         SaveButton?.hide();
     } else {
-        alert('❌ 重命名失败: ' + res.error);
+        Toast.error('❌ 重命名失败: ' + res.error);
     }
 }
 
@@ -290,13 +292,13 @@ async function handleDelete(tagName, refreshCallback) {
             Controller.AppState.tagCategories = categories;
         }
 
-        alert(`✅ 标签已删除: ${tagName}\n已从 ${res.count} 个项目中移除`);
+        Toast.success(`✅ 标签已删除: ${tagName}\n已从 ${res.count} 个项目中移除`);
         if (refreshCallback) refreshCallback();
         categoryManager?.setList(Controller.AppState.tagCategories);
         if (typeof Controller?.refreshView === 'function') Controller.refreshView(false, true);
         SaveButton?.hide();
     } else {
-        alert('❌ 删除失败: ' + res.error);
+        Toast.error('❌ 删除失败: ' + res.error);
     }
 }
 
@@ -338,7 +340,7 @@ function handleSort(tagName, categoryName, refreshCallback) {
             categoryManager?.setList(categories);
             if (SaveButton) SaveButton.hide();
         } else {
-            alert('保存排序失败');
+            Toast.error('保存排序失败');
         }
     });
 }
@@ -354,15 +356,15 @@ async function handleCleanup(refreshCallback) {
             if (categories && Controller?.AppState) {
                 Controller.AppState.tagCategories = categories;
             }
-            alert(`✅ 已清理 ${res.removed_count} 个标签:\n${res.removed_tags.join(', ')}`);
+            Toast.success(`✅ 已清理 ${res.removed_count} 个标签:\n${res.removed_tags.join(', ')}`);
             if (refreshCallback) refreshCallback(() => { });
             categoryManager?.setList(Controller.AppState.tagCategories);
             SaveButton?.hide();
         } else {
-            alert('✨ 没有需要清理的标签');
+            Toast.info('✨ 没有需要清理的标签');
         }
     } else {
-        alert('❌ 清理失败: ' + res.error);
+        Toast.error('❌ 清理失败: ' + res.error);
     }
 }
 

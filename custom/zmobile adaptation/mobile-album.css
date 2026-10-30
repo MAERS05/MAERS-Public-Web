@@ -39,4 +39,42 @@
     body .card-subtitle {
         font-size: 0.75rem !important;
     }
+
+    .album-admin-page .main-card {
+        padding: 24px 12px;
+        min-height: 0;
+        justify-content: flex-start;
+    }
+
+    .album-admin-page .admin-content {
+        padding: 12px 0;
+        min-height: 0;
+    }
+
+    .album-admin-page .page-header-bar {
+        flex-wrap: wrap;
+        flex-shrink: 0;
+        gap: 10px;
+    }
+
+    .album-admin-page .back-btn {
+        white-space: nowrap;
+    }
+
+    .album-admin-page .category-card {
+        min-width: 0;
+        min-height: 190px;
+        height: auto !important;
+        padding: 56px 12px 18px !important;
+    }
+
+    .album-admin-page .category-card .admin-actions {
+        top: 10px;
+        right: 8px;
+        gap: 3px;
+    }
+
+    .album-admin-page .category-card .maers-admin-btn {
+        margin-left: 0;
+    }
 }

@@ -20,7 +20,7 @@ import { View, init as initView, initView as initViewModule, setupViewEventListe
 import { Render, initRender } from './viewer/cms-render.module.js';
 import { Recent, initRecent } from './viewer/cms-recent.module.js';
 import { Controller, AppState, CONFIG, bootstrap } from './admin/cms-controller.module.js';
-import { Editor, initEditor } from './admin/cms-editor.module.js';
+import { Reader, initReader } from './viewer/cms-reader.module.js';
 
 // 3. Initialize Dependency Injection
 // UI
@@ -30,7 +30,7 @@ initTheme();
 // CMS System
 initStateModule(Controller);
 initSearch(State, Render, Tags);
-initEvents(State, Render, null, Tags, Editor, null, Recent); // No Admin, No LitView (yet), Yes Recent
+initEvents(State, Render, null, Tags, Reader, null, Recent); // No Admin, No LitView (yet), Yes Recent
 initTags(State, Controller, Search);
 initRender(State, null, Controller, Events, null, null, Search); // No Admin/Drag/LiteratureView in user view, but include Search
 initViewModule({
@@ -42,9 +42,9 @@ initViewModule({
     Lightbox,
     Admin: null,
     Controller,
-    Editor
+    Reader
 });
-initEditor(Controller);
+initReader(Controller);
 
 // 5. Bootstrap on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', async () => {
@@ -56,18 +56,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // [New Feature] Auto-open specific note from URL ('?openNote=Title')
     const urlParams = new URLSearchParams(window.location.search);
     const openNoteTitle = urlParams.get('openNote');
-    if (openNoteTitle && Editor) {
+    const openNoteId = urlParams.get('openNoteId');
+    if ((openNoteId || openNoteTitle) && Reader) {
         const normalize = (s) => s.trim().replace(/[《》]/g, '');
-        const needle = normalize(openNoteTitle);
+        const needle = normalize(openNoteTitle || '');
         // 轮询等待 allNodes 加载完成（最多等 5 秒）
         let attempts = 0;
         const tryOpen = () => {
             const allNodes = Controller?.AppState?.allNodes;
             if (allNodes && allNodes.length > 0) {
                 const targetNode = allNodes.find(n =>
-                    n.type === 'note' && (n.title === openNoteTitle || normalize(n.title) === needle)
+                    n.type === 'note' && (openNoteId ? n.id === openNoteId : (n.title === openNoteTitle || normalize(n.title) === needle))
                 );
-                if (targetNode) Editor.open(targetNode);
+                if (targetNode) Reader.open(targetNode);
             } else if (attempts < 50) {
                 attempts++;
                 setTimeout(tryOpen, 100);

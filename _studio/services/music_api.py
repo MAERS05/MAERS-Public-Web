@@ -2,6 +2,8 @@
 MAERS Music API Module
 用于集成各种音乐/视频平台的 API 获取。
 """
+
+from .errors import internal_error
 import urllib.request
 import json
 import urllib.parse
@@ -35,6 +37,6 @@ def get_video_info(bvid):
             else:
                 print(f"  [ BILI ] ⚠️  API 响应错误 | API Error: {data.get('code')}")
                 return 404, {"error": "Video not found or API error", "bili_code": data.get('code')}
-    except Exception as e:
+    except (OSError, ValueError, KeyError, TypeError) as e:
         print(f"  [ BILI ] ❌ 网络请求失败 | Network Error: {e}")
-        return 500, {"error": str(e)}
+        return internal_error(e, "music_api.py")

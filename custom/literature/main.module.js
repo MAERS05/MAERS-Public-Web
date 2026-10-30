@@ -23,7 +23,7 @@ import { Recent, initRecent } from '../cms/viewer/cms-recent.module.js';
 
 // 3. CMS Admin Modules
 import { Controller, bootstrap } from '../cms/admin/cms-controller.module.js';
-import { Editor, initEditor } from '../cms/admin/cms-editor.module.js';
+import { Reader, initReader } from '../cms/viewer/cms-reader.module.js';
 
 // 4. Data Layer
 import { DataProvider } from '../../data-manage/data-provider.module.js';
@@ -44,13 +44,13 @@ initTheme();
 // 1. Init Dependencies
 initStateModule(Controller);
 initSearch(State, Render, Tags, LiteratureView);
-initEvents(State, Render, null, Tags, Editor, LiteratureView, Recent);
+initEvents(State, Render, null, Tags, Reader, LiteratureView, Recent);
 initTags(State, Controller, Search);
 initRender(State, null, Controller, Events, null, LiteratureView, Search);
 initLightbox();
 
 // 2. Init Components
-initEditor(Controller);
+initReader(Controller);
 
 // Wire up the View Layer (Dependency Injection)
 initView({
@@ -65,8 +65,8 @@ initView({
     CustomView: LiteratureView
 });
 
-// Initialize Literature View with Editor dependency
-initLiteratureView({ Editor });
+// Initialize Literature View with Reader dependency
+initLiteratureView({ Reader });
 
 // E. Initialize Literature View & CMS Bootstrap
 document.addEventListener('DOMContentLoaded', async () => {
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // [New Feature] Auto-open specific note from URL ('?openNote=Title')
     const urlParams = new URLSearchParams(window.location.search);
     const openNoteTitle = urlParams.get('openNote');
-    if (openNoteTitle && Editor) {
+    if (openNoteTitle && Reader) {
         const normalize = (s) => s.trim().replace(/[《》]/g, '');
         const needle = normalize(openNoteTitle);
         // 轮询等待 allNodes 加载完成（最多等 5 秒）
@@ -93,7 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const targetNode = allNodes.find(n =>
                     n.type === 'note' && (n.title === openNoteTitle || normalize(n.title) === needle)
                 );
-                if (targetNode) Editor.open(targetNode);
+                if (targetNode) Reader.open(targetNode);
             } else if (attempts < 50) {
                 attempts++;
                 setTimeout(tryOpen, 100);

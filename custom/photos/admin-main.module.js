@@ -7,7 +7,7 @@
 import { initLayout } from '../../shared/layout.module.js';
 import { initTheme } from '../../shared/theme.module.js';
 import { DataProvider } from '../../data-manage/data-provider.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin/admin-base.module.js';
 import { Controller, initController, State, reloadData, checkIsDirty, saveChanges, uploadFiles, fixPath } from './admin/photos-controller.module.js';
 import { View, initView, render, openLightbox } from './viewer/photos-view.module.js';
 import { Admin, initAdmin, initManager, togglePick, stageDelete, executeMove } from './admin/photos-admin.module.js';
@@ -47,7 +47,6 @@ setupImmersiveBackground();
 
 // DOM Ready Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("Photos Admin: Initializing...");
 
     // Setup CMS Tags Adapter
     const adapterResult = setupPhotosAdapter(applyTagFilters, Controller);
@@ -66,7 +65,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     await preloadTagCategories(AppState, dynamicModuleName);
 
     // Initialize CMS Tags System
-    console.log("Photos Admin: Initializing CMS Tags...");
     initTags(StateWrapper, mockController, mockSearch);
 
     // Initialize Navigation (Breadcrumb)
@@ -196,6 +194,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             Tags.refreshDrawerList();
         });
     }
+
+    // 初始化顶栏云同步与 Git 提交按钮
+    const { syncManager } = await import('../../data-manage/sync/sync-manager.module.js');
+    await syncManager.initPhotosSyncBar(Controller);
 });
 
 // Apply tag filters function

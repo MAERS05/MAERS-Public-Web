@@ -77,7 +77,7 @@ async function init() {
 
     // 加载相册配置
     try {
-        const response = await fetch('data/album-config.json?t=' + Date.now());
+        const response = await fetch('data/album-config.json', { cache: 'no-cache' });
         if (response.ok) {
             CATEGORY_CONFIG = await response.json();
         } else {
@@ -418,22 +418,15 @@ export function render(list = null) {
                     Admin.togglePick(img.path);
                 },
                 onEdit: null,
+                onAddTag: (e) => {
+                    e.stopPropagation();
+                    if (Admin && Admin.addTag) Admin.addTag(img);
+                },
                 onDelete: (e) => Admin.stageDelete(e),
                 isDeleted: img._deleted || false,
                 extraClass: '',
                 containerClass: 'photo-admin-actions'
             });
-
-            // Space-Style 'Add Tag' Button
-            const addTagBtn = document.createElement('span');
-            addTagBtn.className = 'maers-admin-btn';
-            addTagBtn.innerHTML = '＋';
-            addTagBtn.title = 'Add Tag';
-            addTagBtn.onclick = (e) => {
-                e.stopPropagation();
-                if (Admin && Admin.addTag) Admin.addTag(img);
-            };
-            adminEl.appendChild(addTagBtn);
 
             div.appendChild(adminEl);
         }

@@ -1,332 +1,370 @@
-import os
-import urllib.parse
-import json
+"""HTTP 路由表：统一输入校验、读写锁及状态码映射，业务交给服务层。"""
 
-# Services
-from services import cms, photos, music, album, space, music_api
-
+from dataclasses import dataclass
+from services.contracts import JsonValue, Query, Response, Validator, Handler
+from services.errors import internal_error
+from contextlib import nullcontext
 import config
-
-PAGE_TEMPLATE = """<!DOCTYPE html>
-<html lang="zh-CN" class="fixed-layout-page">
-<head>
-    <script src="shared/flash-guard.js"></script>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title} - MAERS</title>
-    <link rel="preload" href="static-style/theme.css" as="style">
-    <link rel="preload" href="static-style/components.css" as="style">
-    <link rel="stylesheet" href="static-style/theme.css">
-    <link rel="stylesheet" href="static-style/components.css">
-    <link rel="stylesheet" href="static-style/style.css">
-    <script type="module" src="data-manage/data-provider.module.js"></script>
-    <style>
-        .placeholder-content {{ flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: var(--text-sub); }}
-        .placeholder-text {{ font-size: 2rem; font-weight: 700; color: var(--text-main); margin-top: 20px; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="main-card">
-            <div class="placeholder-content">
-                <div style="font-size: 4rem;">✨</div>
-                <div class="placeholder-text">{title}</div>
-                <p>New page created via Admin.</p>
-            </div>
-        </div>
-    </div>
-    <script type="module">
-        import {{ renderPageHeader }} from './shared/simple-main.module.js';
-        renderPageHeader("{title}", "index.html", "Back");
-    </script>
-</body>
-</html>"""
-
-def dispatch_get(path, query_params):
-    parsed_path = path
-
-    # 0. CMS Tags (Special Case)
-    if parsed_path == '/api/cms/tag_categories':
-        module = query_params.get('module', ['cms'])[0]
-        return 200, cms.get_tag_categories(module)
-    
-    # 1. CMS
-    if parsed_path.startswith('/api/cms/'):
-        return cms.handle_request(parsed_path, 'GET', query_params, None)
-    
-    # 2. General Modules
-    if parsed_path == '/api/modules' or parsed_path == '/api/save_modules':
-        data = cms.load_json(config.MODULES_JSON_FILE) or []
-        return 200, data
-    
-    # 3. Bilibili
-    if parsed_path == '/api/get_bili_info':
-        bvid = query_params.get('bvid', [None])[0]
-        return music_api.get_video_info(bvid)
-
-    
-    
-    # 4. Music - 获取音乐数据 API
-    if parsed_path == '/api/music_data':
-        data = cms.load_json('data/music-data.json', 'data/music-data.js')
-        if data is not None:
-            return 200, data
-        return 404, {"error": "Music data not found"}
-    
-    if parsed_path == '/api/space/save_tree':
-        # This is a POST-only API usually, but routes might direct here if misconfigured?
-        # Actually dispatch_post handles this. Let's redirect logic if needed or just return 405.
-        return 405, {"error": "Method Not Allowed"}
-
-    # 5. Space - 获取收藏数据 API
-    if parsed_path == '/api/space/collections':
-        data = space.load_collections()
-        return 200, data
-
-    return 404, None  # 返回 None 让 SimpleHTTPRequestHandler 处理静态文件
-
-def dispatch_post(path, query_params, body_data, file_data=None):
-    
-    # 0. CMS Tags (Special Case)
-    if path == '/api/cms/save_tag_categories':
-        module = query_params.get('module', ['cms'])[0]
-        success = cms.save_tag_categories(body_data, module)
-        if success:
-            return 200, {"status": "success"}
-        else:
-            return 500, {"error": "Failed to save tag categories"}
-
-    if path == '/api/cms/cleanup_tags':
-        module = query_params.get('module', ['cms'])[0]
-        result = cms.cleanup_unused_tags(module)
-        if result.get('success'):
-            return 200, result
-        else:
-            return 500, result
-    
-    if path == '/api/cms/rename_tag':
-        module = query_params.get('module', ['cms'])[0]
-        old_name = body_data.get('old_name')
-        new_name = body_data.get('new_name')
-        
-        if not old_name or not new_name:
-            return 400, {"error": "old_name and new_name are required"}
-        
-        result = cms.rename_tag(module, old_name, new_name)
-        if result.get('success'):
-            return 200, result
-        else:
-            return 400, result
-    
-    if path == '/api/cms/delete_tag':
-        module = query_params.get('module', ['cms'])[0]
-        tag_name = body_data.get('tag_name')
-        
-        if not tag_name:
-            return 400, {"error": "tag_name is required"}
-        
-        result = cms.delete_tag(module, tag_name)
-        if result.get('success'):
-            return 200, result
-        else:
-            return 400, result
-
-    # 1. CMS
-    if path.startswith('/api/cms/'):
-        # Check for granular tag update
-        if path == '/api/cms/update_tags':
-            module = query_params.get('module', ['notes'])[0]
-            node_id = body_data.get('id')
-            tags = body_data.get('tags', [])
-            
-            if not node_id:
-                return 400, {"error": "Node ID is required"}
-            
-            try:
-                if cms.update_node_tags(module, node_id, tags):
-                    return 200, {"status": "success", "message": "Tags updated"}
-                else:
-                    return 404, {"error": "Node not found"}
-            except Exception as e:
-                return 500, {"error": str(e)}
-        
-        return cms.handle_request(path, 'POST', query_params, body_data)
-    
-    # 2. Photos (Upload/Delete/Reorder) (Ex-Album)
-    clean_path = path.rstrip('/')
-    if clean_path == '/upload':
-        if not file_data:
-            return 400, {"error": "Upload failed: No file data received (Check Service Worker body handling)"}
-        return 200, photos.handle_upload(query_params, file_data)
-    
-    if clean_path == '/delete':
-        return 200, photos.handle_delete(body_data)
-
-    if clean_path == '/reorder':
-        return 200, photos.handle_reorder(query_params, body_data)
-
-    if clean_path == '/api/photos/update_tags':
-        photo_id = body_data.get('id')
-        tags = body_data.get('tags', [])
-        
-        if not photo_id:
-            return 400, {"error": "Photo ID is required"}
-            
-        try:
-            if photos.update_tags(photo_id, tags):
-                return 200, {"status": "success"}
-            else:
-                return 404, {"error": "Photo not found"}
-        except Exception as e:
-            return 500, {"error": str(e)}
-
-    # 3. Music
-    if path == '/api/save_music':
-        music.save_music_data(body_data)
-        return 200, {}
-    
-    if path == '/api/delete_track':
-        music.delete_track(body_data)
-        return 200, {}
-
-    if path == '/api/reset_tracks':
-        music.reset_tracks(body_data)
-        return 200, {}
-
-    # 4. Modules & Albums (Categories)
-    if path == '/api/save_modules':
-        cms.save_json(config.MODULES_JSON_FILE, body_data)
-        return 200, {"status": "success"}
-
-    if path == '/api/save_index_cards':
-        cms.save_json(config.INDEX_CARDS_JSON, body_data)
-        return 200, {"status": "success"}
-
-    # 5. Page Creation
-    if path == '/api/ensure_page':
-        filename = body_data.get('filename')
-        title = body_data.get('title', 'New Page')
-        
-        if not filename or not filename.endswith('.html'):
-            return 400, {"error": "Invalid filename"}
-            
-        # Security check: prevent directory traversal
-        if '..' in filename or '/' in filename or '\\' in filename:
-             return 400, {"error": "Invalid filename path"}
-
-        file_path = os.path.join(os.getcwd(), filename) # Assume CWD is proj root
-        
-        if os.path.exists(file_path):
-            return 200, {"status": "exists", "message": "Page already exists"}
-            
-        try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(PAGE_TEMPLATE.format(title=title))
-            print(f"  [ PAGE ] ✨ 页面自动创建 | New page created: {filename}")
-            return 200, {"status": "created", "message": f"Created new page: {filename}"}
-        except Exception as e:
-            return 500, {"error": str(e)}
-
-    if path == '/api/delete_page':
-        filename = body_data.get('filename')
-        if not filename or not filename.endswith('.html'):
-            return 400, {"error": "Invalid filename"}
-        if '..' in filename or '/' in filename or '\\' in filename:
-             return 400, {"error": "Invalid filename path"}
-        
-        file_path = os.path.join(os.getcwd(), filename)
-        if os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-                print(f"  [ PAGE ] 🗑️  页面物理删除 | Physical page deleted: {filename}")
-                return 200, {"status": "deleted", "message": f"Deleted page: {filename}"}
-            except Exception as e:
-                return 500, {"error": str(e)}
-        return 404, {"error": "File not found"}
+from services import cms, photos, music, album, space, music_api, git_service
+from services import album_lock, crypto_keyring, pages, storage, validation as check
+from services import private_session, private_photos, media_store
 
 
-    if path in ['/api/add_category', '/api/delete_category', '/api/reorder_category', '/api/update_category']:
-        return album.handle_ops(path, body_data)
-    
-    # 5.5 CMS Tags APIs
+@dataclass(frozen=True)
+class Route:
+    handler: Handler
+    validate: Validator | None = None
+    locked: bool = True
 
-    # 6. Space Management APIs
-    if path == '/api/space/fetch_meta':
-        url = body_data.get('url')
-        if not url:
-            return 400, {"error": "URL is required"}
-        try:
-            meta = space.fetch_url_metadata(url)
-            return 200, meta
-        except Exception as e:
-            return 500, {"error": str(e)}
-    
-    if path == '/api/space/add':
-        try:
-            space.add_collection(body_data)
-            return 200, {"status": "success"}
-        except ValueError as e:
-            return 400, {"error": str(e)}
-        except Exception as e:
-            return 500, {"error": str(e)}
-    
-    if path == '/api/space/update':
-        item_id = body_data.get('id')
-        update_data = body_data.get('data', {})
-        if not item_id:
-            return 400, {"error": "ID is required"}
-        try:
-            space.update_collection(item_id, update_data)
-            return 200, {"status": "success"}
-        except ValueError as e:
-            return 404, {"error": str(e)}
-        except Exception as e:
-            return 500, {"error": str(e)}
-    
-    if path == '/api/space/delete':
-        item_id = body_data.get('id')
-        if not item_id:
-            return 400, {"error": "ID is required"}
-        try:
-            space.delete_collection(item_id)
-            return 200, {"status": "success"}
-        except ValueError as e:
-            return 404, {"error": str(e)}
-        except Exception as e:
-            return 500, {"error": str(e)}
-    
-    if path == '/api/space/reorder':
-        id_list = body_data.get('ids', [])
-        try:
-            space.reorder_collections(id_list)
-            return 200, {"status": "success"}
-        except Exception as e:
-            return 500, {"error": str(e)}
 
-    # 6.5 Space Tree Save (New)
-    if path == '/api/space/save_tree':
-        # Direct file write to space-tree.json
-        try:
-            space_tree_path = os.path.join(config.DATA_DIR, 'space-tree.json')
-            cms.save_json(space_tree_path, body_data)
-            return 200, {"status": "success", "message": "Space tree saved"}
-        except Exception as e:
-            print(f"Error saving space tree: {e}")
-            return 500, {"error": str(e)}
+ROUTES = {'GET': {}, 'POST': {}}
 
-    # 6.6 Space Tag Update (Granular)
-    if path == '/api/space/update_tags':
-        node_id = body_data.get('id')
-        tags = body_data.get('tags', [])
-        if not node_id:
-            return 400, {"error": "Node ID is required"}
-        
-        try:
-            if space.update_node_tags(node_id, tags):
-                return 200, {"status": "success", "message": "Tags updated"}
-            else:
-                return 404, {"error": "Node not found"}
-        except Exception as e:
-            return 500, {"error": str(e)}
 
-    return 404, {"error": "API not found"}
+def route(method, *paths, validate=None, locked=True):
+    """注册路由及校验器；别名共享同一份处理逻辑。"""
+    def register(function):
+        for path in paths:
+            if path in ROUTES[method]:
+                raise RuntimeError(f'Duplicate route: {method} {path}')
+            ROUTES[method][path] = Route(function, validate, locked)
+        return function
+    return register
+
+
+def _module(query, default='notes'):
+    return check.scope(query.get('module', [default])[0], cms.JS_SYNC_MAP)
+
+
+def _ok(value=None):
+    return 200, value if value is not None else {'status': 'success'}
+
+
+def _changed(changed):
+    return _ok() if changed else (404, {'error': 'Node not found'})
+
+
+@route('GET', '/api/modules', '/api/save_modules')
+def modules(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(cms.load_json(config.MODULES_JSON_FILE) or [])
+
+
+@route('GET', '/api/music_data')
+def music_data(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(cms.load_json(config.MUSIC_DATA) or [])
+
+
+@route('GET', '/api/changelog')
+def changelog(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(cms.load_json(config.CHANGELOG_JSON) or [])
+
+
+@route('GET', '/api/space/collections')
+def collections(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(space.load_collections())
+
+
+@route('GET', '/api/git/status', locked=False)
+def git_status(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(git_service.get_git_status())
+
+
+@route('GET', '/api/get_bili_info')
+def bili_info(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return music_api.get_video_info(q.get('bvid', [None])[0])
+
+
+@route('GET', '/api/cms/fetch')
+def cms_fetch(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(cms.fetch_module_tree(_module(q)))
+
+
+@route('GET', '/api/cms/tag_categories', '/api/cms/get_categories')
+def tag_categories(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(cms.get_tag_categories(_module(q, 'cms')))
+
+
+@route('POST', '/api/cms/save_tag_categories', '/api/cms/save_categories', validate=check.categories)
+def save_categories(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    cms.save_tag_categories(b, _module(q, 'cms'))
+    return _ok()
+
+
+@route('POST', '/api/cms/cleanup_tags', validate=check.object_body)
+def cleanup_tags(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    result = cms.cleanup_unused_tags(_module(q, 'cms'))
+    return (200 if result.get('success') else 500), result
+
+
+@route('POST', '/api/cms/rename_tag', validate=check.fields(old_name=str, new_name=str))
+def rename_tag(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    result = cms.rename_tag(_module(q, 'cms'), b['old_name'], b['new_name'])
+    return (200 if result.get('success') else 400), result
+
+
+@route('POST', '/api/cms/delete_tag', validate=check.fields(tag_name=str))
+def delete_tag(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    result = cms.delete_tag(_module(q, 'cms'), b['tag_name'])
+    return (200 if result.get('success') else 400), result
+
+
+@route('POST', '/api/cms/node', validate=check.object_body)
+def cms_node(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    _module(q)
+    return cms.handle_request('/api/cms/node', 'POST', q, b)
+
+
+@route('POST', '/api/cms/update_tags', validate=check.tags)
+def cms_tags(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _changed(cms.update_node_tags(_module(q), b['id'], b['tags']))
+
+
+@route('POST', '/upload', validate=check.object_body)
+def upload(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    if not f:
+        raise ValueError('No file data received')
+    private = private_photos.upload(q, f)
+    return _ok(private if private is not None else photos.handle_upload(q, f))
+
+
+@route('POST', '/delete', validate=check.fields(path=str))
+def delete_photo(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    private = private_photos.delete(b)
+    return _ok(private if private is not None else photos.handle_delete(b))
+
+
+@route('POST', '/reorder', validate=check.records)
+def reorder_photos(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    for item in b:
+        check.fields(path=str)(item)
+    private = private_photos.reorder(q.get('category', [''])[0], b)
+    return _ok(private if private is not None else photos.handle_reorder(q, b))
+
+
+@route('POST', '/api/photos/update_tags', validate=check.tags)
+def photo_tags(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    private = private_photos.update_tags(b['id'], b['tags'])
+    return _changed(private if private is not None else photos.update_tags(b['id'], b['tags']))
+
+
+@route('POST', '/api/photos/register', '/api/photos/register_r2', validate=check.fields(category=str, path=str))
+def register_photo(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    if private_photos.entry(b['category']):
+        raise ValueError('私密相册请通过本地后台上传，以便图片直接写入私有存储')
+    return _ok(photos.handle_register_r2(b))
+
+
+@route('POST', '/api/save_music', validate=check.records)
+def save_music(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(music.save_music_data(b))
+
+
+@route('POST', '/api/delete_track', validate=check.fields(catIdx=int, colIdx=int, albIdx=int, trackIdx=int))
+def delete_track(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(music.delete_track(b))
+
+
+@route('POST', '/api/reset_tracks', validate=check.fields(catIdx=int, colIdx=int, albIdx=int))
+def reset_tracks(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(music.reset_tracks(b))
+
+
+@route('POST', '/api/save_modules', validate=check.cards)
+def save_modules(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    cms.save_json(config.MODULES_JSON_FILE, b)
+    return _ok()
+
+
+@route('POST', '/api/save_index_cards', validate=check.cards)
+def save_cards(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    cms.save_json(config.INDEX_CARDS_JSON, b)
+    return _ok()
+
+
+@route('POST', '/api/save_changelog', validate=check.changelog)
+def save_changelog(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    cms.save_json(config.CHANGELOG_JSON, b)
+    return _ok()
+
+
+@route('POST', '/api/ensure_page', validate=check.fields(filename=str))
+def ensure_page(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return pages.ensure_page(b)
+
+
+@route('POST', '/api/delete_page', validate=check.fields(filename=str))
+def delete_page(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return pages.delete_page(b)
+
+
+# 同类服务仅在注册时绑定路径，避免请求分发中的重复分支。
+for _path in ('add_category', 'delete_category', 'update_category', 'reorder_category'):
+    route('POST', '/api/' + _path,
+          validate=check.strings if _path == 'reorder_category' else check.fields(id=str))(
+        lambda q, b, f, path='/api/' + _path: album.handle_ops(path, b))
+
+for _path in ('export_category', 'lock_category', 'unlock_category', 'job'):
+    route('POST', '/api/album/' + _path, validate=check.object_body, locked=_path != 'job')(
+        lambda q, b, f, path='/api/album/' + _path: album_lock.handle(path, b))
+
+
+@route('GET', '/api/crypto/keyring')
+def read_keyring(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    crypto_keyring.migrate()
+    return 200, crypto_keyring._load() or {}
+
+
+@route('POST', '/api/crypto/keyring', validate=check.object_body)
+def keyring(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return crypto_keyring.save(b)
+
+
+route('GET', '/api/crypto/admin-status')(lambda q, b, f: _ok(private_session.status()))
+route('POST', '/api/crypto/admin-session', validate=check.object_body)(
+    lambda q, b, f: _ok(private_session.start(b)))
+route('POST', '/api/crypto/admin-session/close', validate=check.object_body)(
+    lambda q, b, f: _ok(private_session.close(b)))
+route('GET', '/api/crypto/admin-protection')(
+    lambda q, b, f: _ok(private_session.protection(q.get('source', [''])[0])))
+route('POST', '/api/crypto/unprotect', validate=check.fields(reference=str))(
+    lambda q, b, f: private_session.unprotect(b))
+
+
+@route('GET', '/api/crypto/rotation/export')
+def rotation_export(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    from services import crypto_rotation
+    return _ok(crypto_rotation.export_snapshots())
+
+
+from services import crypto_rotation as _rotation
+route('GET', '/api/crypto/rotation/pending')(lambda q, b, f: _ok(_rotation.pending()))
+for _name, _operation in [('/api/crypto/rotation', _rotation.rotate),
+                          ('/api/crypto/rotation/finalize', _rotation.finalize)]:
+    route('POST', _name, validate=check.object_body)(
+        lambda q, b, f, operation=_operation: _ok(operation(b)))
+
+
+@route('POST', '/api/space/fetch_meta', validate=check.fields(url=str))
+def fetch_meta(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _ok(space.fetch_url_metadata(b['url']))
+
+
+@route('POST', '/api/space/add', validate=check.fields(id=str, title=str))
+def add_collection(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    space.add_collection(b)
+    return _ok()
+
+
+@route('POST', '/api/space/update', validate=check.fields(id=str, data=dict))
+def update_collection(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    space.update_collection(b['id'], b['data'])
+    return _ok()
+
+
+@route('POST', '/api/space/delete', validate=check.fields(id=str))
+def delete_collection(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    space.delete_collection(b['id'])
+    return _ok()
+
+
+@route('POST', '/api/space/reorder', validate=check.fields(ids=list))
+def reorder_collections(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    check.strings(b['ids'])
+    space.reorder_collections(b['ids'])
+    return _ok()
+
+
+@route('POST', '/api/space/save_tree', validate=check.tree)
+def save_space(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    space.save_tree(b)
+    return _ok()
+
+
+@route('POST', '/api/space/update_tags', validate=check.tags)
+def space_tags(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    return _changed(space.update_node_tags(b['id'], b['tags']))
+
+
+@route('POST', '/api/git/commit_push', '/api/git/commit-push', validate=check.object_body)
+def commit_push(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    result = git_service.commit_and_push(b.get('message'))
+    return (200 if result.get('success') else 500), result
+
+
+@route('GET', '/api/git/progress', locked=False)
+def git_progress(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    # 只读取进度快照，不能等待提交任务持有的文件写锁。
+    return _ok(git_service.get_git_progress())
+
+
+@route('POST', '/api/admin/clean_data', validate=check.object_body)
+def clean_data(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    from services import janitor
+    return _ok(janitor.run_cleanup())
+
+
+@route('GET', '/api/admin/recovery')
+def recovery_list(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    from services import data_safety, media_jobs
+    return _ok({**data_safety.list_recovery(), 'pending_media': len(media_jobs.pending())})
+
+
+@route('POST', '/api/admin/backup', validate=check.object_body)
+def backup(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    from services import data_safety
+    return _ok(data_safety.create_backup(include_remote=b.get('include_remote', True) is not False))
+
+
+from services import data_safety as _safety
+for _name, _operation in [('verify_backup', _safety.verify_backup), ('restore_backup', _safety.restore_backup),
+                          ('restore_trash', _safety.restore_trash)]:
+    route('POST', '/api/admin/' + _name, validate=check.fields(id=str))(
+        lambda q, b, f, operation=_operation: _ok(operation(b['id'])))
+
+
+@route('POST', '/api/media/retry', validate=check.object_body)
+def retry_media(q: Query, b: JsonValue, f: bytes | None) -> Response:
+    from services import media_jobs
+    return _ok(media_jobs.retry())
+
+
+def _dispatch(method: str, path: str, query: Query, body: JsonValue = None, file_data: bytes | None = None) -> Response:
+    path = path.rstrip('/') or '/'
+    entry = ROUTES[method].get(path)
+    if entry is None:
+        if path in ROUTES['GET' if method == 'POST' else 'POST']:
+            return 405, {'error': 'Method not allowed'}
+        return 404, None if method == 'GET' and not path.startswith('/api/') else {'error': 'API not found'}
+    try:
+        relay = body.get('_relay') if isinstance(body, dict) else None
+        if relay is not None:
+            check.fields(source=str, key=str)(relay)
+            body = {key: value for key, value in body.items() if key != '_relay'}
+        if entry.validate:
+            entry.validate(body)
+        with storage.LOCK if entry.locked else nullcontext():
+            if entry.locked:
+                storage._recover_if_needed()
+            if method == 'POST':
+                private_session.require_ready(path)
+            if relay is not None:
+                if method != 'POST' or path not in ('/api/cms/node', '/api/photos/register', '/api/photos/register_r2'):
+                    raise ValueError('Relay metadata is not supported by this route')
+                return storage.run_once(relay['source'], relay['key'], [path, query, body],
+                                        lambda: entry.handler(query, body, file_data))
+            return entry.handler(query, body, file_data)
+    except media_store.MediaAccessError as error:
+        return 403, {'error': str(error)}
+    except PermissionError as error:
+        return 403, {'error': str(error), 'code': 'private_admin_required'}
+    except (ValueError, TypeError, KeyError, IndexError) as error:
+        return 400, {'error': str(error)}
+    except Exception as error:
+        return internal_error(error, f'{method} {path}', 'Internal server error')
+
+
+def dispatch_get(path: str, query_params: Query) -> Response:
+    return _dispatch('GET', path, query_params)
+
+
+def dispatch_post(path: str, query_params: Query, body_data: JsonValue, file_data: bytes | None = None) -> Response:
+    return _dispatch('POST', path, query_params, body_data, file_data)

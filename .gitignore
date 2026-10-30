@@ -1,3 +1,42 @@
 .mcp-servers/toon-context/
+__pycache__/
 /_studio/services/__pycache__
 /_studio/__pycache__
+_studio/tools/r2_config.json
+_studio/tools/media_config.json
+_studio/.local/
+
+# 原图存储桶已完全迁移至 Cloudflare R2，本地原图不纳入 Git 仓库版本管理
+photos/images/
+# 本地外部 Markdown 软件（如 Typora）图片预览目录联接，不纳入 Git 版本管理
+data/*/photos
+data/*/photos/
+
+# SQLite 仅为本机可重建索引；JSON、Markdown 与媒体是持久化真源。
+data/*.db
+data/*.db-*
+data/.relay-receipts.json
+data/.cms-cache-*.db
+data/.gallery-cache-*.db
+data/**/.maers-*.tmp
+
+node_modules/
+_studio/tooling/test-results/
+_studio/tooling/playwright-report/
+
+# 只用于静态托管的可重建访客端产物
+/dist/
+
+# 开源模板的本机账号、凭据、环境与备份均不入库。
+.cloudflare/
+.wrangler/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.log
+*.zip
+*.bak

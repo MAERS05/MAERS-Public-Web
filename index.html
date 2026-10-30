@@ -1,7 +1,9 @@
 <!doctype html>
-<html lang="zh-CN" style="background-color: #0a0a0a; color: #e0e0e0">
+<html lang="zh-CN" data-early-render="home" style="background-color: #0a0a0a; color: #e0e0e0">
 
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- 🔥 第一优先级：关键主题CSS，在任何其他内容之前定义 -->
   <script>
     // 1. 恢复缩放状态 (Index Only - Memory)
@@ -27,31 +29,10 @@
 
     /* body 继承背景色 */
     body {
-      background-color: inherit !important;
+      background-color: transparent !important;
       color: inherit !important;
       margin: 0;
       padding: 0;
-    }
-
-    /* 🔥 防闪烁遮罩 - 使用真实 div 元素 */
-    #flash-guard {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      /* 🎨 同步 #theme-mask 的精确背景，防止色差跳变 */
-      /* 🎨 同步 #theme-mask 的主色调，移除复杂纹理以减小体积 */
-      background-color: #141417;
-      z-index: 99999;
-      pointer-events: none;
-      /* 🎨 优化动画：0.15s */
-      transition: opacity 0.15s;
-    }
-
-    html.light-mode #flash-guard {
-      background-color: #f2f0eb;
-      /* 浅色模式基础色 */
     }
 
     #index-story-icon {
@@ -66,34 +47,47 @@
     }
   </style>
 
-  <!-- 🔥 第二优先级：主题检测脚本 (精简版 - 逻辑已同步至 theme-init.js，但此处保留用于覆盖 index 特有的 mask 逻辑) -->
-  <script src="custom/config.js"></script>
-  <script src="shared/flash-guard.js"></script>
-  <meta charset="UTF-8" />
-  <title>MAERS Space</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="color-scheme" content="dark light" />
-  <link rel="icon" type="image/svg+xml" href="ui/logo.svg" />
-
-  <!-- 🚀 Resource Preloading -->
+  <!-- 提前并行发现模块与嵌套样式，避免沿 import 链逐层等待网络。 -->
   <link rel="preload" href="static-style/theme.css" as="style" />
   <link rel="preload" href="static-style/components.css" as="style" />
-  <link rel="dns-prefetch" href="https://api.bilibili.com" />
+  <link rel="preload" href="static-style/style.css" as="style" />
+  <link rel="preload" href="static-style/site-guide.css" as="style" />
+  <link rel="preload" href="custom/index/viewer/index.css" as="style" />
+  <link rel="preload" href="custom/zmobile adaptation/mobile-global.css" as="style" />
+  <link rel="preload" href="custom/zmobile adaptation/mobile-index.css" as="style" />
+  <link rel="preload" href="data/index-cards.json" as="fetch" crossorigin="anonymous" />
+  <link rel="modulepreload" href="custom/index/viewer/index-viewer.module.js" />
+  <link rel="modulepreload" href="shared/layout.module.js" />
+  <link rel="modulepreload" href="shared/spatial-nav.module.js" />
+  <link rel="modulepreload" href="shared/theme.module.js" />
+  <link rel="modulepreload" href="shared/theme/theme-core.module.js" />
+  <link rel="modulepreload" href="shared/theme/theme-zoom.module.js" />
+  <link rel="modulepreload" href="shared/theme/theme-drag.module.js" />
+  <link rel="modulepreload" href="shared/utils.module.js" />
+  <link rel="modulepreload" href="shared/whats-new.module.js" />
+  <link rel="modulepreload" href="data-manage/encrypt/crypto.module.js" />
+  <link rel="modulepreload" href="data-manage/encrypt/secret-unlock.module.js" />
+
+  <!-- 同步确定主题，之后才允许首页显示。 -->
+  <script defer src="custom/config.js"></script>
+  <script src="shared/flash-guard.js"></script>
+  <title>MAERS Space</title>
+  <meta name="color-scheme" content="dark light" />
+  <link rel="icon" type="image/svg+xml" href="ui/logo.svg" />
 
   <link rel="stylesheet" href="static-style/theme.css" />
   <link rel="stylesheet" href="static-style/components.css" />
   <link rel="stylesheet" href="static-style/style.css" />
   <script type="module" src="custom/index/viewer/index-viewer.module.js"></script>
   <link rel="stylesheet" href="static-style/site-guide.css" />
-  <script src="custom/index/viewer/site-guide.js"></script>
+  <script defer src="custom/index/viewer/site-guide.js"></script>
   <link rel="stylesheet" href="custom/index/viewer/index.css" />
 </head>
 
 <body>
   <!-- 🔥 防闪烁遮罩 - 在页面内容渲染完成后会被移除 -->
-  <div id="flash-guard"></div>
   <!-- 故事入口图标 -->
-  <a href="https://story.maersy.com" target="_blank" title="故事"
+  <a href="https://example.com" target="_blank" title="故事"
     style="position:fixed;top:45px;left:54px;z-index:10000;display:flex;align-items:center;justify-content:center;">
     <img id="index-story-icon" src="ui/story.svg" alt="故事" />
   </a>

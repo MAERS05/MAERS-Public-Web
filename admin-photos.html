@@ -3,10 +3,11 @@
 
 <head>
     <script src="shared/flash-guard.js"></script>
+    <script src="custom/config.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-    <title>MAERS Admin - Photos</title>
+    <title>MAERS Public Admin - Photos</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
@@ -20,6 +21,7 @@
     <link rel="stylesheet" href="custom/cms/viewer/cms-base.css">
     <link rel="stylesheet" href="custom/cms/viewer/cms-theme-default.css">
     <link rel="stylesheet" href="static-style/admin-modal.css">
+    <link rel="stylesheet" href="static-style/sync-ui.css">
 
     <!-- Module Specific -->
     <link rel="stylesheet" href="custom/photos/viewer/photos-viewer.css">
@@ -160,7 +162,7 @@
 
 </head>
 
-<body>
+<body class="photos-admin-page">
 
     <!-- Save Bar Container -->
     <div id="save-bar" class="save-bar-container"></div>
@@ -171,7 +173,6 @@
                 <a href="admin-album.html" class="back-btn">← Back to Albums</a>
                 <div class="header-title" id="page-title">Loading...</div>
                 <div class="header-actions">
-                    <!-- 仅图标，无多余状态 -->
                     <button class="header-action-btn" id="tag-toggle-btn">🏷️ Tags</button>
                     <div class="sort-dropdown-container">
                         <button id="sort-trigger-btn" class="header-action-btn pill-btn" title="排序方式">
@@ -224,5 +225,4 @@
     </div>
 
 </body>
-
 </html>

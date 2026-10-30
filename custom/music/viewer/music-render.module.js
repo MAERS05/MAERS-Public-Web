@@ -5,6 +5,9 @@
  * @version 3.0.0 - ES6 Module
  */
 
+import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+import { renderLockedCard, cryptoIconHtml, setupLockActionButton } from '../../../data-manage/encrypt/admin-lock.module.js';
+
 let UI, Admin, Player, Utils, AdminCore;
 
 export function initRender(uiModule, adminModule, playerModule, utilsModule, adminCoreModule) {
@@ -24,6 +27,12 @@ export function renderCategories() {
     while (listL0.firstChild) listL0.removeChild(listL0.firstChild);
 
     UI.libraryData.forEach((cat, index) => {
+        // 加密记录：访客不展示，admin 展示锁定占位行
+        if (isEncryptedRecord(cat)) {
+            if (IsAdmin()) listL0.appendChild(_renderLockedListItem(0, index));
+            return;
+        }
+
         const div = document.createElement('div');
         const extraClass = IsAdmin() ? Admin.getItemClass(0, index) : '';
         div.className = `list-item ${extraClass}`;
@@ -83,6 +92,16 @@ export function renderCategories() {
                 extraClass: ''
             });
 
+            // 加锁按钮
+            const lockBtn = document.createElement('span');
+            lockBtn.className = 'maers-admin-btn';
+            setupLockActionButton(lockBtn, {
+                isLocked: Boolean(cat._private_id),
+                title: cat._private_id ? '取消此分类的对外加密' : '对外加密此分类',
+                onClick: (e) => { e.stopPropagation(); Admin.uiLock(0, index); }
+            });
+            actionsEl.appendChild(lockBtn);
+
             const actionWrapper = document.createElement('div');
             actionWrapper.className = 'item-actions';
             actionWrapper.appendChild(actionsEl);
@@ -91,6 +110,7 @@ export function renderCategories() {
 
         listL0.appendChild(div);
     });
+    if (IsAdmin()) Admin.refreshUnlockAll?.();
 }
 
 export function renderCollections(catIndex) {
@@ -102,6 +122,12 @@ export function renderCollections(catIndex) {
 
     const cols = UI.libraryData[catIndex].collections;
     cols.forEach((col, index) => {
+        // 加密记录处理
+        if (isEncryptedRecord(col)) {
+            if (IsAdmin()) listL1.appendChild(_renderLockedListItem(1, index));
+            return;
+        }
+
         const div = document.createElement('div');
         const extraClass = IsAdmin() ? Admin.getItemClass(1, index) : '';
         div.className = `list-item ${extraClass}`;
@@ -161,6 +187,16 @@ export function renderCollections(catIndex) {
                 extraClass: ''
             });
 
+            // 加锁按钮
+            const lockBtn = document.createElement('span');
+            lockBtn.className = 'maers-admin-btn';
+            setupLockActionButton(lockBtn, {
+                isLocked: Boolean(col._private_id),
+                title: col._private_id ? '取消此合集的对外加密' : col._private ? '随上级对外加密' : '对外加密此合集',
+                onClick: (e) => { e.stopPropagation(); Admin.uiLock(1, index); }
+            });
+            actionsEl.appendChild(lockBtn);
+
             const actionWrapper = document.createElement('div');
             actionWrapper.className = 'item-actions';
             actionWrapper.appendChild(actionsEl);
@@ -169,6 +205,7 @@ export function renderCollections(catIndex) {
 
         listL1.appendChild(div);
     });
+    if (IsAdmin()) Admin.refreshUnlockAll?.();
 }
 
 export function renderAlbums(catIndex, colIndex) {
@@ -188,6 +225,12 @@ export function renderAlbums(catIndex, colIndex) {
     const albums = UI.libraryData[catIndex].collections[colIndex].albums;
 
     albums.forEach((album, albIndex) => {
+        // 加密记录处理
+        if (isEncryptedRecord(album)) {
+            if (IsAdmin()) listL2.appendChild(_renderLockedListItem(2, albIndex));
+            return;
+        }
+
         const wrapper = document.createElement('div');
         wrapper.className = 'album-wrapper';
 
@@ -270,6 +313,16 @@ export function renderAlbums(catIndex, colIndex) {
                 extraClass: ''
             });
 
+            // 加锁按钮
+            const lockBtn2 = document.createElement('span');
+            lockBtn2.className = 'maers-admin-btn';
+            setupLockActionButton(lockBtn2, {
+                isLocked: Boolean(album._private_id),
+                title: album._private_id ? '取消此专辑的对外加密' : album._private ? '随上级对外加密' : '对外加密此专辑',
+                onClick: (e) => { e.stopPropagation(); Admin.uiLock(2, albIndex); }
+            });
+            actionsEl.appendChild(lockBtn2);
+
             // 补全：还原分P按钮 (↺)
             const resetBtn = document.createElement('span');
             resetBtn.className = 'maers-admin-btn';
@@ -345,5 +398,27 @@ export function renderAlbums(catIndex, colIndex) {
             wrapper.appendChild(dropdown);
         }
         listL2.appendChild(wrapper);
+    });
+    if (IsAdmin()) Admin.refreshUnlockAll?.();
+}
+
+// ── 内部辅助函数 ──
+
+/**
+ * 渲染一个锁定列表运占位行（仅 Admin 可见）
+ * @param {number} level - 0/1/2
+ * @param {number} index
+ * @returns {HTMLElement}
+ */
+function _renderLockedListItem(level, index) {
+    return renderLockedCard({
+        variant: 'list',
+        label: '私密内容',
+        onUnlock: () => Admin.uiUnlock(level, index),
+        deleteEl: AdminCore?.AdminButtonHelper?.render({
+            index,
+            isDeleted: false,
+            onDelete: (e) => { e.stopPropagation(); Admin.uiDelete(e, level, index); }
+        })
     });
 }

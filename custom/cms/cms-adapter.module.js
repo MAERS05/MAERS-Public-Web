@@ -1,8 +1,21 @@
 /**
  * @module custom/cms/cms-adapter.module.js
  * @description CMS 适配器核心 - 提供跨模块复用 CMS 组件（如标签系统）的通用兼容层
- * @version 1.0.0
+ * @version 1.1.0
  */
+import { localFetch } from '../../data-manage/api-client.module.js';
+
+/**
+ * 判断当前是否运行在有本地 Python 后端的环境（localhost / 局域网）
+ * @returns {boolean}
+ */
+function _isLocalBackend() {
+    const host = window.location.hostname;
+    return (
+        ['localhost', '127.0.0.1', '[::1]', ''].includes(host) ||
+        /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(host)
+    );
+}
 
 /**
  * 设置基础 CMS 适配器
@@ -39,16 +52,20 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
                 applyFiltersCallback();
             }
         },
-        // 统一的标签保存逻辑
+        // 统一的标签保存逻辑（线上环境静默放行，仅本地写入后端）
         saveTagCategories: async (categories) => {
+            AppState.tagCategories = JSON.parse(JSON.stringify(categories));
+            if (!_isLocalBackend()) {
+                // 线上无后端，内存更新即可
+                return true;
+            }
             try {
-                const res = await fetch(`/api/cms/save_tag_categories?module=${moduleName}`, {
+                const res = await localFetch(`/api/cms/save_tag_categories?module=${moduleName}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(categories)
                 });
                 if (res.ok) {
-                    AppState.tagCategories = JSON.parse(JSON.stringify(categories));
                     return true;
                 } else {
                     throw new Error("Save failed");
@@ -157,31 +174,34 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
 
 /**
  * 预加载标签数据 (带静态回退)
+ * 线上环境（无本地后端）直接跳过 API，读取静态 JSON 文件
  * @param {Object} AppState - 应用状态对象
  * @param {string} moduleName - 当前模块名称
  */
 export async function preloadTagCategories(AppState, moduleName = 'cms') {
     let success = false;
 
-    // 1. 优先尝试 API (适用于 Admin 模式或有后端支持的环境)
-    try {
-        const res = await fetch(`/api/cms/tag_categories?module=${moduleName}`);
-        if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data) && data.length > 0) {
-                AppState.tagCategories = data;
-                success = true;
+    // 1. 仅在本地后端环境下尝试 API（避免线上 Vercel 产生无效 404）
+    if (_isLocalBackend()) {
+        try {
+            const res = await localFetch(`/api/cms/tag_categories?module=${moduleName}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    AppState.tagCategories = data;
+                    success = true;
+                }
             }
+        } catch (e) {
+            console.warn(`[MAERS.Tags] API loading failed for ${moduleName}, trying static fallback...`);
         }
-    } catch (e) {
-        console.warn(`[MAERS.Tags] API loading failed for ${moduleName}, trying static fallback...`);
     }
 
-    // 2. 静态回退 (适用于 线上部署/纯静态 环境)
+    // 2. 静态回退（线上部署 / 纯静态 / 本地 API 失败均走此路径）
     if (!success) {
         try {
             const staticFile = `data/tags/${moduleName}-tag-categories.json`;
-            const res = await fetch(`${staticFile}?t=${Date.now()}`);
+            const res = await localFetch(staticFile, { cache: 'no-cache' });
             if (res.ok) {
                 const data = await res.json();
                 AppState.tagCategories = data;

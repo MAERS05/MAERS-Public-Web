@@ -1,4 +1,13 @@
-/* Admin specific styles */
+/* ==========================================================================
+   MAERS CMS 管理端与高保真阅读器扩展样式 (cms-editor.css)
+   职责：
+   1. 网格管理操作组与新建按钮样式
+   2. 后台阅读器顶栏控制组（可编辑标题、外部打开、一键粘贴、源码抽屉开关）
+   3. 轻量级 Markdown 源码抽屉 (.cms-source-drawer)
+   4. 站内双链标签 (.cms-wikilink) 与 GitHub Alerts 提示卡 (.cms-alert)
+   ========================================================================== */
+
+/* 1. 网格卡片交互与操作组 */
 .grid-item {
     cursor: pointer;
 }
@@ -7,162 +16,28 @@
     cursor: move;
 }
 
-/* New AdminCore Adapter */
 .grid-item:hover .maers-admin-action-group {
     opacity: 1;
     pointer-events: auto;
 }
 
-/* Ensure action group is hidden by default but accessible */
 .maers-admin-action-group {
     transition: opacity 0.2s ease-in-out;
 }
 
-@media (max-width: 768px) {
-    .maers-admin-action-group {
-        opacity: 1 !important;
-        pointer-events: auto !important;
-    }
+/* 保持文字卡片的列宽与间距一致，避免移动端断点反而增加列数。 */
+body.cms-text-admin .folder-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr));
+    gap: 16px;
+    scrollbar-gutter: stable;
 }
 
-/* Fullscreen Editor Styles */
-.immersive-layer.admin-editor-mode {
-    background: var(--bg-base) !important;
-    padding: 0 !important;
-    display: flex;
-    flex-direction: column;
+body.cms-text-admin .main-card {
+    padding-inline: clamp(15px, 3vw, 40px);
 }
 
-.admin-editor-mode .editor-header {
-    height: 60px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    background: var(--bg-base);
-    border-bottom: 1px solid var(--pill-border);
-}
 
-.admin-editor-mode .editor-left {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex: 1;
-}
-
-.admin-editor-mode .editor-right {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.admin-editor-mode #edit-title-input {
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text-main);
-    font-size: 1.2rem;
-    font-weight: bold;
-    width: 100%;
-}
-
-.admin-editor-mode .editor-hint {
-    color: var(--text-sub);
-    font-size: 0.8rem;
-}
-
-.admin-editor-mode .editor-save-btn {
-    padding: 6px 18px;
-    background: #2ed573;
-    color: #000;
-    border: none;
-    border-radius: 20px;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.admin-editor-mode .editor-body {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-    background: var(--bg-base);
-}
-
-.admin-editor-mode #edit-md-input {
-    flex: 1;
-    resize: none;
-    border: none;
-    outline: none;
-    padding: 30px;
-    font-family: 'Consolas', monospace;
-    line-height: 1.6;
-    font-size: 1rem;
-    background: var(--bg-base) !important;
-    color: var(--text-main) !important;
-}
-
-.admin-editor-mode #edit-preview {
-    flex: 1;
-    overflow-y: auto;
-    padding: 30px;
-    border-left: 1px solid var(--pill-border);
-    background: var(--bg-base) !important;
-    color: var(--text-main);
-}
-
-.admin-editor-mode .reader-outline-panel {
-    background: #1e2227 !important; /* Midnight blue */
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-}
-
-html.light-mode .immersive-layer.admin-editor-mode,
-html.light-mode .admin-editor-mode .editor-header,
-html.light-mode .admin-editor-mode .editor-body,
-html.light-mode .admin-editor-mode #edit-md-input,
-html.light-mode .admin-editor-mode #edit-preview,
-html.light-mode .admin-editor-mode .reader-outline-panel {
-    background: #ffffff !important;
-    color: #333 !important;
-}
-
-/* Reader image optimization for Admin */
-.markdown-body img {
-    max-height: 200px;
-    width: auto;
-    border-radius: 8px;
-    cursor: zoom-in;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    display: block;
-    margin: 10px 0;
-}
-
-.markdown-body img:hover {
-    transform: scale(1.02);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    opacity: 0.95;
-}
-
-/* Vditor image optimization */
-.vditor-reset img {
-    max-height: 200px !important;
-    width: auto !important;
-    display: inline-block;
-    margin: 10px 0;
-    border-radius: 5px;
-    cursor: zoom-in;
-    transition: transform 0.2s;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-}
-
-.vditor-reset img:hover {
-    transform: scale(1.05);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-}
-
-/* Create Button Style (Mimic .tag-toggle-btn) */
+/* 新建文件夹/笔记胶囊按钮 */
 .cms-create-btn {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
@@ -173,7 +48,6 @@ html.light-mode .admin-editor-mode .reader-outline-panel {
     border-radius: 20px;
     font-weight: 500;
     transition: all 0.2s;
-    /* Smooth transition */
     display: inline-block;
     vertical-align: middle;
     margin-right: 8px;
@@ -184,119 +58,373 @@ html.light-mode .admin-editor-mode .reader-outline-panel {
     transform: translateY(-2px);
 }
 
-.light-mode .cms-create-btn {
+html.light-mode .cms-create-btn {
     background: rgba(0, 0, 0, 0.05);
     border-color: rgba(0, 0, 0, 0.1);
     color: #333;
 }
 
 /* ==========================================================================
-   Vditor Dark Mode Contrast Fixes
+   2. 统一沉浸式阅读器后台管理顶栏
    ========================================================================== */
 
-/* 1. Editor Main Container */
-.vditor {
-    background-color: var(--bg-base) !important;
-    border: 1px solid var(--pill-border) !important;
-    border-radius: 8px !important;
-    /* overflow: hidden; -- Removed to prevent tooltip clipping */
+.reader-toolbar .reader-meta {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* 1.1 Contrast Fix for floating tooltips (hints) */
-html:not(.light-mode) .vditor-tooltipped::after {
-    background: #4a4f56 !important;
-    color: #ffffff !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+.reader-toolbar .reader-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
-/* Tooltip Arrow Fixes (Full directional coverage) */
-html:not(.light-mode) .vditor-tooltipped::before {
-    border-top-color: #4a4f56 !important;
+.reader-title-input {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    outline: none;
+    color: var(--text-main);
+    font-size: 1.15rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    width: 100%;
+    max-width: 480px;
+    transition: border-color 0.2s, background-color 0.2s;
 }
 
-html:not(.light-mode) [class*="vditor-tooltipped__n"]::before {
-    border-top-color: #4a4f56 !important;
+.reader-title-input:hover {
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
 }
 
-html:not(.light-mode) [class*="vditor-tooltipped__s"]::before {
-    border-bottom-color: #4a4f56 !important;
+.reader-title-input:focus {
+    border-color: rgba(120, 255, 214, 0.5);
+    background: rgba(255, 255, 255, 0.06);
 }
 
-html:not(.light-mode) [class*="vditor-tooltipped__w"]::before {
-    border-left-color: #4a4f56 !important;
+html.light-mode .reader-title-input:hover {
+    border-color: rgba(0, 0, 0, 0.12);
+    background: rgba(0, 0, 0, 0.03);
 }
 
-html:not(.light-mode) [class*="vditor-tooltipped__e"]::before {
-    border-right-color: #4a4f56 !important;
+html.light-mode .reader-title-input:focus {
+    border-color: rgba(0, 184, 148, 0.55);
+    background: rgba(255, 255, 255, 0.9);
 }
 
-/* 1.3 Force Centering for Edge Tooltips (Override Vditor's NE/NW logic) */
-.vditor-tooltipped__ne::after,
-.vditor-tooltipped__nw::after,
-.vditor-tooltipped__se::after,
-.vditor-tooltipped__sw::after {
-    left: auto !important;
-    right: 50% !important;
-    margin-left: 0 !important;
-    transform: translateX(50%) !important;
+/* 后台阅读器顶栏功能按钮 */
+.reader-admin-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    height: 34px;
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
-.vditor-tooltipped__ne::before,
-.vditor-tooltipped__nw::before,
-.vditor-tooltipped__se::before,
-.vditor-tooltipped__sw::before {
-    left: auto !important;
-    right: 50% !important;
-    margin-left: 0 !important;
-    margin-right: -5px !important;
+.reader-admin-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(120, 255, 214, 0.4);
+    transform: translateY(-1px);
 }
 
-/* 1.2 Contrast Fix for dropdown menus (Heading/Emoji etc) */
-html:not(.light-mode) .vditor-hint,
-html:not(.light-mode) .vditor-panel {
-    background-color: #1e2227 !important;
-    border: 1px solid var(--pill-border) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6) !important;
+.reader-admin-btn.active {
+    background: rgba(120, 255, 214, 0.16);
+    border-color: rgba(120, 255, 214, 0.55);
+    color: #78ffd6;
 }
 
-html:not(.light-mode) .vditor-hint li:hover {
-    background-color: rgba(255, 255, 255, 0.1) !important;
-    color: #fff !important;
+.reader-admin-btn.primary {
+    background: #2ed573;
+    border-color: #2ed573;
+    color: #0b1610;
 }
 
-/* 4. Content Area (IR/SV/WYSIWYG) */
-.vditor-ir,
-.vditor-wysiwyg,
-.vditor-sv {
-    background-color: var(--bg-base) !important;
+.reader-admin-btn.primary:hover {
+    background: #3ae37f;
+}
+
+html.light-mode .reader-admin-btn {
+    background: rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.12);
+    color: #222;
+}
+
+html.light-mode .reader-admin-btn:hover {
+    background: rgba(0, 0, 0, 0.09);
+    border-color: rgba(0, 184, 148, 0.45);
+}
+
+html.light-mode .reader-admin-btn.active {
+    background: rgba(0, 184, 148, 0.14);
+    border-color: rgba(0, 184, 148, 0.55);
+    color: #00896f;
+}
+
+html.light-mode .reader-admin-btn.primary {
+    background: #10b981;
+    border-color: #10b981;
+    color: #fff;
+}
+
+/* ==========================================================================
+   3. 轻量级 Markdown 源码抽屉 (.cms-source-drawer)
+   ========================================================================== */
+
+.cms-source-drawer {
+    width: 44%;
+    max-width: 620px;
+    min-width: 340px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: rgba(18, 20, 24, 0.96);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    z-index: 950;
+    transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    overflow: hidden;
+}
+
+.cms-source-drawer.collapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    border-left: none !important;
+    opacity: 0;
+    pointer-events: none;
+}
+
+html.light-mode .cms-source-drawer {
+    background: rgba(250, 249, 246, 0.98);
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.cms-source-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+    gap: 8px;
+}
+
+html.light-mode .cms-source-drawer-header {
+    border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.cms-source-drawer-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+}
+
+.cms-source-drawer-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cms-source-close-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-main);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+html.light-mode .cms-source-close-btn {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+.cms-source-textarea {
+    flex: 1;
+    width: 100%;
+    resize: none;
+    border: none;
+    outline: none;
+    padding: 20px;
+    box-sizing: border-box;
+    background: transparent;
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    overflow-y: auto;
+}
+
+/* ==========================================================================
+   4. 阅读器内容增强：图片、双链 (.cms-wikilink) 与 GitHub Alerts (.cms-alert)
+   ========================================================================== */
+
+.markdown-body img:not(.cms-diagram-fs-icon),
+.vditor-reset img:not(.cms-diagram-fs-icon) {
+    max-height: 240px !important;
+    width: auto !important;
+    border-radius: 8px;
+    cursor: zoom-in;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    display: inline-block;
+    margin: 10px 0;
+}
+
+.markdown-body img:not(.cms-diagram-fs-icon):hover,
+.vditor-reset img:not(.cms-diagram-fs-icon):hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+/* 站内文档胶囊与 [[双链]] 样式 */
+.markdown-body a.cms-doc-pill,
+.vditor-reset a.cms-doc-pill,
+.markdown-body a.cms-wikilink,
+.vditor-reset a.cms-wikilink {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    margin: 2px 3px;
+    border-radius: 7px;
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.26) !important;
+    color: #7dd3fc !important;
+    text-decoration: none !important;
+    font-weight: 500;
+    font-size: 0.93em;
+    line-height: 1.5;
+    vertical-align: baseline;
+    transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.markdown-body a.cms-doc-pill:hover,
+.vditor-reset a.cms-doc-pill:hover,
+.markdown-body a.cms-wikilink:hover,
+.vditor-reset a.cms-wikilink:hover {
+    background: rgba(56, 189, 248, 0.18);
+    border-color: rgba(56, 189, 248, 0.5) !important;
+    color: #bae6fd !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+}
+
+.markdown-body a.cms-doc-pill--cross,
+.vditor-reset a.cms-doc-pill--cross {
+    background: rgba(167, 139, 250, 0.1);
+    border-color: rgba(167, 139, 250, 0.28) !important;
+    color: #c4b5fd !important;
+}
+
+.markdown-body a.cms-doc-pill--cross:hover,
+.vditor-reset a.cms-doc-pill--cross:hover {
+    background: rgba(167, 139, 250, 0.18);
+    border-color: rgba(167, 139, 250, 0.5) !important;
+    color: #ddd6fe !important;
+}
+
+html.light-mode .markdown-body a.cms-doc-pill,
+html.light-mode .vditor-reset a.cms-doc-pill,
+html.light-mode .markdown-body a.cms-wikilink,
+html.light-mode .vditor-reset a.cms-wikilink {
+    background: rgba(2, 132, 199, 0.07);
+    border-color: rgba(2, 132, 199, 0.24) !important;
+    color: #0369a1 !important;
+}
+
+html.light-mode .markdown-body a.cms-doc-pill--cross,
+html.light-mode .vditor-reset a.cms-doc-pill--cross {
+    background: rgba(124, 58, 237, 0.07);
+    border-color: rgba(124, 58, 237, 0.24) !important;
+    color: #6d28d9 !important;
+}
+
+/* GitHub Alerts 高亮提示卡 */
+.markdown-body blockquote.cms-alert,
+.vditor-reset blockquote.cms-alert {
+    padding: 12px 16px !important;
+    margin: 16px 0 !important;
+    border-left: 4px solid #3b82f6 !important;
+    border-radius: 0 10px 10px 0 !important;
+    background: rgba(59, 130, 246, 0.08) !important;
     color: var(--text-main) !important;
 }
 
-/* 5. Text & Caret Priority */
+.cms-alert-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+}
+
+.cms-alert-note {
+    border-left-color: #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.09) !important;
+}
+.cms-alert-note .cms-alert-title { color: #60a5fa; }
+
+.cms-alert-tip {
+    border-left-color: #10b981 !important;
+    background: rgba(16, 185, 129, 0.09) !important;
+}
+.cms-alert-tip .cms-alert-title { color: #34d399; }
+
+.cms-alert-important {
+    border-left-color: #a855f7 !important;
+    background: rgba(168, 85, 247, 0.09) !important;
+}
+.cms-alert-important .cms-alert-title { color: #c084fc; }
+
+.cms-alert-warning {
+    border-left-color: #f59e0b !important;
+    background: rgba(245, 158, 11, 0.09) !important;
+}
+.cms-alert-warning .cms-alert-title { color: #fbbf24; }
+
+.cms-alert-caution {
+    border-left-color: #ef4444 !important;
+    background: rgba(239, 68, 68, 0.09) !important;
+}
+.cms-alert-caution .cms-alert-title { color: #f87171; }
+
+html.light-mode .cms-alert-note .cms-alert-title { color: #2563eb; }
+html.light-mode .cms-alert-tip .cms-alert-title { color: #059669; }
+html.light-mode .cms-alert-important .cms-alert-title { color: #7e22ce; }
+html.light-mode .cms-alert-warning .cms-alert-title { color: #d97706; }
+html.light-mode .cms-alert-caution .cms-alert-title { color: #dc2626; }
+
+/* Vditor.preview 深色模式对比度适配 */
 .vditor-reset {
     color: var(--text-main) !important;
-    caret-color: var(--text-main) !important;
     font-family: var(--font-main) !important;
 }
 
-/* 6. Fix for Code Blocks & Inline Code in Dark Mode */
 html:not(.light-mode) .vditor-reset code:not(.hljs) {
     background-color: rgba(255, 255, 255, 0.1) !important;
     color: #ff79c6 !important;
-    /* Pink-ish for code visibility */
-    padding: 2px 4px !important;
+    padding: 2px 5px !important;
     border-radius: 4px !important;
 }
 
-/* 7. Markdown Symbols (e.g., #, **, >) visibility */
-.vditor-ir__marker {
-    color: var(--text-sub) !important;
-    opacity: 0.6;
-}
-
-/* 8. Table Fix - Avoid blinding white backgrounds */
 .vditor-reset table {
     background: transparent !important;
     color: var(--text-main) !important;
@@ -310,28 +438,32 @@ html:not(.light-mode) .vditor-reset table td {
     padding: 8px !important;
 }
 
-/* 9. Scrollbar for Vditor Content */
-.vditor-ir,
-.vditor-wysiwyg,
-.vditor-sv,
-.vditor-preview {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
+/* 胶囊图标尺寸锁定与导图外层 <pre> 去重框 */
+.cms-pill-icon {
+    width: 15px !important;
+    height: 15px !important;
+    min-width: 15px !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
 }
 
-.vditor-ir::-webkit-scrollbar,
-.vditor-wysiwyg::-webkit-scrollbar,
-.vditor-sv::-webkit-scrollbar,
-.vditor-preview::-webkit-scrollbar {
-    display: block;
-    width: 6px;
-    height: 6px;
+.cms-pill-text {
+    white-space: nowrap;
 }
 
-.vditor-ir::-webkit-scrollbar-thumb,
-.vditor-wysiwyg::-webkit-scrollbar-thumb,
-.vditor-sv::-webkit-scrollbar-thumb,
-.vditor-preview::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb);
-    border-radius: 10px;
+.markdown-body pre.cms-diagram-pre,
+.vditor-reset pre.cms-diagram-pre,
+.vditor-reset pre:has(.cms-diagram-card) {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+}
+
+.cms-diagram-card {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
 }

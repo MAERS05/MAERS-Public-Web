@@ -16,9 +16,9 @@ import { View, initView, setupViewEventListeners } from '../cms/viewer/cms-view.
 import { Recent, initRecent } from '../cms/viewer/cms-recent.module.js';
 
 import { Controller, bootstrap } from '../cms/admin/cms-controller.module.js';
-import { Editor, initEditor } from '../cms/admin/cms-editor.module.js';
+import { Reader, initReader } from '../cms/viewer/cms-reader.module.js';
 import { Drag, initDrag } from '../cms/admin/cms-drag.module.js';
-import { SaveButton, Feedback } from '../../data-manage/admin-base.module.js';
+import { SaveButton, Feedback } from '../../data-manage/admin/admin-base.module.js';
 
 initLayout();
 initTheme();
@@ -26,12 +26,12 @@ initTheme();
 initStateModule(Controller);
 initSearch(State, Render, Tags, null);
 initAdmin(State, Controller, Render, Search);
-initEvents(State, Render, Admin, Tags, Editor, null, Recent);
+initEvents(State, Render, Admin, Tags, Reader, null, Recent);
 initTags(State, Controller, Search);
 initDrag(Admin, Controller, State);
 initRender(State, Admin, Controller, Events, Drag, null, Search);
 initLightbox();
-initEditor(Controller);
+initReader(Controller);
 
 initView({
     State,
@@ -42,7 +42,7 @@ initView({
     Lightbox,
     Admin,
     Controller,
-    Editor,
+    Reader,
     CustomView: null
 });
 
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // [New Feature] Auto-open specific note from URL ('?openNote=Title')
     const urlParams = new URLSearchParams(window.location.search);
     const openNoteTitle = urlParams.get('openNote');
-    if (openNoteTitle && Editor) {
+    if (openNoteTitle && Reader) {
         const normalize = (s) => s.trim().replace(/[《》]/g, '');
         const needle = normalize(openNoteTitle);
         let attempts = 0;
@@ -70,7 +70,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const targetNode = allNodes.find(n =>
                     n.type === 'note' && (n.title === openNoteTitle || normalize(n.title) === needle)
                 );
-                if (targetNode) Editor.open(targetNode);
+                if (targetNode) Reader.open(targetNode);
             } else if (attempts < 50) {
                 attempts++;
                 setTimeout(tryOpen, 100);

@@ -4,7 +4,7 @@
  * @version 1.0.0
  */
 
-import { AdminButtonHelper } from '../../../../data-manage/admin-base.module.js';
+import { AdminButtonHelper } from '../../../../data-manage/admin/admin-base.module.js';
 import { Search as SearchUtils } from '../../../../shared/utils.module.js';
 
 export const TagsRender = {

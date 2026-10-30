@@ -4,6 +4,8 @@
  * 依赖：Controller, View, AdminCore
  * @version 3.0.0 - ES6 Module
  */
+import { Toast } from '../../../shared/toast.module.js';
+import { localFetch } from '../../../data-manage/api-client.module.js';
 
 // 依赖声明
 let Controller, View, AdminCore;
@@ -238,7 +240,7 @@ function showToast(msg, type = 'success') {
     if (window.MAERS?.Toast) {
         type === 'error' ? window.MAERS.Toast.error(msg) : window.MAERS.Toast.success(msg);
     } else {
-        alert(msg);
+        Toast.error(msg);
     }
 }
 
@@ -309,7 +311,7 @@ function bindTagEvents(span, photo, tag) {
 
 async function updateTagsAPI(photo, newTags, silent = false) {
     try {
-        const res = await fetch('/api/photos/update_tags', {
+        const res = await localFetch('/api/photos/update_tags', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: photo.id, tags: newTags })
@@ -336,11 +338,11 @@ async function updateTagsAPI(photo, newTags, silent = false) {
 
             if (!silent && window.MAERS?.Toast) window.MAERS.Toast.success("标签已更新");
         } else {
-            alert("Error: " + (data.error || "Unknown"));
+            Toast.error("Error: " + (data.error || "Unknown"));
         }
     } catch (e) {
         console.error(e);
-        alert("Network Error during tag update");
+        Toast.error("Network Error during tag update");
     }
 }
 

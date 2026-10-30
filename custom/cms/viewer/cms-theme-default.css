@@ -402,8 +402,11 @@
   color: #333;
 }
 
-.light-mode .markdown-body p {
-  color: #444;
+/* Explicit reader text color also overrides the older paragraph theme rule. */
+.light-mode #reader-content,
+.light-mode #reader-content p,
+.light-mode #reader-content li {
+  color: #000000;
 }
 
 

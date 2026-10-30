@@ -5,8 +5,8 @@
     left: 20px;
     z-index: 10000;
     width: auto;
-    height: 30px;
-    padding: 0 15px;
+    height: 28px;
+    padding: 0 11px 0 13px;
     border-radius: 50px;
     background: var(--toggle-bg);
     border: 1px solid rgba(255, 255, 255, 0.2);

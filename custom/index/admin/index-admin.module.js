@@ -3,16 +3,33 @@
  * 主页卡片管理逻辑 - 完整版
  * 集成通用 AdminCore 实现排序、编辑、删除、添加 (原子化添加，批量保存)
  */
+import { initChangelogEditor } from './index-changelog.module.js';
+import { localFetch } from '../../../data-manage/api-client.module.js';
 
 import { initLayout } from '../../../shared/layout.module.js';
 import { initTheme } from '../../../shared/theme.module.js';
 import { Toast } from '../../../shared/toast.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin-base.module.js';
-import { AdminModal } from '../../../data-manage/admin-modal.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin/admin-base.module.js';
+import { AdminModal } from '../../../data-manage/admin/admin-modal.module.js';
+import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+import {
+    unlockRecord,
+    mountUnlockAllButton,
+    refreshUnlockAllButton,
+    unlockListDeep,
+    countEncryptedDeep,
+    lockIndexCardRecord,
+    renderLockedCard,
+    cryptoIconHtml,
+    setupLockActionButton
+} from '../../../data-manage/encrypt/admin-lock.module.js';
 
 // 初始化基础 UI
 initLayout();
 initTheme();
+
+// 注入更新日志编辑器入口
+initChangelogEditor();
 
 export const IndexAdmin = {
     grid: null,
@@ -20,7 +37,6 @@ export const IndexAdmin = {
     manager: null,
 
     init() {
-        console.log("IndexAdmin Init...");
         this.grid = document.querySelector('.nav-grid');
         if (!this.grid) return;
 
@@ -28,8 +44,8 @@ export const IndexAdmin = {
     },
 
     loadData() {
-        // 加载数据 (并加上时间戳防缓存)
-        fetch('data/index-cards.json?t=' + Date.now())
+        // 加载数据 (协商缓存：无变化时服务器返回 304，秒读本地缓存)
+        localFetch('data/index-cards.json', { cache: 'no-cache' })
             .then(res => res.json())
             .then(data => {
                 this.items = data;
@@ -60,6 +76,20 @@ export const IndexAdmin = {
         );
 
         this.render();
+
+        // 注册「解锁全部」按钮
+        mountUnlockAllButton({
+            source: 'index-cards.json',
+            getCount: () => countEncryptedDeep(this.items, null, isEncryptedRecord),
+            onUnlockAll: async () => {
+                const n = await unlockListDeep(this.items, null, isEncryptedRecord);
+                if (n > 0) {
+                    this.manager.updateSaveState();
+                    this.render();
+                }
+                return n;
+            }
+        });
     },
 
     render() {
@@ -67,6 +97,13 @@ export const IndexAdmin = {
         this.grid.innerHTML = '';
 
         this.items.forEach((item, index) => {
+            // ── 加密记录：渲染锁定占位卡片 ──
+            if (isEncryptedRecord(item)) {
+                const lockedCard = this._renderLockedCard(index);
+                this.grid.appendChild(lockedCard);
+                return;
+            }
+
             const card = document.createElement('div');
             // 获取管理员状态类 (选中/删除/普通)
             const stateClass = this.manager.getItemClass(index);
@@ -102,6 +139,7 @@ export const IndexAdmin = {
             card.onclick = (e) => {
                 // 如果点击的是操作按钮，不触发卡片点击
                 if (e.target.closest('.maers-admin-action-group')) return;
+                if (e.target.closest('.card-lock-btn')) return;
 
                 if (this.manager.selectedIndices.length > 0) {
                     e.preventDefault();
@@ -112,8 +150,6 @@ export const IndexAdmin = {
                     }
                 } else {
                     // 非排序模式：直接跳转链接 (用于测试)
-                    // 如果处于删除标记状态，也许应该阻止跳转？通常保持一致即可。
-                    // 只有当有有效链接时才跳转
                     if (item.url && item.url !== '#') {
                         window.location.href = item.url;
                     }
@@ -130,8 +166,15 @@ export const IndexAdmin = {
                 containerClass: 'nav-card-actions' // 自定义类名以便CSS微调
             });
 
-            // 手动微调按钮位置 (也可在CSS中定义 .nav-card-actions)
-            // inline styles removed to use admin-portal.css rules (top: 12px, right: 12px)
+            // 加锁按钮（独立注入，悬停时显示）
+            const lockBtn = document.createElement('span');
+            lockBtn.className = 'card-lock-btn maers-admin-btn';
+            setupLockActionButton(lockBtn, {
+                isLocked: Boolean(item._private_id),
+                title: item._private_id ? '取消此卡片的对外加密' : '对外加密此卡片',
+                onClick: (e) => { e.stopPropagation(); this.uiLock(index); }
+            });
+            btnContainer.appendChild(lockBtn);
 
             card.appendChild(btnContainer);
             this.grid.appendChild(card);
@@ -139,6 +182,21 @@ export const IndexAdmin = {
 
         // 渲染 "添加卡片" 按钮
         this.renderAddButton();
+        refreshUnlockAllButton();
+    },
+
+    /**
+     * 渲染加密记录的锁定占位卡片
+     * @param {number} index
+     * @returns {HTMLElement}
+     */
+    _renderLockedCard(index) {
+        return renderLockedCard({
+            className: 'nav-card locked-card',
+            label: '私密卡片',
+            onUnlock: () => this.uiUnlock(index),
+            onDelete: (e) => this.uiDelete(e, index)
+        });
     },
 
     renderAddButton() {
@@ -212,7 +270,7 @@ export const IndexAdmin = {
 
                 // Auto create page if URL changed
                 if (item.url && item.url !== oldUrl && item.url.endsWith('.html') && !item.url.startsWith('http') && !item.url.includes('/')) {
-                    fetch('/api/ensure_page', {
+                    localFetch('/api/ensure_page', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ filename: item.url, title: item.title })
@@ -260,7 +318,7 @@ export const IndexAdmin = {
             onSave: async (formData) => {
                 if (formData.url.endsWith('.html') && !formData.url.startsWith('http') && !formData.url.includes('/')) {
                     try {
-                        const pageRes = await fetch('/api/ensure_page', {
+                        const pageRes = await localFetch('/api/ensure_page', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ filename: formData.url, title: formData.title })
@@ -287,7 +345,7 @@ export const IndexAdmin = {
 
                 // Immediate save
                 try {
-                    const res = await fetch('/api/save_index_cards', {
+                    const res = await localFetch('/api/save_index_cards', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(this.items)
@@ -312,11 +370,46 @@ export const IndexAdmin = {
         });
     },
 
+    // --- 加锁 / 解锁 ---
+
+    /**
+     * 加锁：将指定索引的普通记录加密，替换为 { _enc: "enc:..." }
+     * @param {number} index
+     */
+    async uiLock(index) {
+        const wasPrivate = !!this.items[index]?._private_id;
+        const encRecord = await lockIndexCardRecord(this.items[index]);
+        if (!encRecord) return;
+
+        this.items[index] = encRecord;
+        this.manager.updateSaveState();
+        this.render();
+        Toast.success(wasPrivate ? '已取消对外加密' : '已设置对外加密，点击保存生效');
+    },
+
+    /**
+     * 解锁：将加密记录解密后恢复为普通记录
+     * @param {number} index
+     */
+    async uiUnlock(index) {
+        const encRecord = this.items[index];
+        if (!encRecord || !encRecord._enc) return;
+
+        const original = await unlockRecord(encRecord);
+        if (!original) return; // 密码错误或用户取消
+
+        this.items[index] = original;
+        this.manager.updateSaveState();
+        this.render();
+        Toast.success('🔓 已解密，点击保存生效');
+    },
+
     // --- 核心保存/取消 ---
 
     async performSave() {
-        // 过滤掉已标记删除的项
+        // 过滤掉已标记删除的项（加密记录没有 _deleted 字段，不受影响）
         const finalItems = this.items.filter(item => !item._deleted);
+
 
         // 检查是否有被删除的项关联了本地文件，并询问删除
         const deletedItems = this.items.filter(item => item._deleted);
@@ -326,7 +419,7 @@ export const IndexAdmin = {
 
                 if (confirmName === item.url) {
                     try {
-                        await fetch('/api/delete_page', {
+                        await localFetch('/api/delete_page', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ filename: item.url })
@@ -342,10 +435,8 @@ export const IndexAdmin = {
             }
         }
 
-        console.log("Saving items:", finalItems);
-
         try {
-            const res = await fetch('/api/save_index_cards', {
+            const res = await localFetch('/api/save_index_cards', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(finalItems)
@@ -380,3 +471,8 @@ export const IndexAdmin = {
 document.addEventListener('DOMContentLoaded', () => {
     IndexAdmin.init();
 });
+
+// ══════════════════════════════════════════════
+// 📋 更新日志编辑器
+// ══════════════════════════════════════════════
+

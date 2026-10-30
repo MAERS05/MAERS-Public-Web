@@ -4,7 +4,9 @@
  * @version 1.0.0 - ES6 Module
  */
 
-import { BatchItemManager, SaveButton } from '../../../data-manage/admin-base.module.js';
+import { Toast } from '../../../shared/toast.module.js';
+
+import { BatchItemManager, SaveButton } from '../../../data-manage/admin/admin-base.module.js';
 
 // Dependency injection
 let State = null;
@@ -211,7 +213,7 @@ export async function createCategory(refreshCallback) {
         }
     } catch (e) {
         console.error(e);
-        alert("保存失败: " + e.message);
+        Toast.error("保存失败: " + e.message);
     }
 
     refreshCallback();

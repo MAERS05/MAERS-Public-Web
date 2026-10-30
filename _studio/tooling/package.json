@@ -1,0 +1,16 @@
+{
+  "name": "maers-dev-tools",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "vendor:check": "node vendor-build.mjs --check",
+    "audit:a11y": "playwright test --config=playwright.accessibility.config.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "acorn": "8.19.0",
+    "prettier": "3.9.10"
+  }
+}

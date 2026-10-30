@@ -48,3 +48,8 @@
 *.xml text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+
+# Git hooks and deterministic tooling
+.githooks/* text eol=lf
+*.mjs text eol=lf
+_studio/tooling/vendor/vditor/*.js -text

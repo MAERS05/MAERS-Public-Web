@@ -3,6 +3,7 @@
  * @description CMS 标签系统 - API 通信层
  * @version 1.0.0
  */
+import { localFetch } from '../../../data-manage/api-client.module.js';
 
 export const TagsApi = {
     /**
@@ -13,7 +14,7 @@ export const TagsApi = {
      */
     async renameTag(moduleName, oldName, newName) {
         try {
-            const res = await fetch(`/api/cms/rename_tag?module=${moduleName}`, {
+            const res = await localFetch(`/api/cms/rename_tag?module=${moduleName}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ old_name: oldName, new_name: newName })
@@ -35,7 +36,7 @@ export const TagsApi = {
      */
     async deleteTag(moduleName, tagName) {
         try {
-            const res = await fetch(`/api/cms/delete_tag?module=${moduleName}`, {
+            const res = await localFetch(`/api/cms/delete_tag?module=${moduleName}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tag_name: tagName })
@@ -57,7 +58,7 @@ export const TagsApi = {
      */
     async saveCategories(moduleName, categories) {
         try {
-            const res = await fetch(`/api/cms/save_tag_categories?module=${moduleName}`, {
+            const res = await localFetch(`/api/cms/save_tag_categories?module=${moduleName}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(categories)
@@ -75,7 +76,7 @@ export const TagsApi = {
      */
     async cleanupTags(moduleName) {
         try {
-            const res = await fetch(`/api/cms/cleanup_tags?module=${moduleName}`, {
+            const res = await localFetch(`/api/cms/cleanup_tags?module=${moduleName}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({})
@@ -96,7 +97,7 @@ export const TagsApi = {
      */
     async getCategories(moduleName) {
         try {
-            const res = await fetch(`/api/cms/tag_categories?module=${moduleName}`);
+            const res = await localFetch(`/api/cms/tag_categories?module=${moduleName}`);
             if (res.ok) {
                 return await res.json();
             }

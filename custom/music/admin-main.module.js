@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MAERS Music Admin Main Entry (admin-main.js)
  * 管理页面入口文件 - 整合所�?Music 模块 + Admin 功能
  * @version 1.0.0 - ES6 Module Entry
@@ -6,8 +6,9 @@
 
 // 导入所有模块
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
+import { syncManager } from '../../data-manage/sync/sync-manager.module.js';
 import { DataProvider } from '../../data-manage/data-provider.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin-base.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin/admin-base.module.js';
 import { initLayout } from '../../shared/layout.module.js';
 import { initTheme } from '../../shared/theme.module.js';
 import { Player, playTrack, togglePlay, showTip, initPlayer } from './viewer/music-player-core.module.js';
@@ -67,6 +68,7 @@ function bindGlobalEvents() {
 
     // 2. Admin Button Bindings
     const bindAddButtons = () => {
+        syncManager.injectSyncButton(document.querySelector('.music-header-bar .right-icon'));
         const addBtns = document.querySelectorAll('.btn-add-entity');
         addBtns.forEach((btn, index) => {
             // Remove old listeners to be safe (though cloneNode is better, we just add here)

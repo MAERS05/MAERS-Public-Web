@@ -63,6 +63,4 @@
         touchStartX = null;
         touchStartY = null;
     });
-
-    console.log('[Mobile Adaptation] Literature touch events initialized.');
 })();

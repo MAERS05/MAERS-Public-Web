@@ -4,9 +4,22 @@
  * 依赖: AdminCore
  * @version 3.0.0 - ES6 Module
  */
+import { localFetch } from '../../../data-manage/api-client.module.js';
 
-import { AdminModal } from '../../../data-manage/admin-modal.module.js';
-import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin-base.module.js';
+import { AdminModal } from '../../../data-manage/admin/admin-modal.module.js';
+import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin/admin-base.module.js';
+import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+import {
+    mountUnlockAllButton,
+    refreshUnlockAllButton,
+    countEncryptedDeep,
+    lockAlbumCategoryFlow,
+    unlockAlbumCategoryFlow,
+    renderLockedCard,
+    cryptoIconHtml,
+    setupLockActionButton
+} from '../../../data-manage/encrypt/admin-lock.module.js';
+import { Toast } from '../../../shared/toast.module.js';
 
 // 依赖声明
 let AdminCore;
@@ -53,12 +66,29 @@ async function init() {
     }
 
     render();
+
+    // 注册「解锁全部」按钮
+    mountUnlockAllButton({
+        source: 'album-config.json',
+        getCount: () => countEncryptedDeep(currentData, null, isEncryptedRecord),
+        onUnlockAll: async () => {
+            let n = 0;
+            for (let i = 0; i < currentData.length; i++) {
+                if (!isEncryptedRecord(currentData[i])) continue;
+                const ok = await _unlockByIndex(i);
+                if (!ok) break;
+                n++;
+                i = -1; // 数据已重新加载，从头扫描
+            }
+            return n;
+        }
+    });
 }
 
 async function loadData() {
     if (!grid) return;
     try {
-        const res = await fetch(`data/album-config.json?v=${Date.now()}`);
+        const res = await localFetch('data/album-config.json', { cache: 'no-cache' });
         let initialData = [];
         if (res.ok) {
             initialData = await res.json();
@@ -85,7 +115,7 @@ async function handleSave() {
         if (btn) btn.textContent = 'Saving...';
 
         // 1. Delete Items marked as _deleted
-        const toDelete = currentData.filter(c => c._deleted);
+        const toDelete = currentData.filter(c => c._deleted && !isEncryptedRecord(c));
         for (let item of toDelete) {
             const confirmId = prompt(
                 `⚠️ 危险操作：是否一并删除物理文件夹？\n\n您删除了分类 "${item.title}"。\n若要同时彻底删除服务器上的图片目录 (photos/*/ ${item.id})，请在下方输入 ID 确认：\n\n(否则请直接点击“取消”或关闭窗口)`,
@@ -97,7 +127,7 @@ async function handleSave() {
                 if (Feedback) Feedback.notifyError("ID不匹配，物理目录已保留。");
             }
 
-            const res = await fetch('/api/delete_category', {
+            const res = await localFetch('/api/delete_category', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -117,9 +147,9 @@ async function handleSave() {
         }
 
         // 2. Sync Metadata
-        const remaining = currentData.filter(c => !c._deleted);
-        for (let item of remaining) {
-            await fetch('/api/update_category', {
+        const remaining = currentData.filter(c => isEncryptedRecord(c) || !c._deleted);
+        for (let item of remaining.filter(c => !isEncryptedRecord(c))) {
+            await localFetch('/api/update_category', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(item)
@@ -127,8 +157,8 @@ async function handleSave() {
         }
 
         // 3. Reorder 
-        const idList = remaining.map(c => c.id);
-        await fetch('/api/reorder_category', {
+        const idList = remaining.map(c => c.id || c._enc);
+        await localFetch('/api/reorder_category', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(idList)
@@ -145,7 +175,7 @@ async function handleSave() {
     } catch (e) {
         console.error(e);
         if (Feedback) Feedback.notifySaveFail();
-        else alert("保存失败");
+        else Toast.error("保存失败");
     }
 }
 
@@ -153,6 +183,12 @@ function render() {
     if (!grid) return;
     grid.innerHTML = '';
     currentData.forEach((cat, index) => {
+        // 加密记录：渲染锁定占位卡片
+        if (isEncryptedRecord(cat)) {
+            grid.appendChild(_renderLockedCategoryCard(index));
+            return;
+        }
+
         const card = document.createElement('div');
         // Get classes from manager
         const extraClasses = manager ? manager.getItemClass(index) : '';
@@ -188,8 +224,6 @@ function render() {
 
         // Admin Buttons (Unified Style)
         if (AdminButtonHelper) {
-            // 注意: 这里生成的按钮容器会使用 .maers-admin-action-group 类
-            // 我们额外添加 'admin-actions' 类以兼容可能的定位样式
             const adminEl = AdminButtonHelper.render({
                 index: index,
                 isDeleted: cat._deleted,
@@ -198,6 +232,17 @@ function render() {
                 onDelete: (e) => uiToggleDelete(e, index),
                 containerClass: 'admin-actions'
             });
+
+            // 加锁按钮
+            const lockBtn = document.createElement('span');
+            lockBtn.className = 'maers-admin-btn';
+            setupLockActionButton(lockBtn, {
+                isLocked: Boolean(cat._private_id),
+                title: cat._private_id ? '取消此相册的对外加密' : '对外加密此相册',
+                onClick: (e) => { e.stopPropagation(); uiLock(index); }
+            });
+            adminEl.appendChild(lockBtn);
+
             card.appendChild(adminEl);
         }
 
@@ -230,6 +275,7 @@ function render() {
     addBtn.onclick = addNewCategory;
     addBtn.innerHTML = `<div class="func-icon">＋</div><div class="func-text">ADD NEW CATEGORY</div>`;
     grid.appendChild(addBtn);
+    refreshUnlockAllButton();
 }
 
 // UI Bridges
@@ -241,6 +287,72 @@ export function uiToggleSelect(e, index) {
 export function uiToggleDelete(e, index) {
     e.stopPropagation();
     if (manager) manager.toggleDelete(index);
+}
+
+let _lockBusy = false;
+
+/**
+ * 加锁：委托 admin-lock 导出分类、前端加密并迁移至私有桶
+ */
+export async function uiLock(index) {
+    if (_lockBusy) return;
+    const original = currentData[index];
+    if (!original || isEncryptedRecord(original) || !original.id) return;
+    if (original._private_id) {
+        const { cancelProtection } = await import('../../../data-manage/encrypt/admin-lock.module.js');
+        if (await cancelProtection(original)) { await loadData(); render(); }
+        return;
+    }
+
+    if (!confirm(`加锁相册「${original.title}」将：\n` +
+        `1. 把全部图片迁入私有桶，并从公开桶与仓库删除\n` +
+        `2. 立即生效，无需点击保存（页面上未保存的修改将丢弃）\n` +
+        `继续？`)) return;
+
+    _lockBusy = true;
+    try {
+        if (await lockAlbumCategoryFlow(original.id)) {
+            await loadData();
+            render();
+            if (SaveButton) SaveButton.hide();
+        }
+    } catch (e) {
+        console.error(e);
+        Toast.error('加锁失败: ' + e.message);
+    } finally {
+        _lockBusy = false;
+    }
+}
+
+async function _unlockByIndex(index) {
+    if (_lockBusy) return false;
+    const enc = currentData[index];
+    if (!isEncryptedRecord(enc)) return false;
+
+    _lockBusy = true;
+    try {
+        if (await unlockAlbumCategoryFlow(enc)) {
+            await loadData();
+            render();
+            if (SaveButton) SaveButton.hide();
+            return true;
+        }
+        return false;
+    } catch (e) {
+        console.error(e);
+        Toast.error('解锁失败: ' + e.message);
+        return false;
+    } finally {
+        _lockBusy = false;
+    }
+}
+
+/**
+ * 解锁：解密后由服务端迁回公开桶与仓库（解锁即恢复公开）
+ */
+export async function uiUnlock(index) {
+    if (!confirm('解锁将把该相册的全部图片迁回公开桶与仓库，恢复为公开状态。继续？')) return;
+    await _unlockByIndex(index);
 }
 
 export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
@@ -310,7 +422,7 @@ export async function addNewCategory() {
             }
 
             try {
-                const res = await fetch('/api/add_category', {
+                const res = await localFetch('/api/add_category', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -350,11 +462,28 @@ export async function addNewCategory() {
     });
 }
 
+// ── 加密占位卡片辅助函数 ──
+
+/**
+ * 渲染加密相册分类的锁定占位卡片
+ * @param {number} index
+ * @returns {HTMLElement}
+ */
+function _renderLockedCategoryCard(index) {
+    return renderLockedCard({
+        className: 'category-card locked-card',
+        label: '私密相册',
+        onUnlock: () => uiUnlock(index)
+    });
+}
+
 // 导出 Admin 对象（向后兼容）
 export const AlbumAdmin = {
     init,
     uiToggleSelect,
     uiToggleDelete,
+    uiLock,
+    uiUnlock,
     uiEdit,
     addNewCategory
 };
