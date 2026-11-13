@@ -18,7 +18,7 @@ if (!document.getElementById('tag-drawer-context-menu-styles')) {
         .tag-menu-option.delete-option { color: #ff6b6b; }
         .tag-menu-option.delete-option:hover { background: rgba(255, 107, 107, 0.1); }
         .drawer-item.reorder-target-tag:hover { background: rgba(120, 255, 214, 0.2); }
-        .light-mode .tag-context-menu { background: #fff; border-color: rgba(0,0,0,0.1); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .light-mode .tag-context-menu { background: #fff; border-color: rgba(0,0,0,0.16); box-shadow: none; }
         .light-mode .tag-menu-option:hover { background: rgba(0,0,0,0.05); }
     `;
     document.head.appendChild(style);
@@ -46,7 +46,7 @@ export const TagsUI = {
         const menu = document.createElement('div');
         menu.className = 'tag-context-menu';
         // z-index must be higher than tag-drawer (10001)
-        menu.style.cssText = `position:fixed;left:-9999px;top:-9999px;background:var(--pill-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:4px 0;box-shadow:0 4px 12px rgba(0,0,0,0.3);z-index:10002;min-width:120px;`;
+        menu.style.cssText = `position:fixed;left:-9999px;top:-9999px;background:var(--pill-bg);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:4px 0;box-shadow:none;z-index:10002;min-width:120px;`;
 
         // Rename option
         const rename = document.createElement('div');

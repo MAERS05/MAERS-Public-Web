@@ -1,6 +1,8 @@
 /** 首页更新日志管理：读取、编辑分组和条目、保存及弹窗生命周期。 */
 import { localFetch } from '../../../data-manage/api-client.module.js';
 import { Toast } from '../../../shared/toast.module.js';
+import { isLocalOnlyUnavailable } from '../../../data-manage/admin/local-only.module.js';
+import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
 export function initChangelogEditor() {
     document.addEventListener('DOMContentLoaded', () => {
         // 等待 layout 注入后在顶栏找位置放按钮
@@ -49,24 +51,20 @@ function _injectAdminStyles() {
  * 打开更新日志编辑模态框
  */
 async function _openChangelogModal() {
-    // 优先从后端接口拉取，失败时降级读取静态文件
-    let logs = [];
+    const relayMode = isLocalOnlyUnavailable();
+    let logs;
     try {
-        const res = await localFetch('/api/changelog', { cache: 'no-cache' });
-        if (res.ok) {
-            logs = await res.json();
-        } else {
-            const fallbackRes = await localFetch('data/changelog.json', { cache: 'no-cache' });
-            if (fallbackRes.ok) logs = await fallbackRes.json();
+        const local = relayMode ? null : await localFetch('/api/changelog', { cache: 'no-cache' }).catch(() => null);
+        const res = local?.ok ? local : await localFetch('data/changelog.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        logs = await res.json();
+        if (relayMode) logs = await syncManager.loadDocument('changelog', logs, null, 'relay');
+        if (!Array.isArray(logs) || !logs.every(group => typeof group?.date === 'string' && Array.isArray(group.entries))) {
+            throw new Error('更新日志格式无效');
         }
     } catch (e) {
-        try {
-            const fallbackRes = await localFetch('data/changelog.json', { cache: 'no-cache' });
-            if (fallbackRes.ok) logs = await fallbackRes.json();
-        } catch (err) {
-            Toast.error('读取更新日志数据失败');
-            return;
-        }
+        Toast.error('读取更新日志数据失败');
+        return;
     }
 
     // 防止重复弹窗
@@ -83,7 +81,7 @@ async function _openChangelogModal() {
             <div class="cl-modal-header">
                 <div class="cl-header-title">
                     <span>更新日志管理</span>
-                    <span class="cl-header-sub">发布网站变动，前台将主动提示访客</span>
+                    <span class="cl-header-sub">${relayMode ? '修改先暂存，待电脑合并后发布' : '发布网站变动，前台将主动提示访客'}</span>
                 </div>
                 <button id="cl-close-btn" class="cl-close-btn" title="关闭">✕</button>
             </div>
@@ -111,7 +109,7 @@ async function _openChangelogModal() {
                 </div>
                 <div class="cl-footer-actions">
                     <button id="cl-cancel-btn" class="cl-btn-secondary">取消</button>
-                    <button id="cl-save-btn" class="cl-btn-primary">保存发布</button>
+                    <button id="cl-save-btn" class="cl-btn-primary">${relayMode ? '暂存修改' : '保存发布'}</button>
                 </div>
             </div>
         </div>
@@ -120,7 +118,7 @@ async function _openChangelogModal() {
     document.body.appendChild(overlay);
 
     // 深拷贝数据，用于本地修改缓冲
-    let workingLogs = JSON.parse(JSON.stringify(logs));
+    const workingLogs = structuredClone(logs);
 
     // 关闭弹窗
     const closeModal = () => overlay.remove();
@@ -179,23 +177,18 @@ async function _openChangelogModal() {
         saveBtn.textContent = '保存中...';
 
         try {
-            const res = await localFetch('/api/save_changelog', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(workingLogs)
+            const result = await syncManager.writeDocument('changelog', workingLogs, {
+                base: logs, mode: relayMode ? 'relay' : 'local'
             });
-
-            if (res.ok) {
-                Toast.success('更新日志已成功保存！');
+            if (result.success) {
+                if (!relayMode) Toast.success('更新日志已成功保存！');
                 closeModal();
-            } else {
-                Toast.error('保存失败，请确认后端 Studio 服务正在运行');
             }
         } catch (e) {
             Toast.error('网络请求失败: ' + e.message);
         } finally {
             saveBtn.disabled = false;
-            saveBtn.textContent = '保存发布';
+            saveBtn.textContent = relayMode ? '暂存修改' : '保存发布';
         }
     };
 }
@@ -219,7 +212,7 @@ function _renderChangelogList(logs) {
     return logs.map((group, gi) => `
         <div class="cl-group-card">
             <div class="cl-group-header">
-                <span class="cl-group-date-badge">${group.date}</span>
+                <span class="cl-group-date-badge">${_escHtml(group.date)}</span>
                 <button class="cl-group-del-btn" data-gi="${gi}" title="删除此日全部记录">删除整日</button>
             </div>
             <ul class="cl-entry-list">

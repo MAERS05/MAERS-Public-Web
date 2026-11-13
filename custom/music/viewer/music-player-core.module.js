@@ -111,6 +111,11 @@ export async function playTrack(bvid, page, total, catIdx, colIdx, albIdx, uiEle
     }
 
     Player.currentPlaying = { bvid, page, total, catIdx, colIdx, albIdx, duration, trackIdx };
+    const category = UI?.libraryData?.[catIdx];
+    const collection = category?.collections?.[colIdx];
+    if (category?._private || collection?._private || collection?.albums?.[albIdx]?._private) {
+        Player.currentPlaying.privateContent = true;
+    }
 
     if (UI) {
         UI.currentCatIndex = catIdx;
@@ -303,9 +308,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 });
-
-// 保留全局函数供 HTML 调用
-
 
 // 将函数挂载到 Player 对象上
 Player.playTrack = playTrack;

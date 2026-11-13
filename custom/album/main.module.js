@@ -5,6 +5,7 @@
 
 // 0. Shared Utilities (Required for Layout/Theme safety)
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
+import { photoCategoryPath } from '../../shared/photos-url.module.js';
 import { isEncryptedRecord } from '../../data-manage/encrypt/crypto.module.js';
 import { revealInPlace } from '../../data-manage/encrypt/secret-unlock.module.js';
 
@@ -37,7 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Error loading album config:', err);
     }
 
-    // 已有会话密钥时，在内存中还原密文分类
+    // 已通过隐藏入口解锁时，在内存中还原密文分类
     await revealInPlace(CATEGORY_CONFIG, { transform: (plain) => plain.category || plain });
 
     // 2. Render Header
@@ -58,7 +59,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Construct Link
         // Propagate 'mode' if present in current URL to maintain theme consistency (optional but good practice)
         const currentMode = new URLSearchParams(window.location.search).get('mode');
-        const url = `photos.html?id=${cat.id}${currentMode ? `&mode=${currentMode}` : ''}`;
+        const url = `${photoCategoryPath(cat)}${currentMode ? `?mode=${encodeURIComponent(currentMode)}` : ''}`;
 
         a.href = url;
         a.className = `category-card ${cat.style_class || ''}`;
@@ -69,7 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         a.style.animationDelay = `${index * -1}s`;
 
         a.innerHTML = `
-            <div class="card-bg-glow"></div>
             <div class="card-icon">${cat.icon}</div>
             <div class="text-group">
                 <div class="card-title">${cat.title}</div>

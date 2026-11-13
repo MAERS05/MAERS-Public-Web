@@ -1,7 +1,7 @@
 /**
  * MAERS Service Worker - Global Cache & Version Controller
  * 
- * 作用：拦截浏览器的网络请求，在 URL 后附加版本号参数，穿透 Cloudflare/浏览器 缓存。
+ * 作用：为静态资源附加缓存版本号，页面导航保持干净地址。
  * 注意：此文件只控制【前端文件】的缓存（JS/CSS/JSON/HTML），后端 Python 文件不经过浏览器，无需管理。
  * 
  * ┌──────────────────────────────────────────────────────────────────┐
@@ -38,7 +38,7 @@ const VERSION_CONFIG = {
     // 📅 全局默认版本（兜底，优先级最低）
     // 大版本发布时修改这里
     // ════════════════════════════════════════════
-    default: '2026.1103-0001',
+    default: '2026.1103-0002',
 
     // ════════════════════════════════════════════
     // 📦 分组版本（推荐日常使用 ⭐）
@@ -48,13 +48,13 @@ const VERSION_CONFIG = {
     groups: {
         // 🎨 全局样式 (CSS)
         styles: {
-            version: '2',   // ← 改了 CSS？把这个数字 +1
+            version: '3',   // ← 改了 CSS？把这个数字 +1
             paths: ['static-style/', 'custom/zmobile adaptation/', 'plugins/vditor-assets/', 'ui/']
         },
         // 📝 CMS 核心内容管理
         cms: {
             version: '3',   // ← 改了 CMS？把这个数字 +1
-            paths: ['custom/cms/']
+            paths: ['custom/cms/', 'admin-cms.html', 'notes.html', 'record.html', 'games.html', 'literature.html', 'videos.html']
         },
         // 📚 文学模块
         literature: {
@@ -79,7 +79,7 @@ const VERSION_CONFIG = {
         // 🎵 音乐模块
         music: {
             version: '2',
-            paths: ['custom/music/', 'data/music-data.json']
+            paths: ['custom/music/', 'data/music-data.json', 'music.html', 'admin-music.html']
         },
         // 🎬 影视模块
         videos: {
@@ -94,7 +94,7 @@ const VERSION_CONFIG = {
         // 🛠️ 基础设施 (shared + data-manage)
         shared: {
             version: '3',
-            paths: ['shared/', 'data-manage/', 'custom/zmobile localization/', 'custom/admin-portal/']
+            paths: ['shared/', 'data-manage/', 'custom/zmobile localization/', 'custom/admin-portal/', 'plugins/ui-components/']
         },
         // 🌌 空间模块
         space: {
@@ -104,7 +104,7 @@ const VERSION_CONFIG = {
         // 🏠 首页
         index: {
             version: '2',
-            paths: ['custom/index/', 'data/index-cards.json']
+            paths: ['index.html', 'custom/index/', 'data/index-cards.json']
         }
     },
 
@@ -130,6 +130,7 @@ const VERSION_CONFIG = {
 };
 
 const CACHE_NAME = `maers-cache-${VERSION_CONFIG.default}`;
+const LEGACY_CACHE_NAME = 'maers-cache-offline';
 
 // 监听安装事件
 self.addEventListener('install', (event) => {
@@ -142,7 +143,10 @@ self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         // 清理结束后通知页面，避免 controllerchange 早于缓存清理导致状态残留。
         const cacheNames = await caches.keys();
-        await Promise.all(cacheNames.filter(name => name !== CACHE_NAME).map(name => caches.delete(name)));
+        const outdated = cacheNames.filter(name => name.startsWith('maers-cache-') &&
+            name !== CACHE_NAME && name !== LEGACY_CACHE_NAME);
+        await Promise.all(outdated.map(name => caches.delete(name)));
+        await caches.open(CACHE_NAME);
         await clients.claim();
         const pages = await clients.matchAll({ type: 'window' });
         pages.forEach(page => page.postMessage({ type: 'MAERS_CACHE_CLEANED' }));
@@ -154,6 +158,7 @@ self.addEventListener('activate', (event) => {
  * 优先级: files > groups > default
  */
 function resolveVersion(pathname) {
+    try { pathname = decodeURI(pathname); } catch { /* 非法编码使用原路径。 */ }
     // 1. 最高优先级：单文件精确匹配
     for (const [path, ver] of Object.entries(VERSION_CONFIG.files)) {
         if (pathname.endsWith(path)) {
@@ -163,7 +168,7 @@ function resolveVersion(pathname) {
 
     // 2. 中优先级：分组前缀匹配
     // 去掉开头的 / 以便与配置的相对路径匹配
-    const relativePath = pathname.startsWith('/') ? pathname.slice(1) : pathname;
+    const relativePath = pathname.replace(/^\//, '') || 'index.html';
     for (const [groupName, group] of Object.entries(VERSION_CONFIG.groups)) {
         for (const prefix of group.paths) {
             if (relativePath.startsWith(prefix)) {
@@ -176,48 +181,69 @@ function resolveVersion(pathname) {
     return VERSION_CONFIG.default;
 }
 
+/** 版本精确匹配优先，站内查询参数可回退到已下载的原路径。 */
+async function readOffline(versioned, original, isPage) {
+    const keys = new Set([versioned.href, original.href]);
+    if (original.origin === location.origin && original.search) {
+        keys.add(original.origin + original.pathname);
+    }
+    if (isPage) {
+        const pathname = /^\/photos\/[^/]+\/?$/.test(original.pathname) ? '/photos.html' :
+            original.pathname.replace(/\/$/, '') || '/index.html';
+        const page = pathname.includes('.') ? pathname : pathname + '.html';
+        keys.add(new URL(page, location.origin).href);
+        keys.add(new URL('/index.html', location.origin).href);
+    }
+    for (const key of keys) {
+        for (const cacheName of [CACHE_NAME, LEGACY_CACHE_NAME]) {
+            const cached = await caches.match(key, { cacheName, ignoreVary: true });
+            if (cached) return isPage ? new Response(cached.body, {
+                status: cached.status, statusText: cached.statusText, headers: cached.headers
+            }) : cached;
+        }
+    }
+    return new Response('Offline', { status: 503 });
+}
+
 // 监听所有网络请求
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
+    const isPage = event.request.mode === 'navigate' || event.request.destination === 'document' ||
+        Boolean(event.request.headers.get('accept')?.includes('text/html'));
 
-    if (url.origin === location.origin) {
+    const remoteMedia = url.origin !== location.origin && url.protocol === 'https:' &&
+        /^\/(?:photos\/(?:images|previews|thumbnails)\/|markdown\/.+\.md$)/.test(url.pathname);
+    if (url.origin === location.origin || remoteMedia) {
 
-        // 排除非 GET、API 请求、上传接口、SW 自身、已带版本号的请求
+        // 排除非 GET、API 请求、上传接口、SW 自身和已版本化的资源请求。
         if (event.request.method !== 'GET' ||
+            event.request.headers.has('X-MAERS-Token') ||
             url.pathname.startsWith('/api/') ||
             url.pathname === '/upload' ||
             url.pathname === '/delete' ||
             url.pathname === '/reorder' ||
             url.pathname.includes('sw.js') ||
-            url.searchParams.has('maers_ver')) {
+            (!isPage && url.searchParams.has('maers_ver'))) {
             return;
         }
 
         // 确定版本号并构造 Cache Busting URL
         const version = resolveVersion(url.pathname);
         const newUrl = new URL(url.toString());
-        newUrl.searchParams.set('maers_ver', version);
+        if (isPage) newUrl.searchParams.delete('maers_ver');
+        else if (!remoteMedia) newUrl.searchParams.set('maers_ver', version);
+        const revalidate = ['no-cache', 'no-store'].includes(event.request.cache);
 
         event.respondWith(
             fetch(newUrl, {
                 method: event.request.method,
                 headers: event.request.headers,
                 mode: 'cors',
-                credentials: event.request.credentials
-            }).catch(() => {
-                // 离线：先查版本化 URL（下载按钮存的），再查原始 URL
-                const matchOpts = { ignoreVary: true, ignoreSearch: true };
-                return caches.match(newUrl.toString(), matchOpts)
-                    .then(c => c || caches.match(event.request, matchOpts))
-                    .then(c => c || caches.match(url.href, matchOpts))
-                    .then(c => {
-                        if (c) return c;
-                        if (event.request.headers.get('accept')?.includes('text/html')) {
-                            return caches.match('/index.html', matchOpts);
-                        }
-                        return new Response('Offline', { status: 503 });
-                    });
-            })
+                redirect: event.request.redirect,
+                cache: revalidate ? event.request.cache : 'default',
+                // 公开 CDN 使用通配 CORS，不能沿用 img 请求的 include 凭据模式。
+                credentials: remoteMedia ? 'omit' : event.request.credentials
+            }).catch(() => readOffline(newUrl, url, isPage))
         );
     }
 });

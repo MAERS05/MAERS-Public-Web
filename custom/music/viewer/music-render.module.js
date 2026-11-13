@@ -6,6 +6,7 @@
  */
 
 import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+import { disableAdminControl, isLocalOnlyUnavailable } from '../../../data-manage/admin/local-only.module.js';
 import { renderLockedCard, cryptoIconHtml, setupLockActionButton } from '../../../data-manage/encrypt/admin-lock.module.js';
 
 let UI, Admin, Player, Utils, AdminCore;
@@ -96,8 +97,8 @@ export function renderCategories() {
             const lockBtn = document.createElement('span');
             lockBtn.className = 'maers-admin-btn';
             setupLockActionButton(lockBtn, {
-                isLocked: Boolean(cat._private_id),
-                title: cat._private_id ? '取消此分类的对外加密' : '对外加密此分类',
+                isLocked: Boolean(cat._private_id || cat._cloudEnvelope),
+                title: '对外加密此分类',
                 onClick: (e) => { e.stopPropagation(); Admin.uiLock(0, index); }
             });
             actionsEl.appendChild(lockBtn);
@@ -191,8 +192,8 @@ export function renderCollections(catIndex) {
             const lockBtn = document.createElement('span');
             lockBtn.className = 'maers-admin-btn';
             setupLockActionButton(lockBtn, {
-                isLocked: Boolean(col._private_id),
-                title: col._private_id ? '取消此合集的对外加密' : col._private ? '随上级对外加密' : '对外加密此合集',
+                isLocked: Boolean(col._private_id || col._cloudEnvelope),
+                title: col._private ? '随上级对外加密' : '对外加密此合集',
                 onClick: (e) => { e.stopPropagation(); Admin.uiLock(1, index); }
             });
             actionsEl.appendChild(lockBtn);
@@ -317,8 +318,8 @@ export function renderAlbums(catIndex, colIndex) {
             const lockBtn2 = document.createElement('span');
             lockBtn2.className = 'maers-admin-btn';
             setupLockActionButton(lockBtn2, {
-                isLocked: Boolean(album._private_id),
-                title: album._private_id ? '取消此专辑的对外加密' : album._private ? '随上级对外加密' : '对外加密此专辑',
+                isLocked: Boolean(album._private_id || album._cloudEnvelope),
+                title: album._private ? '随上级对外加密' : '对外加密此专辑',
                 onClick: (e) => { e.stopPropagation(); Admin.uiLock(2, albIndex); }
             });
             actionsEl.appendChild(lockBtn2);
@@ -328,7 +329,11 @@ export function renderAlbums(catIndex, colIndex) {
             resetBtn.className = 'maers-admin-btn';
             resetBtn.title = '还原所有原始分P';
             resetBtn.textContent = '↺';
-            resetBtn.onclick = (e) => Admin.uiResetTracks(e, catIndex, colIndex, albIndex);
+            if (isLocalOnlyUnavailable()) {
+                disableAdminControl(resetBtn, '还原原始分 P 需要电脑本地后台获取 B 站信息');
+            } else {
+                resetBtn.onclick = (e) => Admin.uiResetTracks(e, catIndex, colIndex, albIndex);
+            }
 
             // 插入到删除按钮之前
             if (actionsEl.children.length > 0) {

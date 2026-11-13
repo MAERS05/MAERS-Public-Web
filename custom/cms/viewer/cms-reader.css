@@ -49,12 +49,12 @@
   cursor: zoom-in;
   display: inline-block;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 .markdown-body img:hover {
   transform: scale(1.05);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   opacity: 0.95;
 }
 
@@ -164,7 +164,7 @@
   background: rgba(10, 10, 12, 0.85); /* 悬浮深色遮罩 */
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+  box-shadow: none;
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s;
   display: block;
   /* hide scrollbar standard */
@@ -173,7 +173,7 @@
 
 .light-mode .reader-outline-panel {
   background: rgba(242, 240, 235, 0.85);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.05);
+  box-shadow: none;
 }
 
 .reader-outline-panel.collapsed {
@@ -269,14 +269,14 @@ html.light-mode .immersive-layer,
   background: rgba(15, 18, 25, 0.8) !important;
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
   z-index: 1010;
 }
 
 html.light-mode .reader-toolbar,
 .light-mode .reader-toolbar {
   background: rgba(255, 255, 255, 0.88) !important;
-  border-bottom-color: rgba(15, 23, 42, 0.07) !important;
+  border-bottom-color: rgba(15, 23, 42, 0.16) !important;
 }
 
 .reader-scroll-area {
@@ -294,16 +294,16 @@ html.light-mode .reader-toolbar,
   box-sizing: border-box;
   border-radius: 14px;
   background: #131720;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: none;
   color: #e2e8f0;
 }
 
 html.light-mode .paper-sheet,
 .light-mode .paper-sheet {
   background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.07);
-  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  box-shadow: none;
   color: #000000;
 }
 
@@ -316,7 +316,7 @@ html.light-mode .paper-sheet,
   width: 256px;
   flex-shrink: 0;
   z-index: 1000;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
   overflow-y: auto;
   overflow-x: hidden;
   padding: 28px 14px;
@@ -332,7 +332,7 @@ html.light-mode .paper-sheet,
 html.light-mode .reader-outline-panel,
 .light-mode .reader-outline-panel {
   background: rgba(255, 255, 255, 0.72);
-  border-right-color: rgba(15, 23, 42, 0.07);
+  border-right-color: rgba(15, 23, 42, 0.16);
   box-shadow: none;
 }
 
@@ -367,18 +367,27 @@ html.light-mode .reader-outline-panel,
   line-height: 1.4;
   color: rgba(226, 232, 240, 0.76);
   cursor: pointer;
-  border-radius: 0 8px 8px 0;
-  border-left: 2px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  border-left: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: all 0.18s ease;
+  transition: background-color 0.18s ease, color 0.18s ease, border-left-color 0.18s ease;
+}
+
+.outline-item.outline-level-2 {
+  border-radius: 0 8px 8px 0;
+  border-left: 2px solid rgba(255, 255, 255, 0.15);
 }
 
 html.light-mode .outline-item,
 .light-mode .outline-item {
   color: #475569;
-  border-left-color: rgba(15, 23, 42, 0.1);
+}
+
+html.light-mode .outline-item.outline-level-2,
+.light-mode .outline-item.outline-level-2 {
+  border-left-color: rgba(15, 23, 42, 0.16);
 }
 
 .outline-item:hover {
@@ -398,7 +407,6 @@ html.light-mode .outline-item:hover,
   background: rgba(56, 189, 248, 0.12);
   color: #38bdf8;
   border-left-color: #38bdf8;
-  font-weight: 600;
 }
 
 html.light-mode .outline-item.active,
@@ -408,8 +416,8 @@ html.light-mode .outline-item.active,
   border-left-color: #0284c7;
 }
 
-.outline-level-1 { padding-left: 12px; font-weight: 600; }
-.outline-level-2 { padding-left: 22px; }
+.outline-level-1 { padding-left: 8px; font-weight: 600; }
+.outline-level-2 { margin-left: 8px; padding-left: 10px; }
 .outline-level-3 { padding-left: 34px; font-size: 0.84rem; }
 .outline-level-4 { padding-left: 46px; font-size: 0.82rem; }
 .outline-level-5 { padding-left: 58px; font-size: 0.8rem; }
@@ -417,7 +425,7 @@ html.light-mode .outline-item.active,
 
 .outline-btn {
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   width: 34px;
   height: 34px;
   margin-right: 10px;
@@ -427,7 +435,7 @@ html.light-mode .outline-item.active,
 html.light-mode .outline-btn,
 .light-mode .outline-btn {
   background: rgba(15, 23, 42, 0.04);
-  border-color: rgba(15, 23, 42, 0.1);
+  border-color: rgba(15, 23, 42, 0.16);
 }
 
 .outline-btn:hover,
@@ -483,7 +491,7 @@ html.light-mode .outline-btn.active,
   border-color: rgba(255, 255, 255, 0.24) !important;
   color: #bae6fd !important;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+  box-shadow: none;
 }
 
 .markdown-body a.cms-doc-pill--cross,
@@ -498,7 +506,7 @@ html.light-mode .outline-btn.active,
   background: rgba(167, 139, 250, 0.18);
   border-color: rgba(167, 139, 250, 0.5) !important;
   color: #ddd6fe !important;
-  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+  box-shadow: none;
 }
 
 .cms-pill-icon {

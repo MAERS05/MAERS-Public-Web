@@ -35,6 +35,7 @@ initView(Controller, null, AdminCore);
 
 // --- Frontend Adapter Setup (Identical to Admin-Main) ---
 document.addEventListener('DOMContentLoaded', async () => {
+    await Controller.resolveCategory();
     // 1. Setup Adapter (Viewer Mode: IS_ADMIN = false)
     const adapterResult = setupPhotosAdapter(applyTagFilters, Controller, null, {
         initialState: { IS_ADMIN: false }

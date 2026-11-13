@@ -83,7 +83,7 @@
     border: 1px solid var(--pill-border);
     font-size: 14px !important;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: none;
+    box-shadow:none;
     /* 强制去除白昼/黑夜下的一切阴影 */
 }
 
@@ -97,7 +97,7 @@
     outline: none;
     background: #121212;
     /* 使用实色背景遮挡下方图形 */
-    box-shadow: none;
+    box-shadow:none;
     /* 强制去聚焦阴影 */
 }
 
@@ -141,9 +141,9 @@ html.light-mode .search-input:focus {
     position: relative;
     height: 200px;
     background: var(--pill-bg);
-    border: none;
+    border: 1px solid var(--pill-border);
     border-radius: 24px;
-    box-shadow: var(--pill-shadow);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -159,7 +159,7 @@ html.light-mode .search-input:focus {
 .space-card:hover {
     transform: translateY(-5px);
     background: var(--pill-hover-bg);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
 }
 
 .header-title img {
@@ -252,7 +252,7 @@ html.light-mode .search-input:focus {
     background: rgba(255, 255, 255, 0.08);
     /* CMS Default */
     color: var(--text-sub);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     /* Slightly Adjusted */
 }
 
@@ -260,7 +260,7 @@ html.light-mode .search-input:focus {
     transform: scale(1.05);
     background: rgba(255, 255, 255, 0.15);
     color: var(--text-main);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
     opacity: 1;
     /* Override opacity from base */
 }
@@ -269,7 +269,7 @@ html.light-mode .search-input:focus {
     background: #78ffd6;
     color: #000;
     font-weight: bold;
-    box-shadow: 0 0 10px rgba(120, 255, 214, 0.6);
+    box-shadow: none;
     transform: scale(1.1);
     opacity: 1;
     border-color: transparent;
@@ -289,5 +289,5 @@ html.light-mode .search-input:focus {
     /* Slight tint on hover only */
     border-color: rgba(0, 0, 0, 0.3);
     color: #000;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    box-shadow: none;
 }

@@ -85,14 +85,14 @@
         max-width: 100% !important;
         width: 100% !important;
         border-radius: 12px !important;
-        border: 1px solid rgba(15, 23, 42, 0.07) !important;
-        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04) !important;
+        border: 1px solid rgba(15, 23, 42, 0.16) !important;
+        box-shadow: none !important;
         box-sizing: border-box !important;
     }
 
     html:not(.light-mode) body .paper-sheet {
-        border: 1px solid rgba(255, 255, 255, 0.07) !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: none !important;
     }
 
     body .cms-diagram-card:not(.cms-diagram-card--fullscreen),
@@ -102,10 +102,10 @@
     body .language-echarts:not(.cms-diagram-card--fullscreen) {
         margin: 12px 0 !important;
         padding: 0 !important;
-        border: 1px solid rgba(15, 23, 42, 0.1) !important;
+        border: 1px solid rgba(15, 23, 42, 0.16) !important;
         border-radius: 8px !important;
         background: transparent !important;
-        box-shadow: none !important;
+        box-shadow:none !important;
         overflow: hidden !important;
         height: 320px !important;
     }
@@ -115,7 +115,7 @@
     html:not(.light-mode) body .language-markmap,
     html:not(.light-mode) body .language-mermaid,
     html:not(.light-mode) body .language-echarts {
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
     }
 
     /* Markdown Content Responsive Styles */
@@ -170,20 +170,6 @@
         height: auto;
     }
 
-    body .header-tools-row .search-box {
-        flex: 1 1 100px;
-        min-width: 0;
-    }
-
-    body .header-tools-row .search-box .search-input,
-    body .header-tools-row .search-box .search-input:focus {
-        box-sizing: border-box;
-        width: 100%;
-        min-width: 0;
-        max-width: 100%;
-        flex: 1 1 0;
-    }
-
     body .header-tools-row .tag-toggle-btn {
         display: inline-flex;
         align-items: center;
@@ -230,7 +216,6 @@
         display: inline-flex;
         align-items: center;
         gap: 4px;
-        margin-right: 4px !important;
     }
 
     /* 3. Grid Admin Action Group Touch Targets */
@@ -328,12 +313,12 @@
     left: 0;
     width: 260px;
     background: rgba(15, 18, 25, 0.95);
-    box-shadow: 12px 0 36px rgba(0, 0, 0, 0.45);
+    box-shadow: none;
   }
   html.light-mode .reader-outline-panel,
   .light-mode .reader-outline-panel {
     background: rgba(255, 255, 255, 0.96);
-    box-shadow: 12px 0 36px rgba(15, 23, 42, 0.1);
+    box-shadow: none;
   }
   .reader-outline-panel.collapsed {
     width: 260px;

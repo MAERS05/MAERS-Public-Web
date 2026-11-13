@@ -13,10 +13,13 @@
           "vditorFlowchartScript",
         ).then(function () {
           n.forEach(function (e) {
-            if ("true" !== e.getAttribute("data-processed")) {
-              var t = flowchart.parse(i.flowchartRenderAdapter.getCode(e));
+            if (e.isConnected !== false && "true" !== e.getAttribute("data-processed")) {
+              const source = i.flowchartRenderAdapter.getCode(e).trim();
+              if (!source) return;
+              var t = flowchart.parse(source);
               ((e.innerHTML = ""),
                 t.drawSVG(e),
+                e.setAttribute("data-diagram-sig", "flowchart:" + source),
                 e.setAttribute("data-processed", "true"),
                 window.__mountDiagramFsBtn && window.__mountDiagramFsBtn(e));
             }

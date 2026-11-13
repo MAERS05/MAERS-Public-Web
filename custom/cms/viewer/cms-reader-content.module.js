@@ -1,6 +1,7 @@
 /** MAERS 阅读器内容：Markdown 预处理、链接增强、任务状态和锚点导航。 */
 import { Utils } from '../../../shared/utils.module.js';
 import { Toast } from '../../../shared/toast.module.js';
+import { draftPhotoUrl } from '../../../data-manage/data-provider.module.js';
 import { mountDiagramFullscreenButton as _mountDiagramFullscreenButton } from './cms-diagrams.module.js';
 
 // 现代文档胶囊 SVG 图标
@@ -28,8 +29,13 @@ export function preprocessMarkdown(mdText) {
 
     const codeSlots = [];
     const protectedText = mdText.replace(/(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`)/g, (match) => {
+        // 将 ```mindmap-both / ```mindmap both 等方向标记归一化为代码块内注释指令，交由导图引擎按标记分流
+        const normalized = match.replace(
+            /^(`{3,}|~{3,})[ \t]*(mindmap|markmap)(?:-(both|lr|tb)|[ \t]+(?:direction[ \t]*:[ \t]*)?(both|lr|tb))[ \t]*(\r?\n)/i,
+            (_, fence, type, hyphenDir, spaceDir, nl) => `${fence}${type.toLowerCase()}${nl}%% direction: ${(hyphenDir || spaceDir).toLowerCase()}${nl}`
+        );
         const token = `\u0000CMS_CODE_SLOT_${codeSlots.length}\u0000`;
-        codeSlots.push(match);
+        codeSlots.push(normalized);
         return token;
     });
 
@@ -37,6 +43,8 @@ export function preprocessMarkdown(mdText) {
         // 1. Markdown 与 HTML 图片路径归一化，兼容 Typora 本地相对路径与网页端根路径
         .replace(/\]\((?:(?:\.\.\/)+|\/)photos\//g, '](photos/')
         .replace(/(<img\b[^>]*?\bsrc=["'])(?:(?:\.\.\/)+|\/)photos\//gi, '$1photos/')
+        .replace(/(\]\(|<img\b[^>]*?\bsrc=["'])(photos\/images\/[^\s"'<>\)]+)/gi,
+            (_, prefix, key) => prefix + (draftPhotoUrl(key) || key))
         // 2. 站内双链语法转换（忽略 ![[图片]] 语法）
         .replace(/(!?)\[\[([^\]|\n]+?)(?:\|([^\]\n]+?))?\]\]/g, (full, bang, target, alias) => {
             if (bang === '!') return full;
@@ -154,6 +162,7 @@ export function bindInteractiveTasks(container, node, module) {
 }
 
 function _enhanceReaderLink(a) {
+    if (a.getAttribute('data-mindmap-link') === 'true') return;
     const href = (a.getAttribute('href') || '').trim();
     if (!href) return;
     // A linked image is content, not a text-only document chip.

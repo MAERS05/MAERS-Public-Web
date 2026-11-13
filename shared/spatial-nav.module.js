@@ -62,7 +62,7 @@ function createCardElement(data) {
 function createBrandHeader() {
     const header = u('div', 'spatial-brand-header');
     header.innerHTML = `
-        <img src="ui/index.svg" alt="Logo" class="spatial-brand-logo" />
+        <img src="ui/index.svg" alt="Logo" class="spatial-brand-logo" data-logo-unlock draggable="false" />
         <div class="spatial-brand-title">
             <span class="spatial-interactive" data-link="me.html">MAERS</span>
             <span class="spatial-interactive" data-link="space.html">SPACE</span>

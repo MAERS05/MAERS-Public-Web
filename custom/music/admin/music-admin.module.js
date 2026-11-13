@@ -4,6 +4,7 @@
  * @version 4.0.0 - ES6 Module
  */
 import { Toast } from '../../../shared/toast.module.js';
+import { isRelayMode } from '../../../data-manage/admin/local-only.module.js';
 
 import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
 import { lockRecord, unlockRecord, mountUnlockAllButton, refreshUnlockAllButton, unlockListDeep, countEncryptedDeep } from '../../../data-manage/encrypt/admin-lock.module.js';
@@ -79,7 +80,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 cleanDeletedItems(UI.libraryData);
 
                 if (UI.saveData) {
-                    await UI.saveData();
+                    // 保存失败时保留编辑内容与保存条，由调用方显示失败而不是成功
+                    if (!(await UI.saveData())) return false;
                     Object.values(managers).forEach(m => m && m.clearSelection());
                     if (UI.refreshCurrentView) UI.refreshCurrentView();
                     if (AdminCore.Feedback) AdminCore.Feedback.notifySaveSuccess();
@@ -108,6 +110,30 @@ function cleanDeletedItems(list) {
             if (list[i].collections) cleanDeletedItems(list[i].collections);
             if (list[i].albums) cleanDeletedItems(list[i].albums);
         }
+    }
+}
+
+/**
+ * 获取 B 站视频信息：本地走后端代理。
+ * 云端没有 B 站代理，改为手动录入标题与分P数，时长留空待电脑端刷新。
+ */
+async function loadBiliInfo(bvid) {
+    try {
+        const response = await fetch(`${API_BASE}/api/get_bili_info?bvid=${encodeURIComponent(bvid)}`);
+        if (!response.ok) throw new Error(`获取 B 站信息失败 (HTTP ${response.status})`);
+        const info = await response.json();
+        if (!Array.isArray(info?.pages)) throw new Error('B 站信息格式无效');
+        return info;
+    } catch (error) {
+        if (!isRelayMode()) throw error;
+        const title = prompt("云端无法获取 B 站信息，请手动输入标题：");
+        if (!title) throw error;
+        const count = parseInt(prompt("分P数量：", "1"), 10);
+        if (!(count >= 1)) throw error;
+        return {
+            title, duration: 0,
+            pages: Array.from({ length: count }, (_, index) => ({ page: index + 1, part: `P${index + 1}`, duration: 0 }))
+        };
     }
 }
 
@@ -161,7 +187,7 @@ export async function uiLock(level, index) {
     const original = mgr.list[index];
     if (!original || isEncryptedRecord(original)) return;
 
-    const enc = await lockRecord(original);
+    const enc = await lockRecord(original, { choose: true });
     if (!enc) return;
 
     mgr.list[index] = enc;
@@ -219,8 +245,7 @@ async function handleComplexEdit(alb, mgr) {
     if (newBvid && newBvid !== alb.bvid) {
         // Fetch new info
         try {
-            const response = await fetch(`${API_BASE}/api/get_bili_info?bvid=${newBvid}`);
-            const info = await response.json();
+            const info = await loadBiliInfo(newBvid);
             const newTitle = prompt("修改标题:", info.title) || info.title;
             alb.bvid = newBvid;
             alb.title = newTitle;
@@ -287,8 +312,7 @@ export async function uiResetTracks(e, catIdx, colIdx, albIdx) {
     // 如果没有 bili_total，尝试从 total 获取（前提是我们没改过 total）
     // 或者干脆重新通过 BV 号获取一次信息
     try {
-        const response = await fetch(`${API_BASE}/api/get_bili_info?bvid=${alb.bvid}`);
-        const info = await response.json();
+        const info = await loadBiliInfo(alb.bvid);
 
         alb.total = info.pages.length;
         alb.page_mapping = Array.from({ length: alb.total }, (_, k) => k + 1);
@@ -311,10 +335,15 @@ export async function uiResetTracks(e, catIdx, colIdx, albIdx) {
 export async function addCategory() {
     const name = prompt("新分类名称：");
     if (name) {
-        UI.libraryData.push({ name: name, collections: [] });
-        // Direct Save
+        const created = { name: name, collections: [] };
+        UI.libraryData.push(created);
+        // Direct Save：失败则撤回，避免界面出现从未保存的分类
         if (UI.saveData) {
-            await UI.saveData();
+            if (!(await UI.saveData())) {
+                UI.libraryData.splice(UI.libraryData.indexOf(created), 1);
+                UI.refreshCurrentView();
+                return;
+            }
             // [Fix] Sync Snapshot so subsequent Cancel doesn't revert creation
             const mgr = ensureManager(0);
             if (mgr) mgr.setList(UI.libraryData);
@@ -330,10 +359,15 @@ export async function addCollection() {
     const name = prompt("新合集名称：");
     if (name) {
         const cat = UI.libraryData[UI.currentCatIndex];
-        cat.collections.push({ name: name, albums: [] });
-        // Direct Save
+        const created = { name: name, albums: [] };
+        cat.collections.push(created);
+        // Direct Save：失败则撤回
         if (UI.saveData) {
-            await UI.saveData();
+            if (!(await UI.saveData())) {
+                cat.collections.splice(cat.collections.indexOf(created), 1);
+                UI.refreshCurrentView();
+                return;
+            }
             // [Fix] Sync Snapshot
             const mgr = ensureManager(1);
             if (mgr) mgr.setList(cat.collections);
@@ -350,8 +384,7 @@ export async function addAlbum() {
     const bvid = prompt("B站 BV号：");
     if (!bvid) return;
     try {
-        const response = await fetch(`${API_BASE}/api/get_bili_info?bvid=${bvid}`);
-        const info = await response.json();
+        const info = await loadBiliInfo(bvid);
         const title = prompt("确认标题：", info.title) || info.title;
         const newAlbum = {
             title: title, bvid: bvid, total: info.pages.length,
@@ -365,9 +398,13 @@ export async function addAlbum() {
         const col = UI.libraryData[UI.currentCatIndex].collections[UI.currentColIndex];
         col.albums.push(newAlbum);
 
-        // Direct Save
+        // Direct Save：失败则撤回
         if (UI.saveData) {
-            await UI.saveData();
+            if (!(await UI.saveData())) {
+                col.albums.splice(col.albums.indexOf(newAlbum), 1);
+                UI.refreshCurrentView();
+                return;
+            }
             // [Fix] Sync Snapshot
             const mgr = ensureManager(2);
             if (mgr) mgr.setList(col.albums);

@@ -8,12 +8,39 @@ from unittest import mock
 
 from .helpers import make_test_png_bytes
 from .sandbox import SandboxTestCase, photos
+from services import local_media
+from services import media_store
 
 TIERS = ('images', 'thumbnails', 'previews')
 
 
 class Test06_AlbumAndPhotosSandbox(SandboxTestCase):
     """在隔离沙盒中测试相册分类增删改查、多级图像生成 (Origin/AVIF/WebP)、去重与物理清理"""
+
+    def test_16_missing_upload_repairs_existing_identity_and_tags(self):
+        """丢失原图后重新上传，保留原身份、三级路径、标签与已有转换格式。"""
+        from PIL import Image
+        payload = make_test_png_bytes('red')
+        for convert in (False, True):
+            with self.subTest(convert=convert):
+                category = 'repair_avif' if convert else 'repair_raw'
+                query = {'category': [category], 'name': ['original.png']}
+                if convert:
+                    query['convert'] = ['avif']
+                code, uploaded = self.call_post('/upload', query, file_data=payload)
+                self.assertEqual(code, 200, uploaded)
+                self.call_post('/api/photos/update_tags', body={'id': uploaded['id'], 'tags': ['保留']})
+                os.remove(self.root_path(uploaded['path']))
+                code, repaired = self.call_post('/upload', {'category': [category], 'name': ['ignored.jpg']},
+                                               file_data=payload)
+                self.assertEqual(code, 200, repaired)
+                for field in ('id', 'name', 'path', 'thumb', 'preview'):
+                    self.assertEqual(repaired[field], uploaded[field])
+                self.assert_tiers_exist(repaired)
+                self.assertEqual(len(self.gallery_json()[category]), 1)
+                self.assertEqual(self.gallery_json()[category][0]['tags'], ['保留'])
+                with Image.open(self.root_path(repaired['path'])) as image:
+                    self.assertEqual(image.format, 'AVIF' if convert else 'PNG')
 
     def test_15_cloud_mixed_formats_keep_independent_derivatives_and_retry_identity(self):
         """旧云端同编号的混合格式登记、重试及删除，不能覆盖另一张图片。"""
@@ -25,17 +52,17 @@ class Test06_AlbumAndPhotosSandbox(SandboxTestCase):
                     f'photos/images/travel/{names[1]}': jpeg.getvalue()}
         bodies = [{'category': 'travel', 'name': name, 'path': f'photos/images/travel/{name}'} for name in names]
         with mock.patch.object(photos, '_download_r2_image', side_effect=lambda key: payloads[key]) as download:
-            code, first = self.call_post('/api/photos/register_r2', body=bodies[0])
+            code, first = self.call_post('/api/photos/register', body=bodies[0])
             self.assertEqual(code, 200, first)
             before = {}
             for field in ('path', 'thumb', 'preview'):
                 with open(self.root_path(first[field]), 'rb') as source:
                     before[field] = source.read()
-            code, second = self.call_post('/api/photos/register_r2', body=bodies[1])
+            code, second = self.call_post('/api/photos/register', body=bodies[1])
             self.assertEqual(code, 200, second)
             self.assertNotEqual(first['thumb'], second['thumb'])
             self.assertNotEqual(first['preview'], second['preview'])
-            code, repeated = self.call_post('/api/photos/register_r2', body=bodies[0])
+            code, repeated = self.call_post('/api/photos/register', body=bodies[0])
             self.assertEqual(code, 200, repeated)
             self.assertEqual(download.call_count, 2)
         for field in ('id', 'path', 'thumb', 'preview'):
@@ -73,6 +100,28 @@ class Test06_AlbumAndPhotosSandbox(SandboxTestCase):
         for field, expected in before.items():
             with open(self.root_path(first[field]), 'rb') as source:
                 self.assertEqual(source.read(), expected)
+
+    def test_cloud_worker_filename_is_shared_without_overwriting_another_image(self):
+        """新版原图、缩略图和预览图同名，已分配的冲突路径在重试时保持稳定。"""
+        from PIL import Image
+        jpeg = io.BytesIO()
+        Image.new('RGB', (40, 40), 'blue').save(jpeg, format='JPEG')
+        stem = '20261106_061821_1234567812344abc8def123456789abc'
+        paths = [f'photos/images/travel/{stem}.{extension}' for extension in ('jpg', 'png')]
+        payloads = dict(zip(paths, (jpeg.getvalue(), make_test_png_bytes('red'))))
+        endpoint = '/api/photos/register'
+        with mock.patch.object(photos, '_download_r2_image', side_effect=payloads.__getitem__):
+            code, first = self.call_post(endpoint, body={'category': 'travel', 'path': paths[0]})
+            self.assertEqual(code, 200, first)
+            self.assertEqual(first['path'], paths[0])
+            self.assertEqual(first['thumb'], f'photos/thumbnails/travel/{stem}.webp')
+            self.assertEqual(first['preview'], f'photos/previews/travel/{stem}.avif')
+            code, second = self.call_post(endpoint, body={'category': 'travel', 'path': paths[1]})
+            self.assertEqual(code, 200, second)
+            self.assertNotEqual(first['thumb'], second['thumb'])
+            self.assertNotEqual(first['preview'], second['preview'])
+            self.assertEqual(self.call_post('/delete', body={'path': first['path']})[0], 200)
+            self.assertEqual(self.call_post(endpoint, body={'category': 'travel', 'path': paths[1]}), (200, second))
 
     def add_category(self, cat_id, title, **extra):
         code, res = self.call_post('/api/add_category', body={'id': cat_id, 'title': title, **extra})
@@ -122,6 +171,70 @@ class Test06_AlbumAndPhotosSandbox(SandboxTestCase):
         self.assertTrue(res.get('tag_file_deleted'))
         for sub in TIERS:
             self.assertFalse(os.path.exists(os.path.join(self.temp_photos, sub, 'temp_cat')))
+
+    def test_category_entry_removal_preserves_images_and_can_be_restored(self):
+        """仅移除入口不会动图片和索引，重新加入同一分类即可恢复访问。"""
+        self.add_category('other', '其它')
+        image = self.upload_png('other', 'kept.png', 'red')
+        before = self.gallery_json()
+        self.assertEqual(self.call_post('/api/delete_category', body={'id': 'other', 'delete_physical': False})[0], 200)
+        self.assertFalse(any(item.get('id') == 'other' for item in self.album_config()))
+        self.assertEqual(self.gallery_json(), before)
+        self.assert_tiers_exist(image)
+        self.assertTrue(os.path.isfile(self.tag_file('other')))
+        self.add_category('other', '其它')
+        self.assertTrue(any(item.get('id') == 'other' for item in self.album_config()))
+        self.assertEqual(self.gallery_json(), before)
+
+    def test_category_physical_delete_clears_only_its_index_and_uploads(self):
+        """删除目录同时清理本分类索引和待上传任务，保留其他相册与既有云端删除任务。"""
+        from services import media_jobs
+        self.add_category('removed', '删除目标')
+        self.add_category('kept', '保留相册')
+        image = self.upload_png('removed', 'removed.png', 'red')
+        kept = self.upload_png('kept', 'kept.png', 'blue')
+        for field in ('path', 'thumb', 'preview'):
+            media_jobs.enqueue('ensure', image[field], deferred=True)
+        media_jobs.enqueue('ensure', kept['path'], deferred=True)
+        old_delete = 'photos/images/removed/previously-deleted.png'
+        media_jobs.enqueue('delete', old_delete)
+        remote_before = {name: dict(rows) for name, rows in self.mock_s3.buckets.items()}
+        code, result = self.call_post('/api/delete_category', body={'id': 'removed', 'delete_physical': True})
+        self.assertEqual(code, 200, result)
+        self.assertNotIn('removed', self.gallery_json())
+        self.assertEqual(self.gallery_json()['kept'][0]['id'], kept['id'])
+        self.assert_tiers_exist(image, False)
+        self.assert_tiers_exist(kept)
+        self.assertFalse(os.path.exists(self.tag_file('removed')))
+        self.assertEqual({job['key'] for job in media_jobs.pending()}, {kept['path'], old_delete})
+        self.assertEqual(self.mock_s3.buckets, remote_before)
+        with photos.get_db() as connection:
+            self.assertEqual(connection.execute('SELECT COUNT(*) FROM photos WHERE category=?', ('removed',)).fetchone()[0], 0)
+
+    def test_category_delete_failure_rolls_back_files_index_tags_and_tasks(self):
+        """文件删除或最后配置写入失败时，还原原图、索引、标签和待办。"""
+        from services import album, media_jobs
+        self.add_category('rollback', '需要保留')
+        image = self.upload_png('rollback', 'image.png', 'green')
+        media_jobs.enqueue('ensure', image['path'], deferred=True)
+        before = self.gallery_json()
+        jobs = media_jobs.pending()
+        originals = {}
+        for field in ('path', 'thumb', 'preview'):
+            with open(self.root_path(image[field]), 'rb') as source:
+                originals[image[field]] = source.read()
+        failures = [(album.os, 'rmdir'), (album.cms, 'save_json')]
+        for target, name in failures:
+            with self.subTest(failure=name), mock.patch.object(target, name, side_effect=OSError('simulated failure')):
+                code, _ = self.call_post('/api/delete_category', body={'id': 'rollback', 'delete_physical': True})
+            self.assertEqual(code, 500)
+            self.assertTrue(any(item.get('id') == 'rollback' for item in self.album_config()))
+            self.assertEqual(self.gallery_json(), before)
+            self.assertEqual(media_jobs.pending(), jobs)
+            self.assertTrue(os.path.isfile(self.tag_file('rollback')))
+            for path, content in originals.items():
+                with open(self.root_path(path), 'rb') as source:
+                    self.assertEqual(source.read(), content)
 
     # ---------- 图像流水线 ----------
 
@@ -183,15 +296,16 @@ class Test06_AlbumAndPhotosSandbox(SandboxTestCase):
         with open(self.root_path(rel), 'wb') as f:
             f.write(make_test_png_bytes((70, 130, 180)))
 
-        code, res = self.call_post('/api/photos/register_r2', body={
-            'category': 'travel', 'path': f"https://media.example.com/{rel}",
-            'name': 'mobile_r2_shot.png', 'scope': 'public',
+        code, res = self.call_post('/api/photos/register', body={
+            'category': 'travel', 'path': f"https://images.example.com/{rel}",
+            'name': 'mobile_r2_shot.png', 'scope': 'public', 'tags': ['旅行'],
         })
         self.assertEqual((code, res['status']), (200, 'success'))
         self.assertTrue(res['thumb'].endswith('.webp'))
         self.assertTrue(res['preview'].endswith('.avif'))
         self.assert_tiers_exist(res, keys=('thumb', 'preview'))
-        self.assertTrue(any(p['name'] == 'mobile_r2_shot.png' for p in self.gallery_json().get('travel', [])))
+        row = next(p for p in self.gallery_json()['travel'] if p['name'] == 'mobile_r2_shot.png')
+        self.assertEqual(row['tags'], ['旅行'])
 
     # ---------- 分类加解锁 ----------
 
@@ -213,10 +327,13 @@ class Test06_AlbumAndPhotosSandbox(SandboxTestCase):
         self.assertEqual(job['state'], 'success', f"相册加锁任务失败: {job}")
         self.assertEqual(job['result']['moved'], 6)
 
+        store = media_store.get_store()
         for up in ups:
             for k in (up['path'], up['thumb'], up['preview']):
                 self.assertIn(k, self.mock_s3.buckets['priv-bucket'])
-            self.assert_tiers_exist(up, exist=False, keys=('thumb', 'preview'))
+                self.assertEqual(local_media.path(k).read_bytes(),
+                                 self.mock_s3.buckets['priv-bucket'][k]['data'])
+            self.assert_tiers_exist(up)
         self.assertFalse(os.path.exists(self.tag_file('priv_cat')), "加锁后分类标签配置文件必须被删除")
         self.assertNotIn('priv_cat', self.gallery_json())
         self.assertEqual(self.album_config(), [{'_enc': cipher}])
@@ -230,7 +347,7 @@ class Test06_AlbumAndPhotosSandbox(SandboxTestCase):
 
         cipher = 'enc:iv_restore.cipher_restore'
         self.assertEqual(self.lock_category('restore_cat', cipher)['state'], 'success')
-        self.assertFalse(os.path.exists(self.root_path(up['path'])), '加锁后本地原图也应移除')
+        self.assertTrue(os.path.exists(self.root_path(up['path'])), '加锁后本机原图保留原目录')
 
         payload = {'category': exp['category'], 'photos': exp['photos'], 'tags_file': exp['tags_file']}
         code, start = self.call_post('/api/album/unlock_category', body={'enc': cipher, 'payload': payload})

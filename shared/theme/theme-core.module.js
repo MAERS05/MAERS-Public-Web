@@ -51,11 +51,32 @@ function safeLoadConfig() {
 }
 
 const THEME_TRANSITION_MS = 500;
+const THEME_COLOR_DARK = '#0a0a0c';
+const THEME_COLOR_LIGHT = '#ffffff';
 let themeTransitionTimer = null;
 let themeViewTransition = null;
 let themeRequestId = 0;
 let requestedTheme = null;
 let themeCoreInitialized = false;
+
+/** 同步移动端浏览器顶部地址栏颜色与配色方案元标签 */
+function syncBrowserThemeMeta(isDark) {
+    const head = document.head;
+    if (!head || typeof head.querySelector !== 'function') return;
+    const pairs = [
+        ['theme-color', isDark ? THEME_COLOR_DARK : THEME_COLOR_LIGHT],
+        ['color-scheme', isDark ? 'dark' : 'light'],
+    ];
+    for (const [name, content] of pairs) {
+        let meta = head.querySelector(`meta[name="${name}"]`);
+        if (!meta && typeof document.createElement === 'function') {
+            meta = document.createElement('meta');
+            meta.name = name;
+            head.appendChild(meta);
+        }
+        if (meta) meta.content = content;
+    }
+}
 
 export function applyTheme(theme, { animate = true } = {}) {
     requestedTheme = theme;
@@ -72,6 +93,7 @@ export function applyTheme(theme, { animate = true } = {}) {
                 root.classList.toggle('light-mode', !isDark);
                 root.style.removeProperty('background-color');
                 root.style.removeProperty('color');
+                syncBrowserThemeMeta(isDark);
                 const toggleSwitch = document.querySelector('.theme-switch-checkbox');
                 if (toggleSwitch) toggleSwitch.checked = isDark;
                 localStorage.setItem('theme', theme);
@@ -257,6 +279,14 @@ export function initThemeCore() {
             }
         });
     }
+
+    // 跨标签页修改主题配置时同步当前页与地址栏主题色
+    window.addEventListener?.("storage", (e) => {
+        if (!e.key || e.key === "theme" || e.key === "autoThemeConfig") {
+            config = safeLoadConfig();
+            checkThemeStrategy({ animate: false });
+        }
+    });
 }
 
 export function getConfig() {

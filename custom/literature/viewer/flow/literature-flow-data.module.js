@@ -22,7 +22,7 @@ export async function loadBooksFromBackend(engine) {
         if (response.ok) {
             const data = await response.json();
             if (data && data.root) {
-                // 已有会话密钥时，在内存中还原加密节点
+                // 已通过隐藏入口解锁时，在内存中还原加密节点
                 await revealInPlace(data.root, { getChildren: (n) => n.children, transform: await getRevealTransform() });
                 const flattenBooks = (nodes) => {
                     nodes.forEach(node => {

@@ -18,7 +18,7 @@
 }
 
 /* --- Brand Header Styles --- */
-[data-secret-unlock] {
+[data-logo-unlock] {
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
@@ -47,7 +47,7 @@
     height: 80px;
     margin-bottom: 8px;
     color: #d0d0d0;
-    filter: invert(0.8) drop-shadow(0 10px 15px rgba(0, 0, 0, 0.4));
+    filter: invert(0.8);
     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.5s ease;
     cursor: pointer;
 }
@@ -84,6 +84,7 @@
     font-size: 1rem;
     letter-spacing: 0px;
     font-weight: 500;
+    white-space: nowrap;
     opacity: 0.8;
 }
 
@@ -148,7 +149,7 @@ html.light-mode .spatial-brand-subtitle {
     height: 160px;
     /* Wei tiao wei 160px */
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
     padding: 0 35px;
     /* Increase side padding */
@@ -162,7 +163,7 @@ html.light-mode .spatial-brand-subtitle {
     pointer-events: auto;
     transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     backdrop-filter: blur(8px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
     opacity: 0.8;
 }
 
@@ -171,7 +172,7 @@ html.light-mode .spatial-brand-subtitle {
     transform: translateZ(50px) scale(1.05);
     background: rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
     opacity: 1;
     z-index: 100;
 }
@@ -179,13 +180,13 @@ html.light-mode .spatial-brand-subtitle {
 /* Light Mode Overrides */
 html.light-mode .spatial-card {
     background: rgba(255, 255, 255, 0.5);
-    border-color: rgba(0, 0, 0, 0.05);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: none;
 }
 
 html.light-mode .spatial-card:hover {
     background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
 /* Card Content Structure matching Index */
@@ -220,7 +221,7 @@ html.light-mode .spatial-card:hover .card-bg-text {
     /* Restored original large size */
     margin-bottom: 10px;
     /* Tighter gap */
-    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.1));
+    filter: none;
 }
 
 .spatial-card .card-icon img {

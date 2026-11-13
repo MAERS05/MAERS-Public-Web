@@ -7,15 +7,45 @@
 
 import { api } from './api-client.module.js';
 
+// KV 预览只存在于管理页面内存，正文和图库索引始终使用原来的媒体键。
+const draftPhotos = new Map();
+
+export function rememberDraftPhoto(path, url, endpoint) {
+    if (typeof path !== 'string' || !path.startsWith('photos/images/') || !url) return;
+    try {
+        const preview = new URL(url);
+        const encoded = path.split('/').map(encodeURIComponent).join('/');
+        const privateScope = path.startsWith('photos/images/_cloud_private/');
+        const route = privateScope ? '/private/' : '/api/drafts/preview/';
+        const validQuery = privateScope ? preview.search === '?draft=1' : /^\?p=[a-f0-9-]{36}$/.test(preview.search);
+        if (preview.protocol === 'https:' && preview.origin === new URL(endpoint).origin &&
+            preview.pathname === route + encoded && validQuery && !preview.hash && !preview.username && !preview.password) {
+            draftPhotos.set(path, preview.href);
+        }
+    } catch { /* 草稿预览地址无效时沿用正式媒体地址。 */ }
+}
+
+export function clearDraftPhotos(paths = null) {
+    if (!paths) draftPhotos.clear();
+    else for (const path of paths) draftPhotos.delete(path);
+}
+
+export function draftPhotoUrl(key, privateScope = false) {
+    if (typeof key !== 'string' || key.startsWith('photos/images/_cloud_private/') !== privateScope) return undefined;
+    return draftPhotos.get(key);
+}
+
 /** 统一公开媒体入口；私密 URL 和外部绝对地址不做改写。 */
-export function publicMediaUrl(value) {
+export function publicMediaUrl(value, { local = false } = {}) {
     if (typeof value === 'string' && value.startsWith('/api/private/media/')) return value;
     if (!value || /^https?:\/\//i.test(value)) return value;
     const key = value.replace(/^\/+/, '');
+    const draft = draftPhotoUrl(key);
+    if (draft) return draft;
     const base = (window.MAERS?.Config?.MEDIA_PUBLIC_BASE || '').replace(/\/+$/, '');
     if (!/^photos\/(images|thumbnails|previews)\//.test(key)) return value;
     const encoded = key.split('/').map(encodeURIComponent).join('/');
-    return base && key.startsWith('photos/images/') ? `${base}/${encoded}` : encoded;
+    return base && !local ? `${base}/${encoded}` : encoded;
 }
 
 /** 保留真实文件键；URL 路径仅解码一次，以便匹配完整 CDN 地址。 */
@@ -32,55 +62,62 @@ function mediaKeys(value, fromUrl = true) {
     return keys;
 }
 
-export const DataProvider = {
-    // 缓存数据
-    _cache: {},
-    _coverIndex: new Map(),
-    _coverIndexLoaded: false,
-    _coverIndexRequest: null,
+let photoIndexRequest;
+let coverIndexRequest;
+let coverIndex = new Map();
 
+/** 只复用公开索引，避免在页面内缓存本机管理会话的私密投影。 */
+function readPublicPhotoIndex(refresh) {
+    if (!refresh && photoIndexRequest) return photoIndexRequest;
+    const request = (async () => {
+        const response = await fetch('data/photos-data.json', { cache: 'no-cache' });
+        if (!response.ok) throw new Error('图片索引请求失败：' + response.status);
+        const data = await response.json();
+        if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('图片索引格式无效');
+        return data;
+    })();
+    photoIndexRequest = request;
+    request.catch(() => {
+        if (photoIndexRequest === request) photoIndexRequest = undefined;
+    });
+    return request;
+}
+
+export const DataProvider = {
     /** 共用页面内封面索引；管理端重新载入时刷新，失败后允许重试。 */
-    loadCoverIndex({ refresh = false } = {}) {
-        if (this._coverIndexRequest) return this._coverIndexRequest;
-        if (this._coverIndexLoaded && !refresh) return Promise.resolve(true);
-        this._coverIndexRequest = Promise.resolve().then(async () => {
-            try {
-                const response = await fetch('data/photos-data.json', { cache: 'no-cache' });
-                if (!response.ok) throw new Error(`图片索引请求失败：${response.status}`);
-                const data = await response.json();
-                if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('图片索引格式无效');
-                const index = new Map();
-                for (const rows of Object.values(data)) {
-                    if (!Array.isArray(rows)) continue;
-                    for (const row of rows) {
-                        if (!row || typeof row !== 'object') continue;
-                        for (const key of mediaKeys(row.path, false)) index.set(key, row);
-                    }
+    async loadCoverIndex({ refresh = false } = {}) {
+        const request = readPublicPhotoIndex(refresh);
+        try {
+            const data = await request;
+            if (request !== photoIndexRequest) return false;
+            if (request === coverIndexRequest) return true;
+            const index = new Map();
+            for (const rows of Object.values(data)) {
+                if (!Array.isArray(rows)) continue;
+                for (const row of rows) {
+                    if (!row || typeof row !== 'object') continue;
+                    for (const key of mediaKeys(row.path, false)) index.set(key, row);
                 }
-                this._coverIndex = index;
-                this._coverIndexLoaded = true;
-                return true;
-            } catch (error) {
-                this._coverIndexLoaded = false;
-                console.warn('[DataProvider] 封面索引加载失败，使用原图：', error);
-                return false;
-            } finally {
-                this._coverIndexRequest = null;
             }
-        });
-        return this._coverIndexRequest;
+            coverIndex = index;
+            coverIndexRequest = request;
+            return true;
+        } catch (error) {
+            console.warn('[DataProvider] 封面索引加载失败，使用原图：', error);
+            return false;
+        }
     },
 
     /** 使用显式私密地址、索引的真实衍生路径或原图，禁止推测文件名。 */
-    getCoverUrl(node, size = 'preview') {
+    getCoverUrl(node, size = 'preview', { local = this.isLocal } = {}) {
         if (!node) return null;
         const explicit = size === 'thumb' ? node.coverThumb || node.coverPreview : node.coverPreview || node.coverThumb;
         if (explicit) return explicit;
         for (const key of mediaKeys(node.coverImage)) {
-            const row = this._coverIndex.get(key);
-            if (row) return publicMediaUrl(row[size] || row[size === 'thumb' ? 'preview' : 'thumb'] || node.coverImage) || null;
+            const row = coverIndex.get(key);
+            if (row) return publicMediaUrl(row[size] || row[size === 'thumb' ? 'preview' : 'thumb'] || node.coverImage, { local }) || null;
         }
-        return publicMediaUrl(node.coverImage) || null;
+        return publicMediaUrl(node.coverImage, { local }) || null;
     },
 
     // 环境判定
@@ -99,43 +136,36 @@ export const DataProvider = {
     /**
      * 获取分类下的图片列表
      */
-    async getGalleryData(category) {
-        // 本地模式：请求 JSON 文件 (获取最新文件列表)
-        if (this.isLocal) {
-            const data = await api.get(`data/photos-data.json`, {
-                v: Date.now()
-            });
+    async getGalleryData(category, { refresh = false } = {}) {
+        if (this.isLocal && (refresh || window.IS_ADMIN === true)) {
+            const data = await api.get('data/photos-data.json', { v: Date.now() });
             return data[category] || [];
         }
 
-        // 线上模式：读取全局变量 (由 photos-data.js 提供，或异步加载 JSON)
-        if (typeof galleryData !== 'undefined' && galleryData[category]) {
+        if (!this.isLocal && !refresh && typeof galleryData !== 'undefined' && galleryData[category]) {
             return galleryData[category];
         }
 
-        // 降级：尝试异步加载 JSON
         try {
-            const response = await fetch('data/photos-data.json');
-            if (response.ok) {
-                const data = await response.json();
-                return data[category] || [];
-            }
+            const data = await readPublicPhotoIndex(refresh);
+            return structuredClone(data[category] || []);
         } catch (e) {
+            if (this.isLocal) throw e;
             console.error('[DataProvider] Failed to load photos data:', e);
+            return [];
         }
-
-        return [];
     },
 
     /**
      * 上传图片
      */
-    async uploadImage(category, file) {
+    async uploadImage(category, file, options = {}) {
         if (!this.isLocal) throw new Error("Permission denied: Not local environment");
         const result = await api.upload('/upload', file, {
             category: category,
-            name: encodeURIComponent(file.name)
-        });
+            name: encodeURIComponent(file.name),
+            ...(options.bucketId ? { bucketId: options.bucketId } : {})
+        }, options);
         if (result.sync?.state === 'pending') window.MAERS?.Toast?.warning('图片已保存到本机，云端同步待完成，请在后台备份与恢复中重试');
         return result;
     },

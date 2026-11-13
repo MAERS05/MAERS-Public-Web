@@ -20,23 +20,23 @@
     aspect-ratio: 2 / 3 !important;
     /* Portrait aspect ratio (2:3) to match Literature and Movie posters */
     height: auto !important;
-    border-radius: 8px !important;
     padding: 0;
     overflow: hidden;
     background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: none;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     align-items: center;
     content-visibility: auto;
     contain-intrinsic-size: 140px 210px;
-    will-change: transform;
 }
 
 .grid-item::after,
-.grid-item:not(.is-selected)::before {
+.grid-item:not(.is-selected)::before,
+.folder-grid .type-note::after,
+.folder-grid .type-note:not(.is-selected)::before {
     display: none !important;
 }
 
@@ -55,15 +55,15 @@
     z-index: 2;
     width: 100%;
     background: none !important;
-    padding: 10px 10px 5px 10px;
-    margin: 0 !important;
+    padding: 0 10px;
+    margin: 10px 0 5px !important;
 
     font-size: 14px;
     font-weight: 700;
     text-align: left !important;
     color: #ffffff !important;
     line-height: 1.2;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
+    text-shadow: none !important;
 
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -110,15 +110,14 @@
 .folder-grid .grid-item .mini-tag.active {
     background: #78ffd6 !important;
     color: #000 !important;
-    box-shadow: 0 0 10px rgba(120, 255, 214, 0.6) !important;
+    box-shadow: none !important;
     transform: scale(1.05);
     border-color: transparent !important;
     pointer-events: auto;
 }
 
 .folder-grid .grid-item:hover {
-    transform: translateY(-4px) translateZ(0);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+    box-shadow: none !important;
     z-index: 10;
 }
 
@@ -188,20 +187,7 @@
     transform: none !important;
 }
 
-.folder-grid .grid-item::after,
-.folder-grid .type-note::after,
-.folder-grid .grid-item:not(.is-selected)::before,
-.folder-grid .type-note:not(.is-selected)::before {
-    display: none !important;
-}
-
-
-
 html.light-mode .theme-switch-label {
     background-color: rgba(0, 0, 0, 0.1) !important;
     border-color: rgba(0, 0, 0, 0.15) !important;
-}
-
-.cms-create-btn:nth-of-type(1) {
-    display: none !important;
 }

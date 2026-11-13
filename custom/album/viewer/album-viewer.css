@@ -12,7 +12,7 @@
   background: transparent !important;
   border: none !important;
   backdrop-filter: none !important;
-  box-shadow: none !important;
+  box-shadow:none !important;
 }
 
 html.light-mode .gallery-content {
@@ -42,7 +42,7 @@ html.light-mode .gallery-content {
   background: var(--card-bg);
   border: 1px solid var(--pill-border);
   border-radius: 24px;
-  box-shadow: var(--pill-shadow);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -57,17 +57,12 @@ html.light-mode .gallery-content {
 .category-card:hover {
   transform: scale(1.03) translateY(-10px);
   background: var(--pill-hover-bg);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: none;
   z-index: 5;
 }
 
 .category-card:hover .card-icon {
   transform: scale(1.1) rotate(5deg);
-}
-
-.category-card:hover .card-bg-glow {
-  opacity: 0.8;
-  transform: scale(1.5);
 }
 
 /* ==========================================================================
@@ -79,14 +74,14 @@ html.light-mode .gallery-content {
   margin-bottom: 15px;
   transition: transform 0.4s ease;
   z-index: 2;
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+  filter: none;
 }
 
 .card-title {
   font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-main);
-  text-shadow: var(--text-shadow);
+  text-shadow: none;
   z-index: 2;
 }
 
@@ -101,68 +96,6 @@ html.light-mode .gallery-content {
 .text-group {
   text-align: center;
   z-index: 2;
-}
-
-/* ==========================================================================
-   Card Background Glow Effect
-   ========================================================================== */
-
-.card-bg-glow {
-  position: absolute;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  filter: blur(50px);
-  opacity: 0.4;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  transition: all 0.6s ease;
-  z-index: 0;
-}
-
-/* ==========================================================================
-   Category Theme Colors
-   ========================================================================== */
-
-.card-nature .card-bg-glow {
-  background: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%);
-}
-
-.card-arch .card-bg-glow {
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-.card-avatar .card-bg-glow {
-  background: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);
-}
-
-.card-bio .card-bg-glow {
-  background: linear-gradient(135deg, #9fab95 0%, #cfd6cd 100%);
-}
-
-.card-life .card-bg-glow {
-  background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-}
-
-.card-exhibit .card-bg-glow {
-  background: linear-gradient(135deg, #e57254 0%, #f0a68d 100%);
-}
-
-.card-city .card-bg-glow {
-  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-}
-
-.card-humanity .card-bg-glow {
-  background: linear-gradient(135deg, #e6b980 0%, #eacda3 100%);
-}
-
-.card-ani .card-bg-glow {
-  background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
-}
-
-.card-other .card-bg-glow {
-  background: linear-gradient(135deg, #cfd9df 0%, #e2ebf0 100%);
 }
 
 /* ==========================================================================

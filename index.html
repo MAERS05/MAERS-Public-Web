@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
   <!-- 🔥 第一优先级：关键主题CSS，在任何其他内容之前定义 -->
   <script>
     // 1. 恢复缩放状态 (Index Only - Memory)
@@ -54,7 +55,7 @@
   <link rel="preload" href="static-style/site-guide.css" as="style" />
   <link rel="preload" href="custom/index/viewer/index.css" as="style" />
   <link rel="preload" href="custom/zmobile adaptation/mobile-global.css" as="style" />
-  <link rel="preload" href="custom/zmobile adaptation/mobile-index.css" as="style" />
+  <link rel="preload" href="custom/zmobile adaptation/mobile-index.css" as="style" media="(max-width: 768px)" />
   <link rel="preload" href="data/index-cards.json" as="fetch" crossorigin="anonymous" />
   <link rel="modulepreload" href="custom/index/viewer/index-viewer.module.js" />
   <link rel="modulepreload" href="shared/layout.module.js" />
@@ -72,7 +73,6 @@
   <script defer src="custom/config.js"></script>
   <script src="shared/flash-guard.js"></script>
   <title>MAERS Space</title>
-  <meta name="color-scheme" content="dark light" />
   <link rel="icon" type="image/svg+xml" href="ui/logo.svg" />
 
   <link rel="stylesheet" href="static-style/theme.css" />
@@ -87,13 +87,13 @@
 <body>
   <!-- 🔥 防闪烁遮罩 - 在页面内容渲染完成后会被移除 -->
   <!-- 故事入口图标 -->
-  <a href="https://example.com" target="_blank" title="故事"
+  <a href="space.html" target="_blank" title="空间"
     style="position:fixed;top:45px;left:54px;z-index:10000;display:flex;align-items:center;justify-content:center;">
     <img id="index-story-icon" src="ui/story.svg" alt="故事" />
   </a>
   <div class="home-container">
     <div class="brand-area">
-      <img src="ui/index.svg" alt="Logo" class="brand-logo" id="brand-logo" />
+      <img src="ui/index.svg" alt="Logo" class="brand-logo" id="brand-logo" data-logo-unlock draggable="false" />
       <div class="brand-title">
         <span class="maers-interactive" id="brand-maers">MAERS</span>
         <span class="maers-interactive" id="brand-space">SPACE</span>
@@ -103,14 +103,6 @@
     <div class="nav-grid">
       <!-- Cards will be loaded dynamically from data/index-cards.json -->
     </div>
-    <footer style="
-          margin-top: 60px;
-          color: var(--text-sub);
-          font-size: 0.8rem;
-          opacity: 0.6;
-        ">
-      &copy; 2026 Maers Personal Web. Powered by AI.
-    </footer>
   </div>
 </body>
 

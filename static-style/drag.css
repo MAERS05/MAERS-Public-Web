@@ -50,7 +50,7 @@ html.shrink-view .home-container.is-dragging {
     border-radius: 50%;
     /* 蓝色半透明涟漪 */
     background: rgba(0, 120, 255, 0.6);
-    box-shadow: 0 0 20px rgba(0, 120, 255, 0.4);
+    box-shadow: none;
     pointer-events: none;
     /* 确保不阻挡鼠标事件 */
     z-index: 99999;

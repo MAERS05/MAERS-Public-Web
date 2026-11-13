@@ -12,7 +12,6 @@ let State = null;
 let Render = null;
 let Tags = null;
 let LiteratureView = null;
-
 export function initSearch(state, render, tags = null, literatureView = null) {
     State = state;
     Render = render;
@@ -28,6 +27,7 @@ export function setupSearchListeners() {
 
     const mainInput = document.getElementById(State.SELECTORS.SEARCH_INPUT.slice(1));
     if (mainInput) {
+        mainInput.placeholder = '搜索标题';
         let lastKeyword = "";
 
         mainInput.addEventListener("input", (e) => {

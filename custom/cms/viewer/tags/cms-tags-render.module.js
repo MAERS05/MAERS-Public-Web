@@ -5,6 +5,7 @@
  */
 
 import { AdminButtonHelper } from '../../../../data-manage/admin/admin-base.module.js';
+import { disableAdminControl, isLocalOnlyUnavailable } from '../../../../data-manage/admin/local-only.module.js';
 import { Search as SearchUtils } from '../../../../shared/utils.module.js';
 
 export const TagsRender = {
@@ -144,7 +145,7 @@ export const TagsRender = {
                       <div class="category-header" style="font-weight:bold;margin-bottom:5px;display:flex;align-items:center;cursor:pointer;gap:8px;">
                           <span class="cat-toggle-icon" style="transform:${iconRotation};flex-shrink:0;">▼</span>
                           <span class="category-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${State.escapeAttr(cat.name)}">${State.escapeHtml(cat.name)}</span>
-                          ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:#78ffd6; border:none; border-radius:4px; color:#000; box-shadow:0 0 10px rgba(120, 255, 214, 0.6); font-size:11px; padding:3px 8px; cursor:pointer; font-weight:bold; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
+                          ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:#78ffd6; border:none; border-radius:4px; color:#000; box-shadow:none; font-size:11px; padding:3px 8px; cursor:pointer; font-weight:bold; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
                           ${adminButtonsPlaceholder}
                       </div>
                       <div class="list-anim-wrapper" style="display:grid;transition:all 0.3s ease;${gridStyle}">
@@ -165,7 +166,7 @@ export const TagsRender = {
                       <div class="category-header" style="font-weight:bold;margin-bottom:5px;cursor:pointer;display:flex;align-items:center;gap:8px;">
                           <span class="cat-toggle-icon" style="transform:${iconRotation};flex-shrink:0;">▼</span>
                           <span class="category-name" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="其他">其他</span>
-                          ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:#78ffd6; border:none; border-radius:4px; color:#000; box-shadow:0 0 10px rgba(120, 255, 214, 0.6); font-size:11px; padding:3px 8px; cursor:pointer; font-weight:bold; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
+                          ${State.IS_ADMIN && selectedTags.size > 0 ? `<button class="tag-move-here-btn" style="background:#78ffd6; border:none; border-radius:4px; color:#000; box-shadow:none; font-size:11px; padding:3px 8px; cursor:pointer; font-weight:bold; flex-shrink:0; white-space:nowrap;">移动至此</button>` : ''}
                       </div>
                       <div class="list-anim-wrapper" style="display:grid;transition:all 0.3s ease;${gridStyle}">
                           <div class="category-tags-list" style="display:flex;flex-direction:column;gap:2px;overflow:hidden;min-height:0;">
@@ -215,9 +216,14 @@ export const TagsRender = {
 
             const cleanupBtn = container.querySelector('.cleanup-tags-btn');
             if (cleanupBtn) {
-                cleanupBtn.onmouseenter = () => { cleanupBtn.style.opacity = '1'; };
-                cleanupBtn.onmouseleave = () => { cleanupBtn.style.opacity = '0.5'; };
-                cleanupBtn.onclick = callbacks.onCleanup; // Bind cleanup callback
+                if (isLocalOnlyUnavailable()) {
+                    cleanupBtn.style.removeProperty('cursor');
+                    disableAdminControl(cleanupBtn, '清理未使用的标签仅限电脑本地后台');
+                } else {
+                    cleanupBtn.onmouseenter = () => { cleanupBtn.style.opacity = '1'; };
+                    cleanupBtn.onmouseleave = () => { cleanupBtn.style.opacity = '0.5'; };
+                    cleanupBtn.onclick = callbacks.onCleanup;
+                }
             }
         }
     }

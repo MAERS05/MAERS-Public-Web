@@ -3,10 +3,14 @@
  * 职责：核心状态管理、API交互、纯数学逻辑
  * @version 3.0.0 - ES6 Module
  */
-import { localFetch } from '../../../data-manage/api-client.module.js';
+import { isOnlineAdminPage, localFetch } from '../../../data-manage/api-client.module.js';
 import { DataProvider } from '../../../data-manage/data-provider.module.js';
+import { ModuleConfig } from '../../../shared/module-config.module.js';
+import { TagsApi } from './cms-tags-api.module.js';
 
 import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
+import { hasProtectedCmsContent, validateCmsNodeAction } from '../../../data-manage/sync/relay-actions.module.js';
+import { editCmsDraft, openCmsDrafts, uploadCmsDraft } from './cms-private-drafts.module.js';
 import { revealInPlace } from '../../../data-manage/encrypt/secret-unlock.module.js';
 import {
     unpackRevealedNode,
@@ -18,6 +22,7 @@ import {
 export { unpackRevealedNode, getRevealTransform };
 
 const URL_PARAMS = new URLSearchParams(window.location.search);
+let privateDrafts = new Map();
 
 function getDetectedModule() {
     if (window.CURRENT_MODULE) return window.CURRENT_MODULE;
@@ -73,7 +78,7 @@ export async function loadData() {
             const res = await localFetch(`/api/cms/fetch?module=${CONFIG.CURRENT_MODULE}`);
             if (res.ok) {
                 const data = await res.json();
-                if (data && data.root && data.root.length > 0) {
+                if (Array.isArray(data?.root)) {
                     AppState.root = data.root;
                     success = true;
                 }
@@ -86,15 +91,14 @@ export async function loadData() {
     // 2. 线上/非本地环境，或本地 API 失败时：回退读取静态 JSON 文件
     if (!success) {
         try {
-            const dataFile = window.MAERS?.ModuleConfig
-                ? window.MAERS.ModuleConfig.get(CONFIG.CURRENT_MODULE).dataFile
-                : `data/${CONFIG.CURRENT_MODULE}-tree.json`;
+            const dataFile = ModuleConfig.get(CONFIG.CURRENT_MODULE).dataFile;
 
             const response = await localFetch(dataFile, { cache: 'no-cache' });
             if (response.ok) {
                 const data = await response.json();
-                // 兼容两种格式：{ root: [...] } 或顶层直接是数组 [...]
-                AppState.root = data.root ?? (Array.isArray(data) ? data : []);
+                const root = data?.root;
+                if (!Array.isArray(root)) throw new Error('内容数据格式无效');
+                AppState.root = root;
                 success = true;
             } else {
                 console.error(`Failed to load JSON data: ${dataFile}`);
@@ -108,9 +112,13 @@ export async function loadData() {
 
     AppState.allNodes = [];
     AppState.lockedNodes = [];
-    // 访客页面：已有会话密钥时原位还原（Admin 页面不还原，避免保存时把明文写回）
+    privateDrafts = new Map();
     if (!CONFIG.IS_ADMIN) {
         await revealInPlace(AppState.root, { getChildren: (n) => n.children, transform: await getRevealTransform() });
+    } else if (success && isOnlineAdminPage()) {
+        const opened = await openCmsDrafts(CONFIG.CURRENT_MODULE, AppState.root);
+        AppState.root = opened.root;
+        privateDrafts = opened.byId;
     }
     extractLockedNodes(AppState.root, AppState.lockedNodes);
     flattenNodes(AppState.root);
@@ -132,32 +140,18 @@ export async function loadData() {
         ? DataProvider.loadCoverIndex({ refresh: CONFIG.IS_ADMIN && isLocal })
         : Promise.resolve();
 
-    // 4. 加载标签分类（本地走 API，线上直接走静态 JSON）
-    let tagSuccess = false;
-    if (isLocal) {
+    // 4. 管理端通过统一入口加载分类及编辑基线。
+    if (CONFIG.IS_ADMIN) {
+        AppState.tagCategories = await TagsApi.getCategories(CONFIG.CURRENT_MODULE);
+    } else {
         try {
-            const tagRes = await localFetch(`/api/cms/tag_categories?module=${CONFIG.CURRENT_MODULE}`);
-            if (tagRes.ok) {
-                const data = await tagRes.json();
-                if (Array.isArray(data) && data.length > 0) {
-                    AppState.tagCategories = data;
-                    tagSuccess = true;
-                }
-            }
-        } catch (e) {
-            console.warn("[MAERS.CMS] Tag API failed, trying static fallback...", e);
-        }
-    }
-
-    if (!tagSuccess) {
-        try {
-            const staticTagFile = `data/tags/cms-${CONFIG.CURRENT_MODULE}-tag-categories.json`;
-            const tagRes = await localFetch(staticTagFile, { cache: 'no-cache' });
-            if (tagRes.ok) {
-                AppState.tagCategories = await tagRes.json();
+            const local = isLocal ? await localFetch(`/api/cms/tag_categories?module=${CONFIG.CURRENT_MODULE}`).catch(() => null) : null;
+            const categories = local?.ok ? await local.json().catch(() => null) : null;
+            if (Array.isArray(categories) && categories.length > 0) {
+                AppState.tagCategories = categories;
             } else {
-                console.warn(`[MAERS.CMS] Static tags file not found: ${staticTagFile}`);
-                AppState.tagCategories = [];
+                const tagRes = await localFetch(`data/tags/cms-${CONFIG.CURRENT_MODULE}-tag-categories.json`, { cache: 'no-cache' });
+                AppState.tagCategories = tagRes.ok ? await tagRes.json() : [];
             }
         } catch (e) {
             console.error("[MAERS.CMS] Static tags load failed:", e);
@@ -166,23 +160,56 @@ export async function loadData() {
     }
 
     await coversReady;
-    return true;
+    return success;
 }
 
 export async function callApi(action, data) {
-    if (action === 'add' && !data.id) {
-        data.id = `${(data.type || 'n')[0]}_${Date.now()}`;
-    }
-
+    try { validateCmsNodeAction(AppState.root, action, data); }
+    catch (error) { return privateFailure(error); }
     const mode = syncManager.getEffectiveMode();
+    const online = isOnlineAdminPage();
+    const protectedDelete = action === 'delete' && (data.purge_private?.length ||
+        AppState.lockedNodes.some(node => node.id === data.id) ||
+        hasProtectedCmsContent(AppState.allNodes.find(node => node.id === data.id), AppState.lockedNodes));
+    if (protectedDelete && (online || mode === 'relay')) {
+        return privateFailure(Error('整项删除加密内容仅限电脑本地后台'));
+    }
+    if (online) {
+        const ids = [action !== 'add' && data.id, data.parentId, data.targetParentId, ...(data.ids || [])]
+            .filter(id => id && id !== 'root');
+        const entries = new Set(ids.map(id => privateDrafts.get(id)).filter(Boolean));
+        const locked = AppState.lockedNodes.some(node => ids.includes(node.id));
+        const publicOrder = action === 'reorder' && !locked && ids.every(id => {
+            const node = AppState.allNodes.find(item => item.id === id);
+            const parent = AppState.allNodes.find(item => item.id === node?.parentId);
+            return node && !parent?._private;
+        });
+        if ((entries.size && !publicOrder) || locked) {
+            try {
+                if (locked || entries.size !== 1) {
+                    throw Error('此操作涉及其他加密内容，请在电脑本地后台操作');
+                }
+                await editCmsDraft(entries.values().next().value, action, data);
+            } catch (error) {
+                return privateFailure(error);
+            }
+            try { await loadData(); } catch { window.MAERS?.Toast?.error?.('草稿已保存，请刷新页面查看'); }
+            return { success: true };
+        }
+        if (ids.some(id => !AppState.allNodes.some(node => node.id === id))) {
+            return privateFailure(Error('内容尚未加载，请刷新页面后再编辑'));
+        }
+        if (entries.size && publicOrder) return _relayAction(action, data, false);
+    }
     const isLockAction = (action === 'lock' || action === 'unlock');
-    const privateOperation = action === 'protect' || AppState.allNodes.some(node => node._private &&
+    const privateOperation = action === 'protect' || protectedDelete || AppState.allNodes.some(node => node._private &&
         (node.id === data.id || node.id === data.targetParentId || node.id === data.parentId || data.ids?.includes(node.id)));
     // 手机端 / 远程模式：走 Cloudflare Worker 0.1秒极速入队
     if (mode === 'relay' && !privateOperation) {
         return _relayAction(action, data, isLockAction);
     }
 
+    if (action === 'add' && !data.id) data = { ...data, id: `${(data.type || 'n')[0]}_${Date.now()}` };
     try {
         const res = await localFetch(`/api/cms/node?module=${CONFIG.CURRENT_MODULE}&action=${action}`, {
             method: 'POST',
@@ -217,6 +244,26 @@ export async function callApi(action, data) {
         }
         return { success: false, msg: e.message };
     }
+}
+
+function privateFailure(error) {
+    window.MAERS?.Toast?.error?.(error.message);
+    return { success: false, msg: error.message };
+}
+
+function uploadCloudImage(file, nodeId, cover = false) {
+    if (!isOnlineAdminPage()) return null;
+    const entry = privateDrafts.get(nodeId);
+    if (!entry) {
+        if (!nodeId || AppState.allNodes.some(node => node.id === nodeId && !node._private)) return null;
+        return Promise.resolve(privateFailure(Error('请先打开已解锁的内容再上传')));
+    }
+    return uploadCmsDraft(entry, nodeId, file, cover).then(async row => {
+        if (cover) {
+            try { await loadData(); } catch { window.MAERS?.Toast?.error?.('封面草稿已保存，请刷新页面查看'); }
+        }
+        return { ...row, relPath: row.path, success: true };
+    }, privateFailure);
 }
 
 /** 中继入队；加解锁/删除入队成功后在本地内存同步加密占位 */
@@ -258,8 +305,8 @@ export function reorderNodes(ids) {
 }
 
 /** 加锁：将节点整棵子树替换为一条密文记录（密文由前端生成） */
-export function lockNode(id, enc, covers = [], sources = []) {
-    return callApi('lock', { id, enc, covers, sources });
+export function lockNode(id, enc, covers = [], sources = [], group = 'default') {
+    return callApi('lock', { id, enc, covers, sources, group });
 }
 
 /** 解锁：用解密后的子树重建节点及正文文件 */
@@ -267,31 +314,19 @@ export function unlockNode(id, tree) {
     return callApi('unlock', { id, tree });
 }
 
+/** 保存标签分类：本地写后端，云端中继暂存；仅在真实保存成功后更新内存，失败返回 false */
 export async function saveTagCategories(categories) {
-    AppState.tagCategories = categories;
-
-    // Call API (本地环境)
-    try {
-        const res = await localFetch(`/api/cms/save_categories?module=${CONFIG.CURRENT_MODULE}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(categories)
-        });
-
-        if (res.ok) {
-            return { success: true };
-        } else {
-            return { success: false, msg: 'API Error' };
-        }
-    } catch (e) {
-        console.warn("[MAERS.CMS] 本地后端保存标签失败:", e);
-        return { success: true }; // 线上模式静默放行
-    }
+    const saved = await TagsApi.saveCategories(CONFIG.CURRENT_MODULE, categories);
+    if (saved) AppState.tagCategories = categories;
+    else window.MAERS?.Toast?.error?.('标签保存失败，修改未生效');
+    return saved;
 }
 
 // Image Upload Logic (Business Logic)
 export async function uploadImage(file, nodeId) {
     if (!file) return { success: false, msg: 'Missing file' };
+    const privateUpload = uploadCloudImage(file, nodeId);
+    if (privateUpload) return privateUpload;
     const module = CONFIG.CURRENT_MODULE || 'notes';
     let category = '_notes';
 
@@ -301,7 +336,7 @@ export async function uploadImage(file, nodeId) {
     else if (module === 'videos') category = '_videos';
     else category = '_notes';
 
-    return await syncManager.uploadFile(file, category, 'public', nodeId ? { module, node_id: nodeId } : {});
+    return await syncManager.uploadFile(file, category, nodeId ? { module, node_id: nodeId } : {});
 }
 
 // Export Controller object
@@ -329,6 +364,8 @@ export async function uploadCover(formData) {
     const file = formData.get('file');
     const nodeId = formData.get('nodeId');
     if (!file || !nodeId) return { success: false, msg: 'Missing file or nodeId' };
+    const privateUpload = uploadCloudImage(file, nodeId, true);
+    if (privateUpload) return privateUpload;
 
     // 确定所属封面分类
     let category = 'literaturecovers';
@@ -340,7 +377,7 @@ export async function uploadCover(formData) {
     }
 
     try {
-        const uploadRes = await syncManager.uploadFile(file, category, 'public', {
+        const uploadRes = await syncManager.uploadFile(file, category, {
             module: currentModule, node_id: nodeId, cover: '1'
         });
         if (!uploadRes.success) {
@@ -370,13 +407,13 @@ export async function bootstrap(View) {
     syncManager.setController(Controller);
     if (!View) {
         console.warn("[MAERS.CMS] View not found, skipping bootstrap.");
-        return;
+        return false;
     }
 
     const success = await loadData();
 
     if (success) {
-        View.init(AppState, CONFIG);
+        await View.init(AppState, CONFIG);
         View.setupSearchListeners();
         View.renderPageTitle();
         View.renderBreadcrumb();
@@ -385,4 +422,5 @@ export async function bootstrap(View) {
         console.error("[MAERS.CMS] Failed to load data.");
         if (window.MAERS?.Toast) window.MAERS.Toast.error("Failed to load data.");
     }
+    return success;
 }

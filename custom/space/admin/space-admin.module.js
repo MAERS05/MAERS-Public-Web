@@ -1,9 +1,12 @@
 /**
  * @module custom/space/admin/space-admin.module.js
- * @description Space Admin - Fully Restored & Fixed (Batch Manager + Filters)
+ * @description 空间管理：网站卡片、批量操作、筛选与云端持久化
  * @version 4.1.0 - Filters restored, markDirty fixed.
  */
+import { Search } from '../../../shared/utils.module.js';
 import { api, localFetch } from '../../../data-manage/api-client.module.js';
+import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
+import { applySpaceDraft } from '../../../data-manage/sync/relay-actions.module.js';
 
 import { setupTagDragAndMenu } from '../../cms/admin/tag-interactions.module.js';
 import { AdminModal } from '../../../data-manage/admin/admin-modal.module.js';
@@ -73,20 +76,29 @@ function setupUI() {
 }
 
 async function loadData() {
+    let loaded = false;
     try {
         const res = await localFetch('data/space-tree.json', { cache: 'no-cache' });
-        if (res.ok) {
-            treeData = await res.json();
-        } else {
-            treeData = { root: [] };
-        }
+        if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+        const data = res.ok ? await res.json() : { root: [] };
+        if (!Array.isArray(data?.root)) throw new Error('空间数据格式无效');
+        treeData = data;
+        loaded = true;
     } catch (e) {
         console.error("Load failed", e);
         if (window.MAERS?.Toast) window.MAERS.Toast.error("Failed to load data");
         treeData = { root: [] };
     }
+    // 云端模式：已发布的树叠加尚未合并的整份快照与标签草稿，刷新后保持一致
+    if (loaded) treeData = await syncManager.loadDocument('space-tree', treeData, applySpaceDraft);
+    else syncManager.rememberDocument('space-tree', undefined);
     updateCurrentLevel();
     syncToAppState(); // Important for search/filter
+}
+
+/** 当前是否经云端中继写入（无本地后端） */
+function isRelayMode() {
+    return syncManager.getEffectiveMode() === 'relay';
 }
 
 function updateCurrentLevel() {
@@ -210,19 +222,7 @@ function uiEdit(e, index) {
     // [FIX] In filtering mode, filteredNodes might have stale references.
     // Always use the live object from treeData.
     if (isFiltering()) {
-        // Recursively search in treeData
-        function findInTree(nodes, id) {
-            for (let n of nodes) {
-                if (n.id === id) return n;
-                if (n.children) {
-                    const found = findInTree(n.children, id);
-                    if (found) return found;
-                }
-            }
-            return null;
-        }
-
-        const liveNode = findInTree(treeData.root, node.id);
+        const liveNode = Search.findNodeInfo(treeData.root, node.id);
         if (liveNode) {
             node = liveNode;
         } else {
@@ -254,201 +254,141 @@ function getRenderNodes() {
     return currentLevelNodes;
 }
 
+async function saveNodeTags(node, newTags) {
+    const oldTags = [...(node.tags || [])];
+    node.tags = newTags;
+    syncToAppState();
+    if (await performUpdateTags(node, newTags)) return true;
+    node.tags = oldTags;
+    return false;
+}
+
+async function addNodeTags(event, node) {
+    event.stopPropagation();
+    const input = prompt('添加标签 (可使用 , 或 ， 分隔多个):');
+    if (!input) return;
+    const oldTags = node.tags || [];
+    const additions = [...new Set(input.split(/[,，]/).map(tag => tag.trim()).filter(Boolean))]
+        .filter(tag => !oldTags.includes(tag));
+    if (!additions.length) return;
+    if (!(await saveNodeTags(node, [...oldTags, ...additions]))) render();
+}
+
+function createCardActions(node, index, filtering) {
+    if (!AdminCore?.AdminButtonHelper) return null;
+    const actions = AdminCore.AdminButtonHelper.render({
+        index,
+        isDeleted: node._deleted,
+        onSort: filtering ? null : event => uiToggleSelect(event, index),
+        onEdit: event => uiEdit(event, index),
+        onAddTag: event => addNodeTags(event, node),
+        onDelete: event => uiToggleDelete(event, index),
+        containerClass: 'admin-actions'
+    });
+    const lockBtn = document.createElement('span');
+    lockBtn.className = 'maers-admin-btn';
+    setupLockActionButton(lockBtn, {
+        isLocked: Boolean(node._private_id || node._cloudEnvelope),
+        title: node._private ? '随上级对外加密' : '对外加密此节点',
+        onClick: event => { event.stopPropagation(); uiLock(index); }
+    });
+    actions.appendChild(lockBtn);
+    return actions;
+}
+
+function createCardContent(node) {
+    const contentHtml = node.type === 'directory' ? `
+        <div class="space-icon folder-icon">
+            <svg viewBox="0 0 24 24" width="64" height="64" fill="currentColor">
+                <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
+            </svg>
+        </div>
+    ` : `
+        <div class="space-icon">
+            <img src="${node.icon || 'ui/placeholder.svg'}" alt="${escapeAttr(node.name)}" onerror="this.src='ui/placeholder.svg'">
+        </div>
+    `;
+
+    const innerDiv = document.createElement('div');
+    innerDiv.className = 'card-content-wrapper';
+    innerDiv.innerHTML = `
+        ${contentHtml}
+        <div class="space-text">
+            <div class="space-title">${escapeHtml(node.name)}</div>
+            <div class="space-desc">${escapeHtml(node.content || '')}</div>
+        </div>
+        <div class="space-tags">
+            ${(node.tags || []).map(tag => {
+        const isActive = AdminCore.AppState?.activeFilters?.has(tag);
+        return `<span class="space-tag ${isActive ? 'active' : ''}">${escapeHtml(tag)}</span>`;
+    }).join('')}
+        </div>
+    `;
+
+    const tagsContainer = innerDiv.querySelector('.space-tags');
+    if (manager && tagsContainer) {
+        setupTagDragAndMenu({
+            tagsContainer,
+            getTags: () => node.tags || [],
+            onTagsUpdate: newTags => saveNodeTags(node, newTags)
+        });
+    }
+    return innerDiv;
+}
+
+function handleCardClick(event, node, index, filtering) {
+    if (event.target.closest('.action-btn') || event.target.closest('.maers-admin-btn')) return;
+    const tag = event.target.closest('.space-tag');
+    if (tag) {
+        event.stopPropagation();
+        AdminCore.Tags?.filterByTag?.(event, tag.textContent.trim());
+    } else if (!filtering && manager?.selectedIndices.length > 0) {
+        uiMoveTo(event, index);
+    } else if (node.type !== 'directory' && node.url) {
+        window.open(node.url, '_blank');
+    }
+}
+
+function createSpaceCard(node, index, filtering) {
+    if (isEncryptedRecord(node)) return _renderLockedSpaceCard(index);
+    const card = document.createElement('div');
+    const extraClasses = !filtering && manager ? manager.getItemClass(index)
+        : filtering && node._deleted ? 'is-deleted' : '';
+    card.className = `space-card ${node.type === 'directory' ? 'folder-card' : 'link-card'} ${extraClasses}`;
+    card.dataset.id = node.id;
+    card.dataset.type = node.type;
+    if (!filtering && manager?.selectedIndices.includes(index)) {
+        card.setAttribute('data-order-num', manager.selectedIndices.indexOf(index) + 1);
+    }
+    card.onclick = event => handleCardClick(event, node, index, filtering);
+    const actions = createCardActions(node, index, filtering);
+    if (actions) card.appendChild(actions);
+    card.appendChild(createCardContent(node));
+    return card;
+}
+
+function createAddCard() {
+    const card = document.createElement('div');
+    card.className = 'space-card add-card-wrapper';
+    card.style.cssText = "border: 2px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; opacity:0.6;";
+    card.innerHTML = `<div style="font-size:48px; font-weight:300;">+</div><div style="font-size:12px; font-weight:600;">ADD NEW SITE</div>`;
+    card.onclick = handleAdd;
+    return card;
+}
+
 function render() {
     if (!grid) return;
     grid.innerHTML = '';
-
     const nodes = getRenderNodes();
-    const filtering = isFiltering();
-
     if (!nodes) return;
-
-    nodes.forEach((node, index) => {
-        // 加密记录：渲染锁定占位卡片
-        if (isEncryptedRecord(node)) {
-            grid.appendChild(_renderLockedSpaceCard(index));
-            return;
-        }
-
-        const card = document.createElement('div');
-
-        let extraClasses = '';
-        if (!filtering && manager) {
-            // Normal mode: use manager index directly
-            extraClasses = manager.getItemClass(index);
-        } else if (filtering && node._deleted) {
-            // Filtered mode: check _deleted flag directly (set by toggleDelete on the actual node object)
-            extraClasses = 'is-deleted';
-        }
-
-        card.className = `space-card ${node.type === 'directory' ? 'folder-card' : 'link-card'} ${extraClasses}`;
-        card.dataset.id = node.id;
-        card.dataset.type = node.type;
-
-        if (!filtering && manager && manager.selectedIndices.includes(index)) {
-            card.setAttribute('data-order-num', manager.selectedIndices.indexOf(index) + 1);
-        }
-
-        // Click Handler (Navigation)
-        card.onclick = (e) => {
-            if (e.target.closest('.action-btn') || e.target.closest('.maers-admin-btn')) return;
-
-            // 1. Tag Click
-            const tagEl = e.target.closest('.space-tag');
-            if (tagEl) {
-                e.stopPropagation();
-                if (AdminCore.Tags && AdminCore.Tags.filterByTag) {
-                    AdminCore.Tags.filterByTag(e, tagEl.textContent.trim());
-                }
-                return;
-            }
-
-            // 2. Move-To (if batch selection is active)
-            if (!filtering && manager && manager.selectedIndices.length > 0) {
-                uiMoveTo(e, index);
-                return;
-            }
-
-            // 3. Navigation
-            if (node.type === 'directory') {
-                // Enter folder?
-            } else if (node.url) {
-                window.open(node.url, '_blank');
-            }
-        };
-
-        // Render Buttons
-        if (AdminCore?.AdminButtonHelper) {
-            // 添加标签处理：乐观更新后调用细粒度接口，失败时回滚
-            const onAddTag = async (e) => {
-                e.stopPropagation();
-                const input = prompt("添加标签 (可使用 , 或 ， 分隔多个):");
-                if (input) {
-                    const rawTags = input.split(/[,，]/);
-                    const cleanTags = rawTags
-                        .map(t => t.trim())
-                        .filter(t => t.length > 0);
-
-                    if (cleanTags.length > 0) {
-                        const oldTags = [...(node.tags || [])];
-                        if (!node.tags) node.tags = [];
-                        let changed = false;
-
-                        for (const tag of cleanTags) {
-                            if (!node.tags.includes(tag)) {
-                                node.tags.push(tag);
-                                changed = true;
-                            }
-                        }
-
-                        if (changed) {
-                            // Optimistic update
-                            syncToAppState();
-
-                            // Call Granular API
-                            if (!(await performUpdateTags(node.id, node.tags))) {
-                                // Revert on failure
-                                node.tags = oldTags;
-                                render();
-                            }
-                        }
-                    }
-                }
-            };
-
-            const adminEl = AdminCore.AdminButtonHelper.render({
-                index: index,
-                isDeleted: node._deleted,
-                onSort: filtering ? null : (e) => uiToggleSelect(e, index),
-                onEdit: (e) => uiEdit(e, index),
-                onAddTag: onAddTag,
-                onDelete: (e) => uiToggleDelete(e, index),
-                containerClass: 'admin-actions'
-            });
-
-            // 加锁按钮
-            const lockBtn = document.createElement('span');
-            lockBtn.className = 'maers-admin-btn';
-            setupLockActionButton(lockBtn, {
-                isLocked: Boolean(node._private_id),
-                title: node._private_id ? '取消此节点的对外加密' : node._private ? '随上级对外加密' : '对外加密此节点',
-                onClick: (e) => { e.stopPropagation(); uiLock(index); }
-            });
-            adminEl.appendChild(lockBtn);
-
-            card.appendChild(adminEl);
-        }
-
-        // Inner Content
-        const contentHtml = node.type === 'directory' ? `
-            <div class="space-icon folder-icon">
-                <svg viewBox="0 0 24 24" width="64" height="64" fill="currentColor">
-                    <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
-                </svg>
-            </div>
-        ` : `
-            <div class="space-icon">
-                <img src="${node.icon || 'ui/placeholder.svg'}" alt="${escapeAttr(node.name)}" onerror="this.src='ui/placeholder.svg'">
-            </div>
-        `;
-
-        const innerDiv = document.createElement('div');
-        innerDiv.className = 'card-content-wrapper';
-        innerDiv.innerHTML = `
-            ${contentHtml}
-            <div class="space-text">
-                <div class="space-title">${escapeHtml(node.name)}</div>
-                <div class="space-desc">${escapeHtml(node.content || '')}</div>
-            </div>
-            <div class="space-tags">
-                ${(node.tags || []).map(tag => {
-            const isActive = AdminCore.AppState?.activeFilters?.has(tag);
-            return `<span class="space-tag ${isActive ? 'active' : ''}">${escapeHtml(tag)}</span>`;
-        }).join('')}
-            </div>
-        `;
-
-        // Tag interactions (drag-and-drop + context menu)
-        if (manager) {
-            const tagsContainer = innerDiv.querySelector('.space-tags');
-            if (tagsContainer) {
-                const setupEvents = () => {
-                    setupTagDragAndMenu({
-                        tagsContainer,
-                        getTags: () => node.tags || [],
-                        onTagsUpdate: async (newTags) => {
-                            const oldTags = [...node.tags];
-                            node.tags = newTags;
-                            syncToAppState();
-
-                            if (await performUpdateTags(node.id, newTags)) {
-                                return true;
-                            } else {
-                                node.tags = oldTags;
-                                return false;
-                            }
-                        }
-                    });
-                };
-                setupEvents();
-            }
-        }
-
-        card.appendChild(innerDiv);
-
-        grid.appendChild(card);
-    });
-
-    // Add New Card (Always visible)
-    const addCard = document.createElement('div');
-    addCard.className = 'space-card add-card-wrapper';
-    addCard.style.cssText = "border: 2px dashed rgba(255,255,255,0.1); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; opacity:0.6;";
-    addCard.innerHTML = `<div style="font-size:48px; font-weight:300;">+</div><div style="font-size:12px; font-weight:600;">ADD NEW SITE</div>`;
-    addCard.onclick = handleAdd;
-    grid.appendChild(addCard);
+    const filtering = isFiltering();
+    nodes.forEach((node, index) => grid.appendChild(createSpaceCard(node, index, filtering)));
+    grid.appendChild(createAddCard());
     refreshUnlockAllButton();
 }
+
 function openEditModal(node, index, isNew = false) {
+    const level = currentLevelNodes;
     AdminModal.open({
         title: isNew ? 'Add New Item' : 'Edit Item',
         isNew,
@@ -465,49 +405,31 @@ function openEditModal(node, index, isNew = false) {
             { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'tag1, tag2' }
         ],
         onSave: async (formData) => {
-            // Update node properties
-            node.name = formData.name;
-            node.content = formData.content;
+            const edited = { ...node, name: formData.name, content: formData.content, tags: formData.tags };
             if (node.type === 'link') {
-                node.url = formData.url;
-                node.icon = formData.icon;
-            }
-            node.tags = formData.tags;
-
-            // Logic for New Item
-            if (isNew) {
-                currentLevelNodes.push(node);
-                if (manager) {
-                    manager.setList(currentLevelNodes);
-                }
+                edited.url = formData.url;
+                edited.icon = formData.icon;
             }
 
             try {
-                // Update app state first
-                syncToAppState();
-
-                // Save to server without reloading — the node is already mutated in memory,
-                // so we only need to persist and re-render locally (no JSON fetch needed).
-                await saveToServer();
-
-                // Re-render with the already-updated in-memory data
-                render();
-
-                // Sync manager snapshot so the save bar knows there are no dirty changes
-                if (manager) manager.setList(currentLevelNodes);
-
-                if (window.MAERS?.Toast) {
-                    window.MAERS.Toast.success(isNew ? "网站收藏成功" : "保存成功!");
-                }
-
-                return true; // Close modal
-            } catch (err) {
-                console.error(err);
-                if (window.MAERS?.Toast) {
-                    window.MAERS.Toast.error(isNew ? "网站收藏失败" : "保存失败");
-                }
-                return false; // Keep modal open
+                await saveToServer({ node, edited, insertInto: isNew ? level : null });
+            } catch (error) {
+                console.error('[SPACE] 保存网站失败:', error);
+                return false;
             }
+            // 确认保存后才更新内存树，同一个表单重试只会插入一次。
+            if (isNew) level.push(edited);
+            else Object.assign(node, edited);
+            try {
+                syncToAppState();
+                render();
+                if (manager) manager.setList(currentLevelNodes);
+                window.MAERS?.Toast?.success(isNew ? '网站收藏成功' : '保存成功');
+            } catch (error) {
+                console.warn('[SPACE] 保存后刷新失败:', error);
+                window.MAERS?.Toast?.warning('网站已保存，请手动刷新页面');
+            }
+            return true;
         }
     });
 }
@@ -536,10 +458,12 @@ function handleAdd() {
  * Only POST the current treeData to the server (prune deleted nodes first).
  * Does NOT reload from JSON or re-render — caller is responsible for that.
  */
-async function saveToServer() {
+async function saveToServer({ node, edited, insertInto } = {}) {
     function pruneDeleted(nodes) {
         if (!nodes) return [];
-        return nodes.filter(n => !n._deleted).map(n => {
+        const list = nodes === insertInto ? [...nodes, edited] : nodes;
+        return list.filter(n => !n._deleted).map(original => {
+            const n = original === node ? edited : original;
             if (n.children) {
                 return { ...n, children: pruneDeleted(n.children) };
             }
@@ -550,14 +474,8 @@ async function saveToServer() {
     const cleanRoot = pruneDeleted(treeData.root);
     const dataToSave = { root: cleanRoot };
 
-    const res = await localFetch('/api/space/save_tree', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSave)
-    });
-
-    if (!res.ok) throw new Error(res.status);
-    return true;
+    const result = await syncManager.writeDocument('space-tree', dataToSave);
+    if (!result.success) throw new Error(result.msg || '保存失败');
 }
 
 /**
@@ -605,10 +523,22 @@ async function performCancel() {
     render();
 }
 
-async function performUpdateTags(nodeId, tags) {
+async function performUpdateTags(node, tags) {
+    const { id: nodeId } = node;
     try {
-        const res = await api
-            .post('/api/space/update_tags', { id: nodeId, tags: tags });
+        if (isRelayMode() && node._private) {
+            const saved = await syncManager.writePrivateSpaceTags(nodeId, tags);
+            if (!saved.success) throw Error(saved.msg || '私密标签暂存失败');
+        } else if (isRelayMode()) {
+            const queued = await syncManager.enqueue('space', 'update_tags', { id: nodeId, tags });
+            if (!queued.success) throw new Error(queued.msg || '暂存失败');
+        } else {
+            await api.post('/api/space/update_tags', { id: nodeId, tags: tags });
+        }
+        const item = { module: 'space', action: 'update_tags', data: { id: nodeId, tags } };
+        if (!isRelayMode() || !node._private) {
+            syncManager.updateDocumentBase('space-tree', content => applySpaceDraft(item, content));
+        }
 
         // Success - apply filters to update view and breadcrumb
         if (typeof applyFilters === 'function') {
@@ -625,7 +555,7 @@ async function performUpdateTags(nodeId, tags) {
         return true;
     } catch (e) {
         console.error("[SPACE] Update tags failed", e);
-        if (window.MAERS?.Toast) window.MAERS.Toast.error("Update tags failed");
+        window.MAERS?.Toast?.error?.(e.message || '标签保存失败');
         return false;
     }
 }
@@ -653,7 +583,7 @@ async function uiLock(index) {
     const actualIdx = currentLevelNodes.findIndex(n => n === node || n.id === node.id);
     const targetIdx = actualIdx !== -1 ? actualIdx : index;
 
-    const enc = await lockRecord(currentLevelNodes[targetIdx]);
+    const enc = await lockRecord(currentLevelNodes[targetIdx], { choose: true });
     if (!enc) return;
 
     currentLevelNodes[targetIdx] = enc;

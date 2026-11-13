@@ -5,7 +5,8 @@
  */
 
 import { initSpatialNav } from './spatial-nav.module.js';
-import { guardCurrentPage } from '../data-manage/encrypt/secret-unlock.module.js';
+import { initSecretUnlock, guardCurrentPage } from '../data-manage/encrypt/secret-unlock.module.js';
+import { isStudioAdminPage, isOnlineAdminPage, STUDIO_ENTRY_KEY } from '../data-manage/api-client.module.js';
 
 export function injectThemeSwitch() {
     if (document.querySelector('.theme-switch-wrapper')) return;
@@ -75,11 +76,44 @@ export function renderPageHeader(title, backUrl = "index.html", backText = "Back
     if (mainCard) { mainCard.insertAdjacentHTML('afterbegin', headerHtml); }
 }
 
+let studioEntryStarted = false;
+function initStudioEntry() {
+    if (studioEntryStarted) return;
+    studioEntryStarted = true;
+    const online = isOnlineAdminPage();
+    if (!isStudioAdminPage() && !online) {
+        const leaveAdmin = () => {
+            if (isOnlineAdminPage(new URL('/admin-portal.html', window.location.href))) return;
+            try { sessionStorage.removeItem(STUDIO_ENTRY_KEY); } catch { /* 访客页允许禁用会话存储。 */ }
+        };
+        leaveAdmin();
+        window.addEventListener('pageshow', event => { if (event.persisted) leaveAdmin(); });
+        return;
+    }
+    const root = document.documentElement;
+    root.classList.add('studio-entry-locked');
+    const back = () => window.location.replace('/');
+    import('../data-manage/encrypt/admin-session.module.js')
+        .then(({ ensureAdminSession, ensureOnlineAdminEntry }) => online ? ensureOnlineAdminEntry() : ensureAdminSession())
+        .then(() => root.classList.remove('studio-entry-locked'))
+        .catch(async error => {
+            if (error.cause === 'admin_entry_cancelled') { back(); return; }
+            const { openFormModal } = await import('../data-manage/encrypt/lock-dialog.module.js');
+            openFormModal({
+                title: online ? '无法进入线上后台' : '无法进入本地后台', sub: error.message,
+                confirmText: '重试', cancelText: '返回首页',
+                onSubmit: () => { window.location.reload(); return true; }, onCancel: back
+            });
+        });
+}
+
 /**
  * Main Initialization Function
  * Replaces the DOMContentLoaded listener in original layout.js
  */
 export function initLayout() {
+    initStudioEntry();
+    initSecretUnlock(); // 隐藏的线上解锁入口（无任何可见元素）
     guardCurrentPage(); // 首页卡片已加锁的页面，未解锁访客直接访问时显示 404
     if (document.readyState === "loading") {
         document.addEventListener("DOMContentLoaded", () => {

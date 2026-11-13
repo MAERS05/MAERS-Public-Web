@@ -130,16 +130,16 @@ html {
             -webkit-backdrop-filter: none !important;
 
             /* 2. 移除大阴影：减少 GPU 渲染开销 */
-            box-shadow: none !important;
+            box-shadow:none !important;
 
             /* 3. 移除边框或简化 */
-            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
         }
 
         /* 4. 适配白昼模式边框 */
         html.light-mode .main-card,
         html.light-mode .nav-card {
-            border: 1px solid rgba(0, 0, 0, 0.05) !important;
+            border: 1px solid rgba(0, 0, 0, 0.16) !important;
         }
     }
 
@@ -190,5 +190,20 @@ html {
             height: 70px !important;
             margin-bottom: 4px !important;
         }
+    }
+}
+
+/* 4. 📱 小屏顶栏标题：由“图标 + 名称”组成的标题（相册、笔记、文学、游戏、影视、记录、Space）仅保留图标，
+      为返回、同步与标签等按钮让出空间；图标自带 alt 文本，不影响可访问性。
+      纯文字标题（如 CMS 后台）没有图标，不受影响。 */
+@media (max-width: 560px) {
+    body .header-title:has(> img) {
+        font-size: 0 !important;
+        flex: 0 0 auto;
+    }
+
+    body .header-title:has(> img) > img {
+        height: 28px !important;
+        width: auto !important;
     }
 }

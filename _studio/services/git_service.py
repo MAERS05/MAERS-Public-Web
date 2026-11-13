@@ -127,9 +127,9 @@ def get_git_status():
         'ahead_count': ahead_count
     }
 
-def commit_and_push(commit_message=None):
+def commit_and_push(commit_message=None, *, content_bucket=None):
     try:
-        result = _commit_and_push(commit_message)
+        result = _commit_and_push(commit_message, content_bucket=content_bucket)
         _set_progress(result['step'], result['msg'])
         return result
     except Exception:
@@ -137,7 +137,7 @@ def commit_and_push(commit_message=None):
         raise
 
 
-def _commit_and_push(commit_message=None):
+def _commit_and_push(commit_message=None, *, content_bucket=None):
     """
     一键将所有本地改动添加、提交并推送到远端 Git 仓库（内置推送前静态契约与数据完整性自检）
     """
@@ -160,7 +160,7 @@ def _commit_and_push(commit_message=None):
         except ImportError:
             from _studio.tests.run_tests import run_pre_push_check
 
-        check_res = run_pre_push_check()
+        check_res = run_pre_push_check(preparing=True)
         if not check_res.get('passed', True):
             err_list = check_res.get('errors') or ['未知契约校验异常']
             print(f"  [ GIT ] ❌ 推送前自检拦截 ({len(err_list)} 项未通过): {err_list[0]}")
@@ -175,7 +175,32 @@ def _commit_and_push(commit_message=None):
         print(f"  [ GIT ] ❌ 推送前自检失败 | Pre-check failed: {e}")
         return {"success": False, "step": "pre_check", "msg": "测试门禁执行失败，推送已中止"}
 
+    from . import media_jobs
+    drafts = [job['key'] for job in media_jobs.pending() if job.get('deferred')]
+    if drafts:
+        _set_progress('media', '正在发布已合并的图片草稿…')
+        if media_jobs.retry(drafts, for_publish=True)['state'] != 'complete':
+            return {'success': False, 'step': 'media', 'msg': '图片草稿发布失败，待办已保留。请检查正式桶配置后重试提交并推送'}
+
+    # 先发布图片，再镜像可能引用这些图片的正文。
+    _set_progress('content', '正在同步正文到云端存储…')
+    from . import content_sync
+    try:
+        content_res = content_sync.sync(
+            lambda done, total: _set_progress('content', f'正在同步正文到云端存储（{done}/{total}）…'),
+            bucket_id=content_bucket, for_publish=True)
+        if content_res['enabled']:
+            print(f"  [ GIT ] ✅ 正文镜像已同步 | Content mirror synced: {content_res['uploaded']} uploaded, {content_res['deleted']} removed")
+    except content_sync.PublishConfigurationError as error:
+        return {"success": False, "step": "content", "msg": str(error)}
+    except Exception as e:
+        print(f"  [ GIT ] ❌ 正文镜像同步失败 | Content mirror sync failed: {e}")
+        return {"success": False, "step": "content", "msg": "正文同步到云端存储失败，提交与推送已中止，请检查媒体存储配置后重试"}
+
     _set_progress('commit', '正在保存本地 Git 提交…')
+    untrack = _run_git_cmd(['rm', '--cached', '--ignore-unmatch', '--', ':(glob)markdown/**/*.md', ':(glob)data/**/*.md'])
+    if untrack['code'] != 0:
+        return {'success': False, 'step': 'commit', 'msg': '取消正文的 Git 跟踪失败，请先整理暂存区后重试'}
     # 步骤 1：执行 git add .
     add_res = _run_git_cmd(['add', '.'])
     if add_res['code'] != 0:
@@ -220,7 +245,7 @@ def _commit_and_push(commit_message=None):
             return {
                 'success': True,
                 'step': 'none',
-                'msg': '工作区干净，无任何改动需要提交',
+                'msg': '内容同步已完成，代码与索引无需新增 Git 提交',
                 'pushed': False
             }
 

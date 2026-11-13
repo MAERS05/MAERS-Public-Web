@@ -59,12 +59,12 @@
         border-radius: 50% !important;
         /* 半透明背景，减少视觉干扰 */
         background: rgba(20, 20, 20, 0.4) !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
         backdrop-filter: blur(4px) !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        box-shadow: none !important;
         pointer-events: auto !important;
         /* 只有图标可点击 */
         margin: 5px 0 !important;
@@ -73,7 +73,7 @@
 
     html.light-mode .spatial-card {
         background: rgba(255, 255, 255, 0.6) !important;
-        border-color: rgba(0, 0, 0, 0.1) !important;
+        border-color: rgba(0, 0, 0, 0.16) !important;
     }
 
     /* 4. 隐藏文字内容 */

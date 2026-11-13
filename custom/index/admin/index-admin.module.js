@@ -1,16 +1,19 @@
 /**
  * MAERS Index Admin (index-admin.module.js)
- * 主页卡片管理逻辑 - 完整版
- * 集成通用 AdminCore 实现排序、编辑、删除、添加 (原子化添加，批量保存)
+ * 职责：初始化首页卡片管理，处理卡片编辑、加解锁和保存反馈。
  */
 import { initChangelogEditor } from './index-changelog.module.js';
-import { localFetch } from '../../../data-manage/api-client.module.js';
+import {
+    appendSavedCard, ensureCardPage, readCardList, refreshSavedCards, saveCardChanges
+} from '../../../data-manage/admin/card-persistence.module.js';
 
 import { initLayout } from '../../../shared/layout.module.js';
 import { initTheme } from '../../../shared/theme.module.js';
 import { Toast } from '../../../shared/toast.module.js';
+import { Utils } from '../../../shared/utils.module.js';
 import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin/admin-base.module.js';
 import { AdminModal } from '../../../data-manage/admin/admin-modal.module.js';
+import { disableAdminControl, isLocalOnlyUnavailable } from '../../../data-manage/admin/local-only.module.js';
 import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
 import {
     unlockRecord,
@@ -31,48 +34,52 @@ initTheme();
 // 注入更新日志编辑器入口
 initChangelogEditor();
 
+const SAVE_INDEX_CARDS = '/api/save_index_cards';
+
+/** 生成普通卡片的展示内容，图标路径及文本都按对应的 HTML 上下文转义。 */
+function renderCardContent({ icon, title, bgText, description }) {
+    const isIconPath = icon && (icon.includes('/') || icon.endsWith('.svg')) && !icon.trim().startsWith('<');
+    const iconHtml = isIconPath
+        ? `<img src="${Utils.escapeAttr(icon)}" class="nav-icon-img" alt="${Utils.escapeAttr(title)}" />`
+        : `<span style="font-size: 3rem; line-height: 1;">${Utils.escapeHtml(icon)}</span>`;
+    return `
+        <div class="card-bg-text">${Utils.escapeHtml(bgText)}</div>
+        <div class="card-icon">${iconHtml}</div>
+        <div class="card-title">${Utils.escapeHtml(title)}</div>
+        <div class="card-desc">${Utils.escapeHtml(description)}</div>
+    `;
+}
+
 export const IndexAdmin = {
     grid: null,
     items: [],
     manager: null,
 
-    init() {
+    async init() {
         this.grid = document.querySelector('.nav-grid');
         if (!this.grid) return;
-
-        this.loadData();
-    },
-
-    loadData() {
-        // 加载数据 (协商缓存：无变化时服务器返回 304，秒读本地缓存)
-        localFetch('data/index-cards.json', { cache: 'no-cache' })
-            .then(res => res.json())
-            .then(data => {
-                this.items = data;
-                this.initManager();
-            })
-            .catch(err => {
-                console.error("加载数据失败:", err);
-                this.grid.innerHTML = '<p style="color:red">加载数据失败</p>';
-            });
+        try {
+            this.items = await readCardList('data/index-cards.json');
+        } catch (error) {
+            console.error('[MAERS.Index] 读取首页卡片失败:', error);
+            this.grid.innerHTML = '<p style="color:red">加载数据失败</p>';
+            return;
+        }
+        this.initManager();
     },
 
     initManager() {
         // 初始化管理器 - 用于处理选中、删除状态及脏检查
         this.manager = new BatchItemManager({
             list: this.items,
-            onUpdate: () => this.render(),
-            onChange: (isDirty) => {
-                if (isDirty) SaveButton.show();
-                else SaveButton.hide();
-            }
+            onUpdate: () => this.render()
         });
 
         // 初始化全局保存按钮
         SaveButton.init(
             document.body,
-            async () => await this.performSave(),   // 保存回调
-            async () => await this.performCancel()  // 取消回调
+            () => this.performSave(),
+            () => this.performCancel()
         );
 
         this.render();
@@ -94,95 +101,108 @@ export const IndexAdmin = {
 
     render() {
         if (!this.grid) return;
+        const localOnlyUnavailable = isLocalOnlyUnavailable();
         this.grid.innerHTML = '';
 
         this.items.forEach((item, index) => {
             // ── 加密记录：渲染锁定占位卡片 ──
             if (isEncryptedRecord(item)) {
                 const lockedCard = this._renderLockedCard(index);
+                if (localOnlyUnavailable) disableAdminControl(lockedCard);
                 this.grid.appendChild(lockedCard);
                 return;
             }
 
-            const card = document.createElement('div');
-            // 获取管理员状态类 (选中/删除/普通)
-            const stateClass = this.manager.getItemClass(index);
-            card.className = `nav-card ${stateClass}`;
-            card.id = item.id || `card-${index}`;
-            card.style.position = 'relative'; // 确保内部绝对定位按钮正确
-
-            // 如果处于选中排序模式，显示序号
-            if (this.manager.selectedIndices.includes(index)) {
-                const orderNum = this.manager.selectedIndices.indexOf(index) + 1;
-                card.setAttribute('data-order-num', orderNum);
-            }
-
-            // 图标渲染逻辑：如果是路径则显示IMG，否则直接显示文本(Emoji)
-            // 简单判断：含 / 或 .svg 视为路径，且不是以 < 开头的 HTML
-            let iconHtml = item.icon;
-            if (item.icon && (item.icon.includes('/') || item.icon.endsWith('.svg')) && !item.icon.trim().startsWith('<')) {
-                iconHtml = `<img src="${item.icon}" class="nav-icon-img" alt="${item.title}" />`;
-            } else {
-                // Emoji 或 纯文本图重
-                iconHtml = `<span style="font-size: 3rem; line-height: 1;">${item.icon}</span>`;
-            }
-
-            // 卡片内容
-            card.innerHTML = `
-                <div class="card-bg-text">${item.bgText}</div>
-                <div class="card-icon">${iconHtml}</div>
-                <div class="card-title">${item.title}</div>
-                <div class="card-desc">${item.description}</div>
-            `;
-
-            // 点击逻辑：如果是排序模式，点击即移动；否则无动作(或跳转预览)
-            card.onclick = (e) => {
-                // 如果点击的是操作按钮，不触发卡片点击
-                if (e.target.closest('.maers-admin-action-group')) return;
-                if (e.target.closest('.card-lock-btn')) return;
-
-                if (this.manager.selectedIndices.length > 0) {
-                    e.preventDefault();
-                    if (this.manager.selectedIndices.includes(index)) {
-                        this.manager.toggleSelect(index); // 取消选中
-                    } else {
-                        this.manager.moveTo(index); // 移动到此位置
-                    }
-                } else {
-                    // 非排序模式：直接跳转链接 (用于测试)
-                    if (item.url && item.url !== '#') {
-                        window.location.href = item.url;
-                    }
-                }
-            };
-
-            // 注入通用管理按钮 (Sort, Edit, Delete)
-            const btnContainer = AdminButtonHelper.render({
-                index: index,
-                onSort: (e) => this.uiSort(e, index),
-                onEdit: (e) => this.uiEdit(e, index),
-                onDelete: (e) => this.uiDelete(e, index),
-                isDeleted: this.manager.isDeleted(index),
-                containerClass: 'nav-card-actions' // 自定义类名以便CSS微调
-            });
-
-            // 加锁按钮（独立注入，悬停时显示）
-            const lockBtn = document.createElement('span');
-            lockBtn.className = 'card-lock-btn maers-admin-btn';
-            setupLockActionButton(lockBtn, {
-                isLocked: Boolean(item._private_id),
-                title: item._private_id ? '取消此卡片的对外加密' : '对外加密此卡片',
-                onClick: (e) => { e.stopPropagation(); this.uiLock(index); }
-            });
-            btnContainer.appendChild(lockBtn);
-
-            card.appendChild(btnContainer);
+            // ── 普通卡片 ──
+            const card = this._renderNormalCard(item, index, localOnlyUnavailable);
             this.grid.appendChild(card);
         });
 
         // 渲染 "添加卡片" 按钮
-        this.renderAddButton();
+        this.renderAddButton(localOnlyUnavailable);
         refreshUnlockAllButton();
+    },
+
+    /**
+     * 渲染单张普通（非加密）卡片
+     * @param {object} item - 卡片数据
+     * @param {number} index - 在 items 中的索引
+     * @param {boolean} localOnlyUnavailable - 是否处于受限模式
+     * @returns {HTMLElement}
+     */
+    _renderNormalCard(item, index, localOnlyUnavailable) {
+        const card = document.createElement('div');
+        // 获取管理员状态类 (选中/删除/普通)
+        const stateClass = this.manager.getItemClass(index);
+        card.className = `nav-card ${stateClass}`;
+        card.id = item.id || `card-${index}`;
+        card.style.position = 'relative'; // 确保内部绝对定位按钮正确
+
+        // 如果处于选中排序模式，显示序号
+        const order = this.manager.selectedIndices.indexOf(index) + 1;
+        if (order) card.setAttribute('data-order-num', order);
+
+        // 卡片内容
+        card.innerHTML = renderCardContent(item);
+
+        // 点击逻辑
+        card.onclick = (e) => this._handleCardClick(e, item, index);
+
+        // 注入管理按钮组（含加锁按钮）
+        const btnContainer = this._renderAdminButtons(item, index, localOnlyUnavailable);
+        card.appendChild(btnContainer);
+        return card;
+    },
+
+    /**
+     * 卡片点击处理：排序模式下切换选中/移动，普通模式下跳转
+     */
+    _handleCardClick(e, item, index) {
+        // 如果点击的是操作按钮，不触发卡片点击
+        if (e.target.closest('.maers-admin-action-group, .card-lock-btn')) return;
+
+        if (this.manager.selectedIndices.length > 0) {
+            e.preventDefault();
+            if (this.manager.selectedIndices.includes(index)) {
+                this.manager.toggleSelect(index); // 取消选中
+            } else {
+                this.manager.moveTo(index); // 移动到此位置
+            }
+            return;
+        }
+        // 非排序模式：直接跳转链接 (用于测试)
+        if (item.url && item.url !== '#') {
+            window.location.href = item.url;
+        }
+    },
+
+    /**
+     * 渲染管理按钮组（排序/编辑/删除 + 加锁按钮）
+     */
+    _renderAdminButtons(item, index, localOnlyUnavailable) {
+        const btnContainer = AdminButtonHelper.render({
+            index: index,
+            onSort: (e) => this.uiSort(e, index),
+            onEdit: (e) => this.uiEdit(e, index),
+            onDelete: (e) => this.uiDelete(e, index),
+            isDeleted: this.manager.isDeleted(index),
+            containerClass: 'nav-card-actions' // 自定义类名以便CSS微调
+        });
+
+        // 加锁按钮（独立注入，悬停时显示）
+        const lockBtn = document.createElement('span');
+        lockBtn.className = 'card-lock-btn maers-admin-btn';
+        setupLockActionButton(lockBtn, {
+            isLocked: Boolean(item._private_id),
+            title: '对外加密此卡片',
+            onClick: (e) => { e.stopPropagation(); this.uiLock(index); }
+        });
+        btnContainer.appendChild(lockBtn);
+
+        if (localOnlyUnavailable) {
+            btnContainer.querySelectorAll('.maers-admin-btn').forEach(btn => disableAdminControl(btn));
+        }
+        return btnContainer;
     },
 
     /**
@@ -199,13 +219,12 @@ export const IndexAdmin = {
         });
     },
 
-    renderAddButton() {
+    renderAddButton(localOnlyUnavailable) {
         const addCard = document.createElement('div');
         addCard.className = 'nav-card functional-card';
         addCard.style.display = 'flex';
         addCard.style.alignItems = 'center';
         addCard.style.justifyContent = 'center';
-        addCard.style.cursor = 'pointer';
         addCard.style.border = '2px dashed rgba(255,255,255,0.2)';
         addCard.style.background = 'transparent';
         addCard.style.minHeight = '200px';
@@ -217,6 +236,12 @@ export const IndexAdmin = {
             </div>
         `;
 
+        this.grid.appendChild(addCard);
+        if (localOnlyUnavailable) {
+            disableAdminControl(addCard);
+            return;
+        }
+        addCard.style.cursor = 'pointer';
         addCard.onmouseenter = () => {
             addCard.style.background = 'rgba(255,255,255,0.05)';
             addCard.style.borderColor = 'rgba(255,255,255,0.5)';
@@ -227,7 +252,22 @@ export const IndexAdmin = {
         };
 
         addCard.onclick = () => this.uiAdd();
-        this.grid.appendChild(addCard);
+    },
+
+    // --- 公共字段定义 ---
+
+    /**
+     * 返回卡片编辑/新增的公共字段定义数组
+     * @returns {Array} 字段配置
+     */
+    _cardFields() {
+        return [
+            { name: 'title', label: 'Title', type: 'text', required: true },
+            { name: 'description', label: 'Description', type: 'textarea', required: true },
+            { name: 'bgText', label: 'Background Text (4 chars)', type: 'text', required: true, placeholder: 'ABCD' },
+            { name: 'icon', label: 'Icon (Path or Emoji)', type: 'text', required: true, placeholder: 'ui/logo.svg or 📝' },
+            { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' }
+        ];
     },
 
     // --- UI 操作 ---
@@ -253,38 +293,10 @@ export const IndexAdmin = {
             title: 'Edit Card',
             isNew: false,
             data: item,
-            fields: [
-                { name: 'title', label: 'Title', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea', required: true },
-                { name: 'bgText', label: 'Background Text (4 chars)', type: 'text', required: true, placeholder: 'ABCD' },
-                { name: 'icon', label: 'Icon (Path or Emoji)', type: 'text', required: true, placeholder: 'ui/logo.svg or 📝' },
-                { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' }
-            ],
+            fields: this._cardFields(),
             onSave: async (formData) => {
-                // Update item
-                item.title = formData.title;
-                item.description = formData.description;
-                item.bgText = formData.bgText;
-                item.icon = formData.icon;
-                item.url = formData.url;
-
-                // Auto create page if URL changed
-                if (item.url && item.url !== oldUrl && item.url.endsWith('.html') && !item.url.startsWith('http') && !item.url.includes('/')) {
-                    localFetch('/api/ensure_page', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ filename: item.url, title: item.title })
-                    })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.status === 'created') {
-                                Feedback.notifySuccess(`HTML文件创建成功`);
-                            } else if (data.status === 'exists') {
-                                Feedback.toast(`HTML文件已存在`, 'info');
-                            }
-                        })
-                        .catch(err => console.error("Page creation check failed", err));
-                }
+                if (formData.url !== oldUrl) await ensureCardPage(formData.url, formData.title);
+                Object.assign(item, formData);
 
                 this.manager.updateSaveState();
                 this.render();
@@ -294,7 +306,8 @@ export const IndexAdmin = {
         });
     },
 
-    async uiAdd() {
+    uiAdd() {
+        if (isLocalOnlyUnavailable()) return;
         const newItem = {
             id: '',
             bgText: 'NEW',
@@ -308,66 +321,27 @@ export const IndexAdmin = {
             title: 'Add New Card',
             isNew: true,
             data: newItem,
-            fields: [
-                { name: 'title', label: 'Title', type: 'text', required: true },
-                { name: 'description', label: 'Description', type: 'textarea', required: true },
-                { name: 'bgText', label: 'Background Text (4 chars)', type: 'text', required: true, placeholder: 'ABCD' },
-                { name: 'icon', label: 'Icon (Path or Emoji)', type: 'text', required: true, placeholder: 'ui/logo.svg or 📝' },
-                { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' }
-            ],
-            onSave: async (formData) => {
-                if (formData.url.endsWith('.html') && !formData.url.startsWith('http') && !formData.url.includes('/')) {
-                    try {
-                        const pageRes = await localFetch('/api/ensure_page', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ filename: formData.url, title: formData.title })
-                        });
-                        const pageData = await pageRes.json();
-                        if (pageData.status === 'created') Feedback.notifySuccess('HTML文件创建成功');
-                        else if (pageData.status === 'exists') Feedback.toast('HTML文件已存在', 'info');
-                    } catch (e) { console.error(e); }
-                }
-
-                const id = "nav-" + formData.title.toLowerCase().replace(/\s+/g, '-');
-
-                const finalItem = {
-                    id,
-                    bgText: formData.bgText,
-                    icon: formData.icon,
-                    title: formData.title,
-                    description: formData.description,
-                    url: formData.url
-                };
-
-                // Add to local
-                this.items.push(finalItem);
-
-                // Immediate save
-                try {
-                    const res = await localFetch('/api/save_index_cards', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(this.items)
-                    });
-
-                    if (res.ok) {
-                        this.manager.initialSnapshot = JSON.stringify(this.items);
-                        this.manager.updateSaveState();
-                        this.render();
-                        Feedback.notifyAddSuccess("首页卡片创建成功");
-                        return true;
-                    } else {
-                        throw new Error("Server Error");
-                    }
-                } catch (e) {
-                    this.items.pop(); // Rollback
-                    this.render();
-                    Feedback.notifyAddFail("首页卡片创建失败");
-                    return false;
-                }
-            }
+            fields: this._cardFields(),
+            onSave: formData => this._saveNewCard(formData)
         });
+    },
+
+    async _saveNewCard(formData) {
+        const added = { ...formData, id: 'nav-' + formData.title.toLowerCase().replace(/\s+/g, '-') };
+        let saved;
+        try {
+            await ensureCardPage(added.url, added.title);
+            saved = await appendSavedCard(SAVE_INDEX_CARDS, this.items, added);
+        } catch (error) {
+            console.error('[MAERS.Index] 新建卡片失败:', error);
+            Feedback.notifyAddFail('首页卡片创建失败');
+            return false;
+        }
+        refreshSavedCards(() => {
+            this.manager.markSaved(saved);
+            this.render();
+        }, () => Feedback.notifyAddSuccess('首页卡片创建成功'));
+        return true;
     },
 
     // --- 加锁 / 解锁 ---
@@ -378,7 +352,7 @@ export const IndexAdmin = {
      */
     async uiLock(index) {
         const wasPrivate = !!this.items[index]?._private_id;
-        const encRecord = await lockIndexCardRecord(this.items[index]);
+        const encRecord = await lockIndexCardRecord(this.items[index], { choose: true });
         if (!encRecord) return;
 
         this.items[index] = encRecord;
@@ -407,72 +381,31 @@ export const IndexAdmin = {
     // --- 核心保存/取消 ---
 
     async performSave() {
-        // 过滤掉已标记删除的项（加密记录没有 _deleted 字段，不受影响）
-        const finalItems = this.items.filter(item => !item._deleted);
-
-
-        // 检查是否有被删除的项关联了本地文件，并询问删除
-        const deletedItems = this.items.filter(item => item._deleted);
-        for (const item of deletedItems) {
-            if (item.url && item.url.endsWith('.html') && !item.url.startsWith('http') && !item.url.includes('/')) {
-                const confirmName = prompt(`⚠️ 危险操作：是否一并删除物理文件？\n\n您删除了卡片 "${item.title}"。\n若要同时彻底删除服务器上的文件 "${item.url}"，请在下方输入文件名确认：\n\n(否则请直接点击“取消”或关闭窗口)`, "");
-
-                if (confirmName === item.url) {
-                    try {
-                        await localFetch('/api/delete_page', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ filename: item.url })
-                        });
-                        Feedback.notifySuccess(`HTML文件已同步删除`);
-                    } catch (e) {
-                        console.error('File delete error', e);
-                        Feedback.notifyError(`文件删除失败: ${item.url}`);
-                    }
-                } else if (confirmName !== null) {
-                    Feedback.notifyError("文件名不匹配，文件未删除。");
-                }
-            }
-        }
-
+        if (isLocalOnlyUnavailable()) return false;
         try {
-            const res = await localFetch('/api/save_index_cards', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(finalItems)
-            });
-
-            if (res.ok) {
-                // 保存成功
-                // 更新 items 引用 (去除 soft deleted 的项)
-                this.items = finalItems;
-                // 更新管理器引用
-                this.manager.setList(this.items);
-
-                this.render();
-                SaveButton.hide();
-                Feedback.notifySaveSuccess();
-            } else {
-                Feedback.notifySaveFail();
-            }
-        } catch (e) {
-            console.error(e);
-            Feedback.notifySaveFail(e.message);
+            this.items = await saveCardChanges(SAVE_INDEX_CARDS, this.items, '卡片');
+        } catch (error) {
+            console.error('[MAERS.Index] 保存失败:', error);
+            Feedback.notifySaveFail(error.message);
+            return false;
         }
+        refreshSavedCards(() => {
+            this.manager.setList(this.items);
+            this.render();
+        }, () => Feedback.notifySaveSuccess());
+        return true;
     },
 
     async performCancel() {
         this.manager.reset(); // 回滚到快照
-        this.render();
         Feedback.notifyCancel();
     }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    IndexAdmin.init();
+    IndexAdmin.init().catch(error => {
+        console.error('[MAERS.Index] 初始化首页管理失败:', error);
+        Toast.error('首页管理初始化失败，请刷新重试');
+    });
 });
-
-// ══════════════════════════════════════════════
-// 📋 更新日志编辑器
-// ══════════════════════════════════════════════
 

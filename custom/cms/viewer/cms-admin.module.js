@@ -8,6 +8,7 @@
 import { Toast } from '../../../shared/toast.module.js';
 
 import { BatchItemManager, SaveButton, Feedback } from '../../../data-manage/admin/admin-base.module.js';
+import { isLocalOnlyUnavailable } from '../../../data-manage/admin/local-only.module.js';
 import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
 import {
     unlockRecord,
@@ -97,7 +98,6 @@ export async function initAdminFeatures() {
             const btnText = document.createElement('button');
             btnText.className = 'cms-create-btn';
             btnText.innerHTML = '＋ 文本';
-            btnText.style.marginRight = '8px';
             btnText.onclick = (e) => {
                 e.stopPropagation();
                 uiCreateNode('text');
@@ -130,8 +130,9 @@ export function syncManagerList(list, shouldReset = false) {
     }
 }
 
+/** 批量保存删除与排序；返回 false 表示有失败，保存条保持可见 */
 export async function performSave() {
-    if (!manager) return;
+    if (!manager) return true;
 
     const deletedItems = manager.list.filter(item => item._deleted);
 
@@ -208,6 +209,7 @@ export async function performSave() {
             window.MAERS.Toast.error("部分保存失败，请检查控制台");
         }
     }
+    return success;
 }
 
 export async function performCancel() {
@@ -494,6 +496,8 @@ function _toast(type, msg) {
     window.MAERS?.Toast?.[type]?.(msg);
 }
 
+let _lockBusy = false;
+
 /**
  * 加锁节点（文件夹则连同全部子文档一起加密）
  * 本地后端：立即写库并把封面迁入私有桶；中继模式：入队，电脑端合并时生效
@@ -501,32 +505,37 @@ function _toast(type, msg) {
 export async function uiLock(e, id) {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    const privateNode = Controller.AppState.allNodes.find(node => node.id === id && node._private_id);
-    if (privateNode) {
-        if (await cancelProtection(privateNode)) await refreshView(true, true);
-        return;
-    }
-
-    if (manager && manager.getSnapshot() !== manager.initialSnapshot) {
-        _toast('error', '存在未保存的改动，请先保存或取消后再加锁');
-        return;
-    }
-
+    if (_lockBusy) return;
     const target = Controller.AppState.allNodes.find(n => n.id === id);
     if (!target) return;
-    if (target._private) {
-        _toast('info', '该内容随上级文件夹对外加密，后台可正常编辑');
+
+    if (manager && manager.getSnapshot() !== manager.initialSnapshot) {
+        _toast('error', '存在未保存的改动，请先保存或取消后再操作');
+        return;
+    }
+
+    const parent = Controller.AppState.allNodes.find(n => n.id === target.parentId);
+    if (target._private && !target._private_id && parent?._private) {
+        _toast('info', '该内容随上级文件夹对外加密，请在上级文件夹上解密');
         return;
     }
     const isFolder = Array.isArray(target.children);
-    const tip = isFolder
-        ? `确定加密文件夹「${target.title}」及其全部子文档吗？\n明文 .md 文件将被删除，封面图迁入私有桶。`
-        : `确定加密文档「${target.title}」吗？\n明文 .md 文件将被删除，封面图迁入私有桶。`;
-    if (!confirm(tip)) return;
-
+    _lockBusy = true;
     try {
+        if (target._private_id || target._private) {
+            // 与旧版一致：弹出“解密或更换加密组”，方案 3 节点由 cancelProtection 内部走本地接口。
+            if (await cancelProtection(target, Controller.CONFIG.CURRENT_MODULE)) await refreshView(true, true);
+            return;
+        }
+        const { choosePasswordGroup } = await import('../../../data-manage/encrypt/password-groups.module.js');
+        const migration = '本地 .md 文件保持不变，图片将迁入私有桶。';
+        const group = await choosePasswordGroup({
+            title: `加密${isFolder ? '文件夹' : '文档'}「${target.title}」`,
+            sub: isFolder ? `全部子文档将使用同一密码组。${migration}` : migration
+        });
+        if (!group) return;
         if (syncManager.isLocalHost()) {
-            if (await protectCmsNode(Controller.CONFIG.CURRENT_MODULE, id)) {
+            if (await protectCmsNode(Controller.CONFIG.CURRENT_MODULE, id, group)) {
                 await refreshView(true, true);
                 _toast('success', '已对外加密，后台可继续编辑');
             }
@@ -536,10 +545,10 @@ export async function uiLock(e, id) {
         const node = Controller.AppState.allNodes.find(n => n.id === id);
         if (!node) return;
 
-        const packed = await packCmsNodeForLock(node, Controller.AppState.lockedNodes);
+        const packed = await packCmsNodeForLock(node, Controller.AppState.lockedNodes, { group });
         if (!packed) return;
 
-        const res = await Controller.lockNode(id, packed.enc, packed.covers, packed.sources);
+        const res = await Controller.lockNode(id, packed.enc, packed.covers, packed.sources, packed.group);
         if (!res.success) {
             _toast('error', `加锁失败: ${res.msg || ''}`);
             return;
@@ -548,14 +557,16 @@ export async function uiLock(e, id) {
         await refreshView(false, true);
         if (SaveButton) SaveButton.hide();
     } catch (err) {
-        console.error('[CMS] Lock failed', err);
-        _toast('error', `加锁失败: ${err.message}`);
+        console.error('[CMS] 加密操作失败', err);
+        _toast('error', `${target._private_id ? '操作失败' : '加锁失败'}：${err.message}`);
+    } finally {
+        _lockBusy = false;
     }
 }
 
 /** 解锁单个加密节点（不刷新视图） */
 async function _unlockOne(locked) {
-    const tree = await unlockRecord({ _enc: locked._enc });
+    const tree = await unlockRecord(locked);
     if (!tree) return false;
 
     const res = await Controller.unlockNode(locked.id, tree);
@@ -580,8 +591,9 @@ export async function uiUnlock(id) {
  * 若当前会话已解锁，顺带清理其已迁入私有桶的封面图；未解锁则仅删除记录
  */
 export async function uiDeleteLocked(id) {
-    if (!confirm('确定永久删除这条加密内容吗？此操作无法恢复。')) return;
+    if (isLocalOnlyUnavailable()) return;
     const locked = (Controller.AppState.lockedNodes || []).find(n => n.id === id);
+    if (!locked || !confirm('确定永久删除这条加密内容吗？此操作无法恢复。')) return;
     const purge = await collectCmsPrivateCoverKeys(locked);
     const res = await Controller.deleteNode(id, purge.length ? { purge_private: purge } : undefined);
     if (res.success) {

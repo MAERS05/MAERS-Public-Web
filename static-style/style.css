@@ -31,97 +31,38 @@ body {
     transition: color 300ms ease;
 }
 
+/* 全站视口级克制背景网格层（置于负层级，不干扰缩略视图与空间导航点击） */
+body:not(.immersive-active)::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--bg-grid-pattern);
+    background-size: var(--bg-grid-size) var(--bg-grid-size);
+    background-position: top center;
+}
 
-/* 3. Theme Mask (Uniform Fade) */
+
+/* 3. Theme Mask (Uniform Clean Dark Backdrop) */
 #theme-mask {
     position: fixed;
     top: 0;
     left: 0;
     width: 100vw;
     height: 100vh;
-    z-index: -1;
+    z-index: -2;
     pointer-events: none;
-    background-color: #141417;
-    background-image:
-        url('data:image/svg+xml;charset=utf-8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noise"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noise)" opacity="0.02"/%3E%3C/svg%3E'),
-        radial-gradient(80% 80% at 50% -20%, rgba(40, 40, 55, 0.4) 0%, transparent 60%),
-        linear-gradient(180deg, #141417 0%, #0a0a0c 100%);
+    background: var(--bg-base);
     opacity: 1;
     transition: opacity 300ms ease;
-    /* GPU 硬件加速 */
     transform: translateZ(0);
     will-change: opacity;
-}
-
-#theme-mask::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-image:
-        radial-gradient(1px 1px at 20px 30px, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1.5px 1.5px at 100px 150px, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1.2px 1.2px at 200px 80px, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1px 1px at 300px 250px, rgba(255, 255, 255, 0.7), transparent);
-    background-size: 400px 400px;
-    animation: stars-random-flicker 50s infinite linear;
-}
-
-@keyframes stars-random-flicker {
-    0% {
-        opacity: 0.5;
-    }
-
-    3% {
-        opacity: 0.2;
-    }
-
-    18% {
-        opacity: 0.6;
-    }
-
-    22% {
-        opacity: 0.15;
-    }
-
-    41% {
-        opacity: 0.55;
-    }
-
-    47% {
-        opacity: 0.25;
-    }
-
-    63% {
-        opacity: 0.65;
-    }
-
-    68% {
-        opacity: 0.18;
-    }
-
-    84% {
-        opacity: 0.45;
-    }
-
-    91% {
-        opacity: 0.3;
-    }
-
-    100% {
-        opacity: 0.5;
-    }
 }
 
 /* Fade the whole background together; no directional reveal. */
 html.light-mode #theme-mask {
     opacity: 0;
-}
-
-html.light-mode #theme-mask::after {
-    display: none;
 }
 
 /* 4. Core Layout */
@@ -140,7 +81,7 @@ html.shrink-view body {
     overflow: hidden !important;
     transform: none !important;
     border-radius: 0;
-    box-shadow: none;
+    box-shadow:none;
 }
 
 html.shrink-view .container {
@@ -159,7 +100,7 @@ html.shrink-view .container {
 .vditor-reset img:hover,
 .markdown-body img:hover {
     transform: scale(1.02);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
 }
 
 html.shrink-view .main-card,
@@ -167,7 +108,7 @@ html.shrink-view .home-container {
     transform: scale(0.65);
     transform-origin: center center;
     border-radius: 40px;
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6);
+    box-shadow: none;
     transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.5s, box-shadow 0.5s, background-color 0.5s ease, border-color 0.5s ease;
     cursor: auto;
     pointer-events: auto;
@@ -195,7 +136,7 @@ html.shrink-view::after {
 .zoom-trigger-icon:hover,
 .zoom-trigger-whole:hover {
     transform: scale(1.15);
-    /* filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)) !important; Removed glow */
+    /* filter: none !important; Removed glow */
     cursor: pointer;
 }
 
@@ -216,7 +157,7 @@ body.is-viewing .auto-mode-btn:hover {
     filter: none !important;
     transform: scale(1);
     cursor: pointer;
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    box-shadow: none;
 }
 
 /* Helper class for SVG icons in Navigation Cards */
@@ -261,6 +202,7 @@ html.fixed-layout-page .main-card {
 .reader-view,
 .reader-scroll-area,
 .gallery-content,
+.reader-outline-panel,
 .admin-content {
     scrollbar-width: thin;
     scrollbar-color: var(--scrollbar-thumb) transparent;
@@ -272,6 +214,7 @@ html.fixed-layout-page .main-card {
 .reader-view::-webkit-scrollbar,
 .reader-scroll-area::-webkit-scrollbar,
 .gallery-content::-webkit-scrollbar,
+.reader-outline-panel::-webkit-scrollbar,
 .admin-content::-webkit-scrollbar {
     display: block;
     width: 6px;
@@ -285,6 +228,7 @@ html.fixed-layout-page .main-card {
 .reader-view::-webkit-scrollbar-track,
 .reader-scroll-area::-webkit-scrollbar-track,
 .gallery-content::-webkit-scrollbar-track,
+.reader-outline-panel::-webkit-scrollbar-track,
 .admin-content::-webkit-scrollbar-track {
     background-color: transparent;
 }
@@ -295,6 +239,7 @@ html.fixed-layout-page .main-card {
 .reader-view::-webkit-scrollbar-thumb,
 .reader-scroll-area::-webkit-scrollbar-thumb,
 .gallery-content::-webkit-scrollbar-thumb,
+.reader-outline-panel::-webkit-scrollbar-thumb,
 .admin-content::-webkit-scrollbar-thumb {
     background-color: var(--scrollbar-thumb);
     border-radius: 10px;
@@ -306,6 +251,7 @@ html.fixed-layout-page .main-card {
 .reader-view::-webkit-scrollbar-thumb:hover,
 .reader-scroll-area::-webkit-scrollbar-thumb:hover,
 .gallery-content::-webkit-scrollbar-thumb:hover,
+.reader-outline-panel::-webkit-scrollbar-thumb:hover,
 .admin-content::-webkit-scrollbar-thumb:hover {
     background-color: var(--scrollbar-thumb-hover);
 }

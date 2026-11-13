@@ -1,17 +1,51 @@
 """
-CMS 封面图私密化 (cms_covers.py)
+CMS 附件登记与私密化 (cms_covers.py)
 
 职责：CMS 节点加锁时，把其（及子树）封面图迁入私有桶并从公开侧移除；解锁时迁回。
 封面图的数据库行由前端打包进密文（字段 coverRow），后端不保存任何明文记录。
 
 顺序保证：
-  加锁：迁入私有桶并校验 -> 写库加锁 -> 删除公开文件与图片行
+  加锁：迁入私有桶并校验 -> 写库加锁 -> 删除公开桶对象与图片行
   解锁：从私有桶取回文件 -> 写库解锁 -> 恢复图片行 -> 外层事务及回执提交后清理私有副本
 任一步失败都不会丢失文件。
 """
 import json
+import os
+import re
 
-from . import album_lock, photos, cms, cms_store, storage
+from . import album_lock, photos, cms, cms_store, relay_media, storage
+
+
+_ATTACHMENT_CATEGORIES = {'_notes', '_record', '_games', '_literature', '_videos',
+                          'gamecovers', 'literaturecovers', 'videocovers'}
+_RELAY_NAME = re.compile(r'[0-9]{8}_[0-9]{6}_[a-f0-9]{32}\.[a-z0-9]{1,10}')
+
+
+def restore_relay_attachments(references, *, from_relay=False):
+    """补登正文和封面引用的原图，合并时从当前 Worker 的 KV 下载。"""
+    paths = set()
+    for reference in references:
+        path = photos.normalize_media_reference(reference)
+        parts = path.split('/')
+        if (len(parts) == 4 and parts[:2] == ['photos', 'images'] and
+                parts[2] in _ATTACHMENT_CATEGORIES and _RELAY_NAME.fullmatch(parts[3])):
+            paths.add(path)
+    if not paths:
+        return {}
+    photos.rebuild_cache()
+    indexed = {row['path']: row for row in album_lock.rows_by_paths(paths)}
+    missing = paths - indexed.keys()
+    if not missing:
+        return indexed
+    if from_relay and not relay_media.active():
+        raise ValueError('请刷新本地后台后再合并 KV 图片草稿')
+    for path in sorted(missing):
+        category, name = path.split('/')[2:]
+        try:
+            photos.register_photo({'category': category, 'path': path, 'name': name})
+        except FileNotFoundError as error:
+            raise ValueError(f'找不到图片 {name}，无法补齐图片登记') from error
+    return {row['path']: row for row in album_lock.rows_by_paths(paths)}
 
 
 def validate_lock_media(module, node_id, paths):
@@ -36,7 +70,13 @@ def validate_lock_media(module, node_id, paths):
             return set()
         content = str(item.get('content') or '')
         if content.endswith('.md'):
-            with open(cms.cms_nodes._md_path(cms.get_context(), content), encoding='utf-8') as source:
+            path = cms.cms_nodes._md_path(cms.get_context(), content)
+            if not os.path.isfile(path):
+                # 正文缺失的其他节点不应阻断本次加密；被加密节点自身缺失则必须停止。
+                if strict:
+                    raise ValueError(f'正文文件缺失，已停止加密：{content}')
+                return set()
+            with open(path, encoding='utf-8') as source:
                 content = source.read()
         keys = [(key, True) for key in photos.media_references(content)]
         if item.get('coverImage'):
@@ -48,7 +88,7 @@ def validate_lock_media(module, node_id, paths):
             if key.startswith('photos/'):
                 if key not in index:
                     if strict:
-                        raise ValueError('Media is missing from gallery index; restore it before locking')
+                        raise ValueError('图片未在公开索引中，已停止加密，请先恢复图片')
                     continue
                 found.add(index[key])
         return found
@@ -98,37 +138,35 @@ def prepare_lock(paths):
     """
     rows = album_lock.rows_by_paths(paths)
     if {row['path'] for row in rows} != set(paths):
-        raise ValueError('Media is missing from gallery index')
+        raise ValueError('图片未在公开索引中，已停止加密，请先恢复图片')
     if not rows:
         return None
     store = album_lock._storage()
+    store.verify_photo_rows(rows)
     keys = album_lock.collect_keys(rows)
-    album_lock.move_to_private(store, keys, reuse_private=True)
-    return {"store": store, "keys": keys,
-            "public_attempts": [], "ids": [r['id'] for r in rows]}
+    published = album_lock.move_to_private(store, keys, reuse_private=True)
+    ctx = {"store": store, "keys": keys, "published": published,
+           "public_attempts": [], "ids": [r['id'] for r in rows]}
+    if published:
+        storage.compensate(store.recovery_record('restore_public', published), lambda: rollback_lock(ctx))
+    return ctx
 
 
 def finalize_lock(ctx):
-    """节点已加锁后：删除公开侧文件与图片行"""
+    """节点已加锁后删除公开桶对象与图片行，保留本机原文件。"""
     if not ctx:
         return
-    from . import media_jobs
-    media_jobs.cancel(ctx['keys'])
-    for key in ctx['keys']:
-        if key.startswith(album_lock.IMAGE_PREFIX):
-            # 网络错误也可能发生在实际删除之后，因此先登记补偿键。
-            ctx['public_attempts'].append(key)
-            ctx['store'].delete('public', key)
-    # CMS 原图也不能继续由本地静态服务公开提供。
-    for key in ctx['keys']:
-        storage.remove(photos.media_path(key))
+    for key in ctx['published']:
+        # 网络错误也可能发生在实际删除之后，因此先登记补偿键。
+        ctx['public_attempts'].append(key)
+        ctx['store'].delete('public', key)
     album_lock.delete_rows(ctx['ids'])
     photos.sync_gallery_js()
     print(f"  [ CMS ] 🖼️ 封面已迁入私有桶: {len(ctx['ids'])} 张")
 
 
 def rollback_lock(ctx):
-    """恢复已尝试删除的公开原图，私有副本保留供恢复或再次加锁。"""
+    """恢复已尝试删除的公开三级图片，私有副本保留供恢复或再次加锁。"""
     try:
         if ctx and ctx['public_attempts']:
             album_lock.rollback_to_public(ctx['store'], ctx['public_attempts'])
@@ -145,9 +183,14 @@ def prepare_unlock(tree):
     if not rows:
         return None
     store = album_lock._storage()
+    store.verify_photo_rows(rows)
     keys = album_lock.collect_keys(rows)
-    ctx = {"store": store, "keys": keys, "rows": rows, "public_attempts": []}
-    storage.compensate(store.recovery_record('retract_public', keys), lambda: rollback_unlock(ctx))
+    from . import media_jobs
+    drafts = media_jobs.drafts(keys)
+    published = [key for key in keys if key not in drafts]
+    ctx = {"store": store, "published": published, "rows": rows, "public_attempts": []}
+    if published and store.client is not None:
+        storage.compensate(store.recovery_record('retract_public', published), lambda: rollback_unlock(ctx))
     album_lock.restore_from_private(store, keys, public_attempts=ctx['public_attempts'])
     return ctx
 
@@ -161,7 +204,8 @@ def finalize_unlock(ctx):
             r['tags'] = json.dumps(r['tags'], ensure_ascii=False)
         album_lock.insert_rows([r], category=_cover_category(r), prepend=True)
     photos.sync_gallery_js()
-    storage.on_commit(lambda: album_lock.purge_private(ctx['store'], ctx['keys']))
+    if ctx['published']:
+        storage.on_commit(lambda: album_lock.purge_private(ctx['store'], ctx['published']))
     print(f"  [ CMS ] 🖼️ 封面已恢复公开: {len(ctx['rows'])} 张")
 
 
@@ -183,6 +227,6 @@ def purge_private_keys(keys):
         return
     try:
         store = album_lock._storage()
-        album_lock.purge_private(store, keys)
+        album_lock.purge_private(store, keys, remove_local=True)
     except Exception as e:
         print(f"  [ CMS ] ⚠️ 私有封面清理失败: {e}")

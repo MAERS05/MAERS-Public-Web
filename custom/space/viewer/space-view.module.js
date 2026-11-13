@@ -90,7 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Failed to load space data:', err);
     }
 
-    // 已有会话密钥时，在内存中递归还原密文节点
+    // 已通过隐藏入口解锁时，在内存中递归还原密文节点
     await revealInPlace(SPACE_DATA.root || [], { getChildren: (n) => n.children });
 
     SpaceController.AppState.root = SPACE_DATA.root || [];

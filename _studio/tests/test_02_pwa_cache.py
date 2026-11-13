@@ -54,10 +54,11 @@ class Test02_PwaAndCacheContracts(unittest.TestCase):
                     self.assertTrue(exists(p.strip('/')), f"Service Worker 分组路径不存在: {p}")
 
     def test_04_sw_offline_fallback_contract(self):
-        """Service Worker 包含 ignoreVary 与 ignoreSearch 离线缓存匹配回退逻辑"""
-        for token in ('ignoreVary: true', 'ignoreSearch: true', "caches.match('/index.html'"):
+        """Service Worker 在项目缓存中先精确匹配，再回退到站内原路径。"""
+        for token in ('cacheName, ignoreVary: true', 'versioned.href, original.href', "keys.add(new URL('/index.html'"):
             with self.subTest(token=token):
                 self.assertIn(token, self.sw)
+        self.assertNotIn('ignoreSearch: true', self.sw)
 
     def test_05_offline_framework_files_exist(self):
         """offline-download.js FRAMEWORK 列表中每一个静态资源 100% 真实存在且无重复"""

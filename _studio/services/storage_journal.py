@@ -146,17 +146,29 @@ def pending():
             if os.path.isfile(os.path.join(directory, name, 'manifest.json'))]
 
 
-def recover():
+def recover(progress=None):
     """恢复失败保留日志并抛错；启动服务和发布必须等待恢复完成。"""
     count = 0
-    for directory in pending():
-        journal = Journal(directory)
+    journals = [Journal(directory) for directory in pending()]
+    total = sum(1 + len(journal.data['remote']) for journal in journals if journal.data['state'] == 'active')
+    done = 0
+    for journal in journals:
         if journal.data['state'] == 'active':
+            if progress:
+                progress(done, total, '正在恢复中断的操作')
             journal.restore_files()
+            done += 1
             if journal.data['remote']:
                 from . import media_store
-                for record in reversed(journal.data['remote']):
-                    media_store.recover(record)
+                while journal.data['remote']:
+                    if progress:
+                        progress(done, total, '正在恢复图片权限与文件')
+                    media_store.recover(journal.data['remote'][-1])
+                    journal.data['remote'].pop()
+                    journal.save()
+                    done += 1
             count += 1
         journal.discard()
+    if progress:
+        progress(done, total, '数据恢复完成')
     return count

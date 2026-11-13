@@ -18,7 +18,7 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            box-shadow: none;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             user-select: none;
         }
@@ -64,7 +64,7 @@
             -webkit-backdrop-filter: blur(24px);
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+            box-shadow: none;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -76,8 +76,8 @@
         }
         html.light-mode .cl-modal-box {
             background: rgba(255, 255, 255, 0.96);
-            border-color: rgba(0, 0, 0, 0.1);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+            border-color: rgba(0, 0, 0, 0.16);
+            box-shadow: none;
         }
 
         /* 头部 */
@@ -86,11 +86,11 @@
             align-items: center;
             justify-content: space-between;
             padding: 16px 22px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             flex-shrink: 0;
         }
         html.light-mode .cl-modal-header {
-            border-bottom-color: rgba(0, 0, 0, 0.08);
+            border-bottom-color: rgba(0, 0, 0, 0.16);
         }
         .cl-header-title {
             display: flex;
@@ -132,7 +132,7 @@
         /* 新增录入区 */
         .cl-add-panel {
             padding: 16px 22px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             background: rgba(255, 255, 255, 0.02);
             display: flex;
             flex-direction: column;
@@ -140,7 +140,7 @@
             flex-shrink: 0;
         }
         html.light-mode .cl-add-panel {
-            border-bottom-color: rgba(0, 0, 0, 0.06);
+            border-bottom-color: rgba(0, 0, 0, 0.16);
             background: rgba(0, 0, 0, 0.015);
         }
         .cl-panel-row {
@@ -249,7 +249,7 @@
             gap: 8px;
         }
         .cl-group-card {
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             background: rgba(255, 255, 255, 0.03);
             border-radius: 12px;
             padding: 12px 14px;
@@ -259,7 +259,7 @@
             border-color: rgba(255, 255, 255, 0.15);
         }
         html.light-mode .cl-group-card {
-            border-color: rgba(0, 0, 0, 0.08);
+            border-color: rgba(0, 0, 0, 0.16);
             background: rgba(0, 0, 0, 0.02);
         }
         .cl-group-header {
@@ -308,11 +308,11 @@
             align-items: center;
             justify-content: space-between;
             padding: 4px 0;
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
         }
         html.light-mode .cl-entry-item {
             color: #333;
-            border-bottom-color: rgba(0, 0, 0, 0.05);
+            border-bottom-color: rgba(0, 0, 0, 0.16);
         }
         .cl-entry-item:last-child {
             border-bottom: none;
@@ -355,11 +355,11 @@
             align-items: center;
             justify-content: space-between;
             padding: 14px 22px;
-            border-top: 1px solid rgba(255, 255, 255, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
             flex-shrink: 0;
         }
         html.light-mode .cl-modal-footer {
-            border-top-color: rgba(0, 0, 0, 0.08);
+            border-top-color: rgba(0, 0, 0, 0.16);
         }
         .cl-footer-info {
             font-size: 12px;
@@ -396,7 +396,7 @@
             border: none;
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: #fff;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            box-shadow: none;
             transition: all 0.2s;
             display: inline-flex;
             align-items: center;
@@ -404,6 +404,6 @@
         }
         .cl-btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+            box-shadow: none;
         }
     

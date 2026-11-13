@@ -115,11 +115,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 }
 
-                if (r1 !== false && r2 !== false) {
-                    Feedback.notifySaveSuccess();
-                } else {
+                if (r1 === false || r2 === false) {
                     Feedback.notifySaveFail("部分保存失败");
+                    return false;
                 }
+                Feedback.notifySaveSuccess();
             },
             async () => {
                 // Joint Cancel

@@ -6,10 +6,8 @@ from __future__ import annotations
 from .contracts import JsonObject
 
 import os
-import json
 import urllib.request
 import urllib.parse
-import re
 from html.parser import HTMLParser
 from . import cms, storage
 
@@ -18,7 +16,6 @@ SERVICE_DIR = os.path.dirname(os.path.abspath(__file__))
 BASE_DIR = os.path.dirname(SERVICE_DIR)  # _studio/
 PROJECT_ROOT = os.path.dirname(BASE_DIR)
 DATA_DIR = os.path.join(PROJECT_ROOT, 'data')
-SPACE_JSON_PATH = os.path.join(DATA_DIR, 'space-collections.json')
 
 # ================= HTML Parser for Metadata =================
 class MetaParser(HTMLParser):
@@ -132,104 +129,6 @@ def fetch_url_metadata(url):
                 'google_icon': 'ui/placeholder.svg'
             }
 
-# ================= JSON 数据操作 =================
-def load_collections() -> list[JsonObject]:
-    """加载 space-collections.json"""
-    if not os.path.exists(SPACE_JSON_PATH):
-        return []
-    with open(SPACE_JSON_PATH, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    if not isinstance(data, list) or any(not isinstance(item, dict) for item in data):
-        raise ValueError('Invalid collections source')
-    return data
-
-@storage.serialized
-
-def save_collections(data: list[JsonObject]) -> bool:
-    storage.write_json(SPACE_JSON_PATH, data)
-    return True
-
-# ================= CRUD 操作 =================
-@storage.serialized
-def add_collection(item_data: JsonObject) -> bool:
-    """添加新的收藏项"""
-    collections = load_collections()
-    
-    # 检查 ID 是否已存在
-    if any(c['id'] == item_data['id'] for c in collections):
-        raise ValueError(f"ID '{item_data['id']}' already exists")
-    
-    # 添加到列表开头
-    collections.insert(0, item_data)
-    
-    if save_collections(collections):
-        print(f"  [ SPACE ] 🆕 已添加 | Added: {item_data['title']}")
-        return True
-    return False
-
-@storage.serialized
-def update_collection(item_id: str, update_data: JsonObject) -> bool:
-    """更新收藏项"""
-    collections = load_collections()
-    
-    for item in collections:
-        if item['id'] == item_id:
-            if 'id' in update_data and (not isinstance(update_data['id'], str) or not update_data['id']
-                    or any(c['id'] == update_data['id'] and c is not item for c in collections)):
-                raise ValueError('Invalid or duplicate collection id')
-            # 更新字段
-            for key, value in update_data.items():
-                item[key] = value # 允许修改 ID
-                    
-            if save_collections(collections):
-                print(f"  [ SPACE ] ✎  已更新 | Updated: {item_id}")
-                return True
-            return False
-            
-    raise ValueError(f"Item with ID '{item_id}' not found")
-
-@storage.serialized
-def delete_collection(item_id: str) -> bool:
-    """删除收藏项"""
-    collections = load_collections()
-    
-    # 过滤掉要删除的项
-    new_collections = [c for c in collections if c['id'] != item_id]
-    
-    if len(new_collections) == len(collections):
-        raise ValueError(f"Item with ID '{item_id}' not found")
-        
-    if save_collections(new_collections):
-        print(f"  [ SPACE ] 🗑️  已删除 | Deleted: {item_id}")
-        return True
-    return False
-
-@storage.serialized
-def reorder_collections(id_list: list[str]) -> bool:
-    """重新排序收藏项"""
-    collections = load_collections()
-    if len(set(id_list)) != len(id_list):
-        raise ValueError('Duplicate collection id')
-    
-    # 创建 ID -> Item 映射
-    items_map = {item['id']: item for item in collections}
-    
-    # 按新顺序重组
-    reordered = []
-    for item_id in id_list:
-        if item_id in items_map:
-            reordered.append(items_map[item_id])
-            
-    # 添加不在列表中的项（防止丢失）
-    for item in collections:
-        if item['id'] not in id_list:
-            reordered.append(item)
-            
-    if save_collections(reordered):
-        print(f"  [ SPACE ] ↕️  已重排序 | Reordered")
-        return True
-    return False
-
 # ================= Tree Operations =================
 def load_tree() -> JsonObject:
     """Load space-tree.json"""
@@ -256,6 +155,8 @@ def update_node_tags(node_id, tags):
     def find_and_update(nodes):
         for node in nodes:
             if node.get('id') == node_id:
+                if node.get('_enc'):
+                    raise ValueError('请先解锁网站所属密码组')
                 node['tags'] = tags
                 return True
             if node.get('children'):

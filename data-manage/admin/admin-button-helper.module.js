@@ -66,7 +66,7 @@ export const AdminButtonHelper = {
                 /* Dark Mode (Default) */
                 background: #1f1f1f;
                 color: #ffffff;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                box-shadow: none;
                 border: 1px solid rgba(255, 255, 255, 0.2);
             }
             
@@ -78,8 +78,8 @@ export const AdminButtonHelper = {
             .light-mode .maers-admin-action-group .maers-admin-btn {
                 background: #ffffff;
                 color: #333333;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-                border: 1px solid rgba(0, 0, 0, 0.1);
+                box-shadow: none;
+                border: 1px solid rgba(0, 0, 0, 0.16);
             }
             
             .maers-admin-action-group .maers-admin-btn:hover {
@@ -88,7 +88,7 @@ export const AdminButtonHelper = {
                 /* Dark Mode Hover */
                 background: #333333;
                 color: #ffffff;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+                box-shadow: none;
                 border-color: rgba(255, 255, 255, 0.4);
             }
             
@@ -96,7 +96,7 @@ export const AdminButtonHelper = {
                 /* Light Mode Hover */
                 background: #ffffff;
                 color: #000000;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                box-shadow: none;
                 border-color: rgba(0, 0, 0, 0.2);
             }
 
@@ -111,18 +111,6 @@ export const AdminButtonHelper = {
                 color: #2ed573;
                 border-color: #2ed573; /* Also color current border */
                 font-weight: bold;
-            }
-
-            /* 禁用按钮样式（例如线上环境的加密/加锁按钮变灰） */
-            .maers-admin-action-group .maers-admin-btn.maers-admin-btn--disabled {
-                opacity: 0.35 !important;
-                filter: grayscale(1) !important;
-                cursor: not-allowed !important;
-            }
-
-            .maers-admin-action-group .maers-admin-btn.maers-admin-btn--disabled:hover {
-                transform: none !important;
-                box-shadow: none !important;
             }
 
             /* Music Module Specific Fixes */

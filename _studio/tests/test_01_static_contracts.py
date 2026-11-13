@@ -107,7 +107,7 @@ class Test01_StaticContracts(unittest.TestCase):
         expected = (
             'mobile-global.css', 'mobile-cms.css', 'mobile-index.css',
             'mobile-literature.css', 'mobile-literature.js', 'mobile-photos.css',
-            'mobile-photos.js', 'mobile-album.css', 'mobile-music.css',
+            'mobile-album.css', 'mobile-music.css',
             'mobile-games.css', 'mobile-record.css', 'mobile-space.css',
             'mobile-admin.css', 'mobile-spatial-nav.css',
         )
@@ -154,7 +154,7 @@ class Test01_StaticContracts(unittest.TestCase):
     def test_11_vditor_local_assets_integrity(self):
         """本地化 Vditor 核心资产与依赖目录完整存在"""
         required = (
-            'plugins/vditor-assets/index.min.js',
+            'plugins/vditor-assets/method.min.js',
             'plugins/vditor-assets/index.css',
             'plugins/vditor-assets/dist/js/lute/lute.min.js',
             'plugins/vditor-assets/dist/js/katex/katex.min.js',
@@ -233,6 +233,25 @@ class Test01_StaticContracts(unittest.TestCase):
         css = read_text('static-style/sync-ui.css')
         self.assertRegex(css, r'\.header-actions\s*>\s*\.maers-toolbar-btn\s*\{[^}]*margin-right:\s*0')
 
+
+    def test_16e_admin_photos_layout_contract(self):
+        """后台图片页须使用固定布局，缩放视图才不会把整页卡片移出屏幕；双列网格卡片与图片共用同一高度变量"""
+        self.assertRegex(read_text('admin-photos.html'), r'<html[^>]*class="[^"]*\bfixed-layout-page\b')
+        css = read_text('custom/zmobile adaptation/mobile-photos.css')
+        self.assertIn('height: var(--photo-cell-height) !important', css)
+        self.assertNotRegex(css, r'body \.photo-item img \{[^}]*height:\s*\d+px')
+        # 卡片外观由 fixed-layout-page 统一控制，不得再被强制为 100vw 直角卡片
+        self.assertNotRegex(css, r'\.main-card\.content-mode\s*\{[^}]*(width:\s*100vw|border-radius:\s*0)')
+
+    def test_16f_space_mobile_header_title_ellipsis(self):
+        """Space 窄屏标题须为块级才能显示省略号（flex 容器内 text-overflow 无效），更窄时仅保留图标"""
+        css = read_text('custom/zmobile adaptation/mobile-space.css')
+        title = re.search(r'\.header-title\s*\{([^}]*)\}', css).group(1)
+        self.assertIn('text-overflow: ellipsis', title)
+        self.assertRegex(title, r'display:\s*block\s*!important')
+        self.assertRegex(css, r'max-width:\s*560px\)\s*\{[^@]*\.header-left\s*\{[^}]*justify-content:\s*space-between')
+        glob = read_text('custom/zmobile adaptation/mobile-global.css')
+        self.assertRegex(glob, r'max-width:\s*560px\)\s*\{[^@]*\.header-title:has\(> img\)\s*\{[^}]*font-size:\s*0')
 
     def test_17_inline_scripts_have_no_remote_esm(self):
         """HTML 内联脚本不从远程 CDN 加载 ES 模块（保证离线可用与本地化）"""

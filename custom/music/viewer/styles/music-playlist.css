@@ -194,7 +194,7 @@ html.light-mode .view-header img[src*="music-class"] {
     background: rgba(40, 40, 40, 0.7);
     backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     border-radius: 10px;
     opacity: 0.85;
     transform: scale(1.02);
@@ -227,7 +227,7 @@ body.is-dragging-mode * {
     font-size: 0.85rem;
     color: var(--text-sub);
     cursor: pointer;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     display: flex;
     justify-content: space-between;
 }
@@ -334,18 +334,18 @@ body.is-dragging-mode * {
 /* 白昼模式适配 */
 html.light-mode .list-item {
     background: #fdfdfd !important;
-    border: 1px solid rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid rgba(0, 0, 0, 0.16) !important;
     color: #333 !important;
     margin-bottom: 3px !important;
     padding: 12px 15px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: none !important;
     transition: background 0.2s !important;
     transform: none !important;
 }
 
 html.light-mode .list-item:hover {
     background: #f2f2f5 !important;
-    border-color: rgba(0, 0, 0, 0.1) !important;
+    border-color: rgba(0, 0, 0, 0.16) !important;
     transform: none !important;
 }
 
@@ -358,19 +358,19 @@ html.light-mode .list-item.playing {
 html.light-mode .playlist-window {
     background-color: #ffffff !important;
     border: 1px solid rgba(0, 0, 0, 0.2) !important;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: none !important;
     backdrop-filter: none !important;
 }
 
 html.light-mode .view-header {
     background: #fcfcfc !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.16) !important;
     color: #000 !important;
 }
 
 html.light-mode .drag-ghost {
     background: rgba(255, 255, 255, 0.7);
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.16);
     color: #000;
 }
 

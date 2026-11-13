@@ -100,8 +100,9 @@ export function getManager() {
 }
 
 export async function tagPerformSave() {
-    await TagsAdmin.tagPerformSave();
+    const saved = await TagsAdmin.tagPerformSave();
     refreshDrawerList();
+    return saved;
 }
 
 export async function tagPerformCancel() {

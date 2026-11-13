@@ -24,18 +24,14 @@ export function setupPhotosAdapter(applyFiltersCallback, photosController, Photo
     const controllerOverrides = {
         updateNodeTags: async (nodeId, tags) => {
             try {
-                const res = await localFetch('/api/photos/update_tags', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: nodeId, tags: tags })
-                });
+                const target = photosController?.State?.loadedData?.find(p => p.id === nodeId);
+                if (!target) return false;
+                const saved = await photosController.savePhotoTags(target, tags);
 
-                if (res.ok) {
-                    // Update local data cache in photosController
-                    const localNode = photosController?.State?.loadedData?.find(p => p.id === nodeId);
-                    if (localNode) {
-                        localNode.tags = tags;
-                    }
+                if (saved.success) {
+                    // 同步内存缓存
+                    const localNode = target;
+                    localNode.tags = tags;
 
                     const m = PhotosAdminModule?.getManager?.();
                     if (m) m.setList(photosController.State.loadedData);

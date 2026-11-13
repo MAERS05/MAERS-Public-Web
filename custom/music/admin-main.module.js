@@ -1,36 +1,24 @@
 /**
  * MAERS Music Admin Main Entry (admin-main.js)
- * 管理页面入口文件 - 整合所�?Music 模块 + Admin 功能
+ * 管理页面入口文件 - 整合音乐模块与管理功能
  * @version 1.0.0 - ES6 Module Entry
  */
 
 // 导入所有模块
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
 import { syncManager } from '../../data-manage/sync/sync-manager.module.js';
-import { DataProvider } from '../../data-manage/data-provider.module.js';
 import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../data-manage/admin/admin-base.module.js';
 import { initLayout } from '../../shared/layout.module.js';
 import { initTheme } from '../../shared/theme.module.js';
-import { Player, playTrack, togglePlay, showTip, initPlayer } from './viewer/music-player-core.module.js';
+import { Player, initPlayer } from './viewer/music-player-core.module.js';
 import { ensurePlayerFrame, initIFrame } from './viewer/music-player-iframe.module.js';
-import { enableBackgroundPlayback, disableBackgroundPlayback, togglePictureInPicture, initPIP } from './viewer/music-player-pip.module.js';
-import { UI, loadMusicData, saveData, refreshCurrentView, enterLevel1, enterLevel2, slideTo, goBack, handleAlbumClick, initUI } from './viewer/music-ui.module.js';
+import { enableBackgroundPlayback, disableBackgroundPlayback, initPIP } from './viewer/music-player-pip.module.js';
+import { UI, initUI } from './viewer/music-ui.module.js';
 import { renderCategories, renderCollections, renderAlbums, initRender } from './viewer/music-render.module.js';
 import { playNext, playPrev, initControl } from './viewer/music-control.module.js';
-import { saveState, restoreState, clearState, formatTime, initState } from './viewer/music-state.module.js';
+import { initState } from './viewer/music-state.module.js';
 import {
     Admin,
-    getManager,
-    isDeleted,
-    getItemClass,
-    uiSort,
-    uiMoveTo,
-    uiDelete,
-    uiRename,
-    uiEditAlbum,
-    uiRenamePart,
-    uiDeletePart,
-    uiResetTracks,
     addCategory,
     addCollection,
     addAlbum,

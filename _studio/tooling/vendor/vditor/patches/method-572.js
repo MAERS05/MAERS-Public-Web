@@ -13,15 +13,25 @@
           "vditorGraphVizScript",
         ).then(function () {
           n.forEach(function (e) {
-            var t = i.graphvizRenderAdapter.getCode(e);
+            if (e.isConnected === false || ["true", "pending"].includes(e.getAttribute("data-processed"))) return;
+            const source = i.graphvizRenderAdapter.getCode(e).trim();
             if (
               !e.parentElement.classList.contains("vditor-wysiwyg__pre") &&
               !e.parentElement.classList.contains("vditor-ir__marker--pre") &&
-              "true" !== e.getAttribute("data-processed") &&
-              "" !== t.trim()
+              source
             ) {
+              const urls = window.URL || window.webkitURL;
+              let worker = null, workerUrl = null, released = false;
+              // 渲染完成或正文被替换时释放工作线程及临时脚本地址。
+              const releaseWorker = () => {
+                if (released) return;
+                released = true;
+                worker?.terminate();
+                if (workerUrl) urls.revokeObjectURL(workerUrl);
+                if (e.__disposeDiagramDOM === releaseWorker) delete e.__disposeDiagramDOM;
+              };
               try {
-                var n = new Blob(
+                const script = new Blob(
                     [
                       "importScripts('".concat(
                         document
@@ -31,24 +41,29 @@
                       ),
                     ],
                     { type: "application/javascript" },
-                  ),
-                  r = (window.URL || window.webkitURL).createObjectURL(n),
-                  a = new Worker(r);
-                new Viz({ worker: a })
-                  .renderSVGElement(t)
-                  .then(function (t) {
-                    ((e.innerHTML = t.outerHTML),
-                      window.__mountDiagramFsBtn &&
-                        window.__mountDiagramFsBtn(e));
+                  );
+                workerUrl = urls.createObjectURL(script);
+                worker = new Worker(workerUrl);
+                e.__disposeDiagramDOM = releaseWorker;
+                e.setAttribute("data-processed", "pending");
+                new Viz({ worker })
+                  .renderSVGElement(source)
+                  .then(function (svg) {
+                    if (released || e.isConnected === false) return;
+                    e.innerHTML = svg.outerHTML;
+                    e.setAttribute("data-diagram-sig", "graphviz:" + source);
+                    e.setAttribute("data-processed", "true");
+                    window.__mountDiagramFsBtn?.(e);
                   })
-                  .catch(function (t) {
-                    ((e.innerHTML = "graphviz render error: <br>".concat(t)),
-                      (e.className = "vditor-reset--error"));
-                  });
-              } catch (e) {
-                console.error("graphviz error", e);
+                  .catch(function (error) {
+                    if (released || e.isConnected === false) return;
+                    e.textContent = "graphviz render error: " + error.message;
+                    e.className = "vditor-reset--error";
+                  }).finally(releaseWorker);
+              } catch (error) {
+                releaseWorker();
+                console.error("graphviz error", error);
               }
-              e.setAttribute("data-processed", "true");
             }
           });
         });

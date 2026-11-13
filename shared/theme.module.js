@@ -25,7 +25,7 @@ export function initTheme() {
 
 function _runInitTheme() {
     const path = window.location.pathname;
-    const isHome = path.endsWith("index.html") || path.endsWith("admin-index.html") || path.endsWith("/") || path === "";
+    const isHome = /^\/(?:index|admin-index)(?:\.html)?\/?$/.test(path) || path === '/' || path === '';
 
     // 0. Auto-Inject Drag Styles
     if (!document.querySelector('link[href*="drag.css"]')) {
@@ -78,7 +78,6 @@ if (typeof window !== 'undefined') {
         setupZoomTrigger: setupZoomTrigger,
         init: initTheme
     };
-    window.toggleGlobalShrink = toggleGlobalShrink;
 }
 
 // Export for ES6 module usage

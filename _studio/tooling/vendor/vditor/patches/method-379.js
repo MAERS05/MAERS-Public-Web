@@ -1,6 +1,153 @@
 /** Vditor 379 模块的 MAERS 定制实现；由 vendor-build.mjs 注入固定版本基准。 */
 (e, t, n) => {
   n.d(t, { p: () => l });
+  const installedLayouts = new WeakSet();
+
+  // 与 Mermaid 一样，以被收展的节点固定布局和相机，分支向该节点聚拢。
+  function anchorTreeToggle(series, model, api, payload) {
+    if (payload?.type !== "treeExpandAndCollapse" || !Number.isInteger(payload.dataIndex) ||
+        !model.queryComponents({ mainType: "series", subType: "tree", query: payload }).includes(series)) return;
+    const view = api.getViewOfSeriesModel(series);
+    const graphic = view?._data?.getItemGraphicEl(payload.dataIndex);
+    const camera = graphic?.parent?.getComputedTransform();
+    const data = series.getData(), target = data.getItemLayout(payload.dataIndex);
+    const previousBounds = series.coordinateSystem?.getBoundingRect();
+    if (!camera || !target || !previousBounds) return;
+    const zoom = Math.hypot(camera[0], camera[1]);
+    if (!(zoom > 0)) return;
+    const dx = graphic.x - target.x, dy = graphic.y - target.y;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    data.each(index => {
+      const point = data.getItemLayout(index);
+      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+      const x = point.x + dx, y = point.y + dy;
+      data.setItemLayout(index, { x, y }, true);
+      minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+      minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+    });
+    // TreeView reuses the previous extent on a degenerate axis (e.g. only root).
+    const centerX = maxX > minX ? (minX + maxX) / 2 : previousBounds.x + previousBounds.width / 2;
+    const centerY = maxY > minY ? (minY + maxY) / 2 : previousBounds.y + previousBounds.height / 2;
+    const origin = series.layoutInfo;
+    series.setZoom(zoom);
+    series.setCenter([origin.x + (centerX - camera[4]) / zoom,
+      origin.y + (centerY - camera[5]) / zoom]);
+  }
+
+  // 等 ECharts 解析各节点的尺寸后，用标签边界同时决定框体和布局。
+  function installTreeSpacing(engine) {
+    if (installedLayouts.has(engine)) return;
+    installedLayouts.add(engine);
+    engine.registerLayout(engine.PRIORITY.VISUAL.POST_CHART_LAYOUT, (model, api, payload) => {
+      model.eachSeriesByType("tree", series => {
+        if (series.get("layout") === "radial" ||
+            !["rect", "roundRect"].includes(series.get("symbol")) ||
+            series.get(["label", "position"]) !== "inside") return;
+        const direction = series.getOrient();
+        const vertical = direction === "TB" || direction === "BT";
+        const levels = [];
+        const data = series.getData();
+        const root = data.tree.root.children[0];
+        if (!root) return;
+        function measure(node, depth) {
+          const index = node.dataIndex;
+          const symbolSize = data.getItemVisual(index, "symbolSize");
+          const size = Array.isArray(symbolSize) ? symbolSize : [symbolSize, symbolSize];
+          const baseWidth = Number(size[0]) || 0;
+          const baseHeight = Number(size[1]) || 0;
+          const label = node.getModel().getModel("label");
+          const style = {
+            ...engine.helper.createTextStyle(label, { state: "normal" }),
+            text: series.getFormattedLabel(index) ?? node.name,
+          };
+          const text = new engine.graphic.Text({ style }).getBoundingRect();
+          const width = Math.max(baseWidth, text.width + 16);
+          const height = Math.max(baseHeight, text.height + 12);
+          if ((width > baseWidth || height > baseHeight) && label.get("position") === "inside" &&
+              label.get("show") !== false && ["rect", "roundRect"].includes(data.getItemVisual(index, "symbol"))) {
+            data.setItemVisual(index, "symbolSize", [width, height]);
+          }
+          const breadth = vertical ? width : height;
+          levels[depth] = Math.max(levels[depth] || 0, vertical ? height : width);
+          const item = { node, depth, shift: 0, contour: [[-breadth / 2, breadth / 2]] };
+          item.children = node.isExpand ? node.children.map(child => measure(child, depth + 1)) : [];
+          const contour = [];
+          item.children.forEach((child, index) => {
+            if (index) child.shift = Math.max(...child.contour.map((range, level) =>
+              contour[level] ? contour[level][1] + 24 - range[0] : 0));
+            child.contour.forEach((range, level) => {
+              const min = range[0] + child.shift, max = range[1] + child.shift;
+              contour[level] = contour[level] ? [Math.min(contour[level][0], min), Math.max(contour[level][1], max)] : [min, max];
+            });
+          });
+          const center = item.children.length ? (item.children[0].shift + item.children.at(-1).shift) / 2 : 0;
+          item.children.forEach(child => { child.shift -= center; });
+          contour.forEach(range => item.contour.push([range[0] - center, range[1] - center]));
+          return item;
+        }
+        const tree = measure(root, 0);
+        const depths = [levels[0] / 2];
+        for (let depth = 1; depth < levels.length; depth++) {
+          depths[depth] = depths[depth - 1] + levels[depth - 1] / 2 + 56 + levels[depth] / 2;
+        }
+        const box = series.layoutInfo;
+        const reverse = direction === "BT" || direction === "RL";
+        function place(item, cross) {
+          const along = reverse ? (vertical ? box.height : box.width) - depths[item.depth] : depths[item.depth];
+          item.node.setLayout(vertical ? { x: box.width / 2 + cross, y: along } :
+            { x: along, y: box.height / 2 + cross }, true);
+          item.children.forEach(child => place(child, cross + child.shift));
+        }
+        place(tree, 0);
+        anchorTreeToggle(series, model, api, payload);
+      });
+    });
+  }
+
+  // ECharts 默认让标签保持屏幕字号；矩形树须与节点一起缩放，避免缩小后文字溢出，同时为收起节点自适应着色。
+  function syncTreeLabels(chart) {
+    if (!chart || chart.isDisposed()) return;
+    const dark = Boolean(chart.__maersDark);
+    chart.getModel().eachSeriesByType("tree", series => {
+      if (series.get("layout") === "radial" ||
+          !["rect", "roundRect"].includes(series.get("symbol")) ||
+          series.get(["label", "position"]) !== "inside") return;
+      const zoom = series.coordinateSystem?.getZoom() || 1;
+      const factor = Math.max(0.05, (zoom - 1) * series.get("nodeScaleRatio") + 1);
+      const data = series.getData();
+      data.eachItemGraphicEl((graphic, index) => {
+        const shape = graphic.childAt(0);
+        const text = shape?.getTextContent();
+        if (!shape || !text) return;
+        const node = data.tree?.getNodeByDataIndex(index);
+        const collapsed = Boolean(node?.children?.length && !node.isExpand);
+        // 仅叠加收起高亮；展开时由 ECharts 重绘恢复已解析的颜色，保留 inherit / auto 等配置语义。
+        if (collapsed) {
+          const fill = dark ? "#0c4a6e" : "#e0f2fe";
+          const stroke = dark ? "#38bdf8" : "#0284c7";
+          if (shape.style.fill !== fill || shape.style.stroke !== stroke) {
+            shape.setStyle({ fill, stroke });
+          }
+          const textFill = dark ? "#7dd3fc" : "#0369a1";
+          if (text.style.fill !== textFill) {
+            text.setStyle({ fill: textFill });
+          }
+        }
+        const label = data.getItemModel(index).getModel("label");
+        const fontSize = (Number(label.get("fontSize")) || 12) * factor;
+        if (Math.abs((Number(text.style.fontSize) || 0) - fontSize) < 0.001) return;
+        const style = { fontSize, font: null };
+        for (const key of ["width", "height", "lineHeight"]) {
+          const value = label.get(key);
+          if (typeof value === "number") style[key] = value * factor;
+        }
+        const padding = label.get("padding");
+        if (padding != null) style.padding = Array.isArray(padding)
+          ? padding.map(value => value * factor) : padding * factor;
+        text.setStyle(style);
+      });
+    });
+  }
   var r = n(793),
     a = n(998),
     i = n(781),
@@ -127,17 +274,21 @@
     l = function (e, t, n) {
       (void 0 === e && (e = document), void 0 === t && (t = r.g.CDN));
       var l = i.chartRenderAdapter.getElements(e);
-      l.length > 0 &&
-        (0, a.G)(
+      let runtime;
+      a.D(e, l, function (e) {
+        runtime ??= a.G(
           "".concat(t, "/dist/js/echarts/echarts.min.js?v=5.5.1"),
           "vditorEchartsScript",
-        ).then(function () {
-          l.forEach(function (e) {
+        ).then(() => installTreeSpacing(echarts));
+        return runtime
+          .then(function () {
             return c(void 0, void 0, void 0, function () {
               var t, r, a;
               return s(this, function (c) {
                 switch (c.label) {
                   case 0:
+                    if (e.isConnected === false || e.getAttribute("data-processed") === "true")
+                      return [2];
                     if (
                       e.parentElement.classList.contains(
                         "vditor-wysiwyg__pre",
@@ -158,8 +309,36 @@
                         : [4, (0, o.Qf)(t)]
                     );
                   case 2:
+                    r = c.sent();
+                    // 解析期间可能已切换正文；旧节点和已复用的实例不再初始化。
+                    if (e.isConnected === false || e.getAttribute("data-processed") === "true")
+                      return [2];
                     return (
-                      (r = c.sent()),
+                      ([r.series].flat().filter(Boolean).forEach(series => {
+                        if (series.type === "tree" && ["rect", "roundRect"].includes(series.symbol) && series.label?.position === "inside") {
+                          const dark = "dark" === n;
+                          series.nodeScaleRatio ??= 1;
+                          series.itemStyle = {
+                            color: dark ? "#1e293b" : "#f8fafc",
+                            borderColor: dark ? "#475569" : "#cbd5e1",
+                            borderWidth: 1.5,
+                            ...series.itemStyle,
+                          };
+                          series.lineStyle = {
+                            color: dark ? "#64748b" : "#94a3b8",
+                            width: 1.5,
+                            ...series.lineStyle,
+                          };
+                          series.label = {
+                            color: dark ? "#f1f5f9" : "#1e293b",
+                            ...series.label,
+                          };
+                          series.emphasis = {
+                            disabled: true,
+                            ...series.emphasis,
+                          };
+                        }
+                      })),
                       // 默认背景跟随阅读器；深色箱体避免继承白色，显式颜色始终优先。
                       (r.backgroundColor ??= "transparent"),
                       ("dark" === n && [r.series].flat().filter(Boolean).forEach(function (series) {
@@ -170,7 +349,15 @@
                       (e.__diagramChart = echarts.init(
                         e,
                         "dark" === n ? "dark" : void 0,
-                      )).setOption(r),
+                      )),
+                      (e.__diagramChart.__maersDark = "dark" === n),
+                      e.__diagramChart.setOption(r),
+                      e.__diagramChart.on("treeroam", () => syncTreeLabels(e.__diagramChart)),
+                      e.__diagramChart.on("treeExpandAndCollapse", () => syncTreeLabels(e.__diagramChart)),
+                      e.__diagramChart.on("click", () => syncTreeLabels(e.__diagramChart)),
+                      e.__diagramChart.on("finished", () => syncTreeLabels(e.__diagramChart)),
+                      syncTreeLabels(e.__diagramChart),
+                      e.setAttribute("data-diagram-sig", "echarts:" + t),
                       e.setAttribute("data-processed", "true"),
                       window.__mountDiagramFsBtn &&
                         window.__mountDiagramFsBtn(e),
@@ -189,6 +376,6 @@
               });
             });
           });
-        });
+      });
     };
 };

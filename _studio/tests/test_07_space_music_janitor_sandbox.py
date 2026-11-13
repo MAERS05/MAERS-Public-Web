@@ -26,22 +26,6 @@ class Test07_SpaceMusicPortalAndJanitorSandbox(SandboxTestCase):
 
     # ---------- Space ----------
 
-    def test_01_space_collections_crud_and_reorder(self):
-        """Space 收藏项新增、更新、排序、删除与持久化"""
-        for sid, title, url in (('sp_1', 'GitHub', 'https://github.com'),
-                                ('sp_2', 'MDN', 'https://developer.mozilla.org')):
-            code, _ = self.call_post('/api/space/add', body={'id': sid, 'title': title, 'url': url, 'category': 'dev'})
-            self.assertEqual(code, 200)
-
-        self.assertEqual(self.call_post('/api/space/update', body={'id': 'sp_1', 'data': {'title': 'GitHub Code'}})[0], 200)
-        self.assertEqual(self.call_post('/api/space/reorder', body={'ids': ['sp_2', 'sp_1']})[0], 200)
-
-        _, cols = self.call_get('/api/space/collections')
-        items = cols.get('items', cols) if isinstance(cols, dict) else cols
-        self.assertGreaterEqual(len(items), 2)
-
-        self.assertEqual(self.call_post('/api/space/delete', body={'id': 'sp_1'})[0], 200)
-
     def test_02_space_tree_and_tag_ops(self):
         """save_tree 与 update_tags 更新节点标签并支持标签清理"""
         tree = {'root': [{'id': 'sn_1', 'type': 'item', 'title': '工具站', 'tags': ['AI', '设计']}]}
@@ -64,11 +48,11 @@ class Test07_SpaceMusicPortalAndJanitorSandbox(SandboxTestCase):
         self.assertEqual(self.call_post('/api/save_music', body=sample)[0], 200)
 
         self.assertEqual(self.call_post('/api/delete_track', body={**idx, 'trackIdx': 1})[0], 200)
-        alb = self.call_get('/api/music_data')[1][0]['collections'][0]['albums'][0]
+        alb = self.load_json(config.MUSIC_DATA)[0]['collections'][0]['albums'][0]
         self.assertEqual((alb['total'], alb['page_mapping']), (2, [1, 3]))
 
         self.assertEqual(self.call_post('/api/reset_tracks', body=idx)[0], 200)
-        self.assertEqual(self.call_get('/api/music_data')[1][0]['collections'][0]['albums'][0]['total'], 3)
+        self.assertEqual(self.load_json(config.MUSIC_DATA)[0]['collections'][0]['albums'][0]['total'], 3)
 
     # ---------- 门户与建页 ----------
 
@@ -127,7 +111,7 @@ class Test07_SpaceMusicPortalAndJanitorSandbox(SandboxTestCase):
 
         self.clean_data()
         self.assertTrue(os.path.isfile(kept), "被 Markdown 引用的图片不应被误删")
-        self.assertTrue(os.path.isfile(self.data_path('notes', '保留笔记.md')))
+        self.assertTrue(os.path.isfile(self.root_path('markdown', 'notes', 'root-保留笔记.md')))
 
     def test_09_janitor_purges_orphan_attachments(self):
         """Janitor 精确物理删除未被引用的 _notes 孤儿附件"""
@@ -138,7 +122,7 @@ class Test07_SpaceMusicPortalAndJanitorSandbox(SandboxTestCase):
 
     def test_10_janitor_purges_orphan_md_and_ghost_db_records(self):
         """Janitor 清理未在 cms.db 注册的孤儿 .md，并清除 gallery.db 幽灵记录"""
-        orphan_md = self.write_file(self.data_path('notes', '孤儿文档.md'), '未被索引的内容')
+        orphan_md = self.write_file(self.root_path('markdown', 'notes', '孤儿文档.md'), '未被索引的内容')
         self.insert_gallery_row(id='ghost_1', category='travel', name='missing.jpg',
                                 path='photos/images/travel/missing.jpg', thumb='', preview='',
                                 hash='h1', created_at=0, sort_order=0)
@@ -153,16 +137,19 @@ class Test07_SpaceMusicPortalAndJanitorSandbox(SandboxTestCase):
         data_safety.restore_trash(res['quarantine_batch'])
         self.assertTrue(os.path.isfile(orphan_md))
 
-    def test_11_janitor_preserves_encrypted_data(self):
-        """Janitor 完整保留加密 CMS 节点密文 (_enc) 与加密相册配置"""
-        self.add_node('n_locked_jan', '加密笔记')
+    def test_11_janitor_preserves_private_notes_and_legacy_ciphertext(self):
+        """Janitor 保留私密笔记的本地 .md 与 _private 标记，并完整保留旧版加密相册配置"""
+        self.add_node('n_locked_jan', '私密笔记')
+        self.cms('update', {'id': 'n_locked_jan', 'data': {'content': '私密正文'}})
         self.cms('lock', {'id': 'n_locked_jan', 'enc': 'enc:iv_janitor.cipher_janitor_keep', 'covers': []})
         cms.save_json(config.ALBUM_CONFIG_JSON, [{'_enc': 'enc:iv_alb.cipher_alb'}])
 
         self.clean_data()
         root = self.fetch_tree()['root']
         self.assertEqual(len(root), 1)
-        self.assertEqual((root[0]['type'], root[0]['_enc']), ('locked', 'enc:iv_janitor.cipher_janitor_keep'))
+        self.assertTrue(root[0].get('_private'))
+        self.assertNotIn('_enc', root[0])
+        self.assertTrue(os.path.isfile(self.root_path('markdown', 'notes', 'root-私密笔记.md')), '私密笔记的本地正文不得被清理')
         self.assertEqual(self.album_config(), [{'_enc': 'enc:iv_alb.cipher_alb'}])
 
     def test_12_janitor_is_idempotent(self):
@@ -173,4 +160,4 @@ class Test07_SpaceMusicPortalAndJanitorSandbox(SandboxTestCase):
         res = self.clean_data()
         self.assertEqual(res['deleted_files_count'], 0, "第二次清理不应再删除文件")
         self.assertEqual(res.get('db_fixes_count', 0), 0, "第二次清理不应再修复记录")
-        self.assertTrue(os.path.isfile(self.data_path('notes', '幂等笔记.md')))
+        self.assertTrue(os.path.isfile(self.root_path('markdown', 'notes', 'root-幂等笔记.md')))

@@ -7,7 +7,7 @@
     /* --- 1. Header Layout --- */
     .explorer-header {
         display: grid !important;
-        grid-template-columns: 1fr auto !important;
+        grid-template-columns: minmax(0, 1fr) auto !important;
         grid-template-rows: auto auto !important;
         gap: 15px !important;
         padding-bottom: 20px !important;
@@ -30,6 +30,9 @@
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         flex: 1;
+        min-width: 0;
+        /* 基础样式为 display:flex，flex 容器内的省略号不生效，文字会被直接裁断；改为块级后才会显示“…” */
+        display: block !important;
     }
 
     .back-btn {
@@ -74,7 +77,34 @@
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
 
+    /* 小屏（560px 以下）与 CMS 各页保持一致的三行排布：
+       第一行 返回按钮靠左、标题图标靠右（右上角）；第二行 工具按钮靠右；第三行 搜索框。 */
+    @media (max-width: 560px) {
+        .explorer-header {
+            grid-template-columns: minmax(0, 1fr) !important;
+            grid-template-rows: auto auto auto !important;
+        }
+
+        .header-left {
+            grid-column: 1 / -1 !important;
+            justify-content: space-between !important;
+        }
+
+        .header-right {
+            grid-column: 1 / -1 !important;
+            grid-row: 2 !important;
+            justify-content: flex-end !important;
+        }
+
+        .explorer-header .search-box {
+            grid-row: 3 !important;
+        }
+    }
+
     .search-input {
+        box-sizing: border-box !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
         width: 90% !important;
         height: 38px !important;
         font-size: 15px !important;
@@ -110,8 +140,25 @@
     }
 
     @media (max-width: 767px) {
+        /* 与相册页（mobile-album.css）保持一致：小屏内容区内边距由 40px 收为 20px，
+           否则 330px 宽的窗口左右各被吃掉 40px，卡片放不下 */
+        .gallery-content {
+            padding: 20px !important;
+        }
+
+        /* minmax(0, 1fr)：列宽不再被卡片内容的最小宽度撑大而溢出被裁断 */
         .grid-layout {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+        }
+
+        .space-card {
+            min-width: 0 !important;
+        }
+
+        /* 管理按钮组原为不换行的一整排（约 212px），窄屏下允许换行并居中 */
+        .space-card .admin-actions {
+            flex-wrap: wrap !important;
+            justify-content: center !important;
         }
     }
 

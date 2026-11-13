@@ -2,13 +2,14 @@
  * MAERS Private Media (private-media.module.js)
  * 职责：访客侧在会话解锁后，解密私密相册并生成带令牌的私有桶图片地址
  *
- * 图片地址前缀读取 data/crypto-keyring.json 的 media_base（后台「🛡️ 加密设置」中修改），
+ * 图片地址前缀读取 data/crypto-keyring.json 的 media_base（后台「加密设置」中修改），
  * 默认即中继 Worker 地址。Worker 需实现 GET /private/<key>?t=<token>
  * （见 data-manage/sync/cloudflare-worker-sync.js）。
  */
 
-import { getSessionKey, getAccessToken, unwrapRecord, isEncryptedRecord } from './crypto.module.js';
+import { getSessionKey, getSessionKeysRaw, getAccessToken, unwrapRecord, isEncryptedRecord } from './crypto.module.js';
 import { getMediaBase } from './keyring.module.js';
+import { draftPhotoUrl } from '../data-provider.module.js';
 
 /**
  * 将仓库相对路径转换为带令牌的私有桶地址；绝对 URL 原样返回
@@ -16,23 +17,25 @@ import { getMediaBase } from './keyring.module.js';
  * @param {string} key - 例如 photos/images/xxx/a.jpg
  * @param {string} token - 访问令牌
  */
-function toPrivateUrl(base, key, token) {
+function toPrivateUrl(base, key, token, group = 'default') {
     if (!key) return key;
     if (/^https?:\/\//i.test(key)) return key;
     const encoded = key.split('/').map(encodeURIComponent).join('/');
-    return `${base}/private/${encoded}?t=${token}`;
+    const draft = draftPhotoUrl(key, true);
+    const url = draft ? `${draft}&` : `${base}/private/${encoded}?`;
+    return `${url}t=${token}${group === 'default' ? '' : '&g=' + encodeURIComponent(group)}`;
 }
 
 /**
  * 获取私密图片地址生成器（需会话已解锁且已配置地址）
  * @returns {Promise<((key:string)=>string)|null>}
  */
-export async function getPrivateUrlBuilder() {
+export async function getPrivateUrlBuilder(group = 'default') {
     // 先查会话：未解锁的访客不读取密钥环，不产生额外请求
-    const token = await getAccessToken();
+    const token = await getAccessToken(group);
     const base = token ? await getMediaBase() : '';
     if (!base || !token) return null;
-    return (key) => toPrivateUrl(base, key, token);
+    return (key) => toPrivateUrl(base, key, token, group);
 }
 
 /**
@@ -40,9 +43,7 @@ export async function getPrivateUrlBuilder() {
  * @returns {Promise<{payload:Object, toUrl:Function}|null>}
  */
 async function _findPayload(catId) {
-    const key = await getSessionKey();
-    const toUrl = key ? await getPrivateUrlBuilder() : null;
-    if (!key || !toUrl) return null;
+    if (!Object.keys(getSessionKeysRaw()).length) return null;
 
     let conf = [];
     try {
@@ -54,8 +55,14 @@ async function _findPayload(catId) {
 
     for (const rec of conf) {
         if (!isEncryptedRecord(rec)) continue;
+        const group = rec._group || 'default';
+        const key = await getSessionKey(group);
+        if (!key) continue;
         const payload = await unwrapRecord(rec, key);
-        if (payload && payload.category && payload.category.id === catId) return { payload, toUrl };
+        if (payload && payload.category && payload.category.id === catId) {
+            const toUrl = await getPrivateUrlBuilder(group);
+            return toUrl ? { payload, toUrl } : null;
+        }
     }
     return null;
 }
@@ -158,13 +165,15 @@ export function unpackRevealedNode(p, toUrl = null) {
 
 /** 访客侧解密转换函数（带私密封面地址），供各视图共用 */
 export async function getRevealTransform() {
-    const toUrl = await getPrivateUrlBuilder().catch(() => null);
-    const mark = node => {
+    const builders = new Map();
+    for (const group of Object.keys(getSessionKeysRaw())) builders.set(group, await getPrivateUrlBuilder(group).catch(() => null));
+    const mark = (node, group) => {
         node._private = true;
-        for (const child of node.children || []) mark(child);
+        node._private_group = group;
+        for (const child of node.children || []) mark(child, group);
         return node;
     };
-    return (p) => mark(unpackRevealedNode(p, toUrl));
+    return (p, group = 'default') => mark(unpackRevealedNode(p, builders.get(group)), group);
 }
 
 /**
@@ -180,7 +189,7 @@ export function extractLockedNodes(list, lockedNodes, parentId = 'root') {
     for (let i = list.length - 1; i >= 0; i--) {
         const node = list[i];
         if (isEncryptedRecord(node)) {
-            lockedNodes.unshift({ id: node.id, parentId, index: i, _enc: node._enc });
+            lockedNodes.unshift({ id: node.id, parentId, index: i, _enc: node._enc, ...(node._group ? {_group:node._group} : {}) });
             list.splice(i, 1);
         } else if (node.children) {
             extractLockedNodes(node.children, lockedNodes, node.id);
@@ -225,7 +234,8 @@ export function applyLockActionLocally(AppState, flattenFn, action, data) {
         const hit = _findWithParent(AppState.root, data.id);
         if (!hit) return;
         hit.list.splice(hit.index, 1);
-        AppState.lockedNodes.push({ id: data.id, parentId: hit.parentId, index: hit.index, _enc: data.enc });
+        AppState.lockedNodes.push({ id: data.id, parentId: hit.parentId, index: hit.index, _enc: data.enc,
+            ...(data.group && data.group !== 'default' ? {_group:data.group} : {}) });
     } else if (action === 'unlock') {
         const li = AppState.lockedNodes.findIndex(n => n.id === data.id);
         if (li < 0 || !data.tree) return;

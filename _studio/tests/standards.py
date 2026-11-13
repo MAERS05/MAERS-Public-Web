@@ -37,14 +37,13 @@ NON_MODULE_JS_ALLOWLIST = frozenset({
     'shared/flash-guard.js',                           # 关键渲染路径同步脚本
     'custom/index/viewer/site-guide.js',               # 首页引导独立脚本
     'custom/zmobile adaptation/mobile-literature.js',  # 移动端适配补丁脚本
-    'custom/zmobile adaptation/mobile-photos.js',
     'custom/zmobile localization/offline-download.js', # 离线下载独立 IIFE
     'data-manage/sync/cloudflare-worker-sync.js',      # 部署在 Cloudflare 的 Worker 源码
 })
 
 # 项目根目录允许存在的非 HTML 文件
 ROOT_FILE_ALLOWLIST = frozenset({
-    '.gitattributes', '.gitignore', 'README.md', 'LICENSE', 'Maersy.exe',
+    '.gitattributes', '.gitignore', 'LICENSE', 'README.md', 'Maersy.exe',
     'maers-version-controller.js', 'manifest.json', 'vercel.json',
 })
 

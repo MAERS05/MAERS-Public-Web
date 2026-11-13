@@ -113,7 +113,7 @@ export function createReaderFileWatcher({ getNode, isDirty, isLocal, onChange })
         pending = true;
         try {
             const path = node._mdPath.split('/').map(encodeURIComponent).join('/');
-            const response = await (node._private ? localFetch : fetch)(`data/${path}?t=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
+            const response = await (node._private ? localFetch : fetch)(`${path}?t=${Date.now()}`, { cache: 'no-store', signal: controller.signal });
             if (!response.ok) return;
             const text = await response.text();
             const revision = await sha256Hex(text);

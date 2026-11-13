@@ -4,7 +4,8 @@ permissions:
   contents: read
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    # 真实后台集成用例包含 Windows DPAPI 本机免密登记。
+    runs-on: windows-latest
     env:
       MAERS_VERSION_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
     steps:

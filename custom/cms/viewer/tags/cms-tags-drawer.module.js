@@ -6,7 +6,7 @@
 
 import { Toast } from '../../../../shared/toast.module.js';
 
-import { TagsApi } from '../../admin/cms-tags-api.module.js';
+import { includesPrivateTags, TagsApi } from '../../admin/cms-tags-api.module.js';
 import { TagsRender } from './cms-tags-render.module.js';
 import { TagsUI } from './cms-tags-ui.module.js';
 import { SaveButton } from '../../../../data-manage/admin/admin-base.module.js';
@@ -218,6 +218,10 @@ function getModuleName() {
 }
 
 async function handleRename(oldName, refreshCallback) {
+    if (includesPrivateTags(getModuleName(), Controller?.AppState?.allNodes, [oldName])) {
+        Toast.error('批量重命名私密标签请在电脑本地后台操作');
+        return;
+    }
     const newName = prompt(`重命名标签 "${oldName}":`, oldName);
     if (!newName?.trim() || newName.trim() === oldName) return;
 
@@ -253,7 +257,7 @@ async function handleRename(oldName, refreshCallback) {
             Controller.AppState.tagCategories = categories;
         }
 
-        Toast.success(`✅ 标签已重命名: ${oldName} → ${newName.trim()}\n已更新 ${res.count} 个项目`);
+        Toast.success(`✅ 标签已重命名: ${oldName} → ${newName.trim()}\n${res.count == null ? '已存入云端暂存队列，待电脑端合并' : `已更新 ${res.count} 个项目`}`);
         if (refreshCallback) refreshCallback();
         categoryManager?.setList(Controller.AppState.tagCategories);
         if (typeof Controller?.refreshView === 'function') Controller.refreshView(false, true);
@@ -264,6 +268,10 @@ async function handleRename(oldName, refreshCallback) {
 }
 
 async function handleDelete(tagName, refreshCallback) {
+    if (includesPrivateTags(getModuleName(), Controller?.AppState?.allNodes, [tagName])) {
+        Toast.error('批量删除私密标签请在电脑本地后台操作');
+        return;
+    }
     if (!confirm(`确认删除标签 #${tagName}？\n所有使用该标签的项目都会移除此标签。`)) return;
 
     const res = await TagsApi.deleteTag(getModuleName(), tagName);
@@ -292,7 +300,7 @@ async function handleDelete(tagName, refreshCallback) {
             Controller.AppState.tagCategories = categories;
         }
 
-        Toast.success(`✅ 标签已删除: ${tagName}\n已从 ${res.count} 个项目中移除`);
+        Toast.success(`✅ 标签已删除: ${tagName}\n${res.count == null ? '已存入云端暂存队列，待电脑端合并' : `已从 ${res.count} 个项目中移除`}`);
         if (refreshCallback) refreshCallback();
         categoryManager?.setList(Controller.AppState.tagCategories);
         if (typeof Controller?.refreshView === 'function') Controller.refreshView(false, true);

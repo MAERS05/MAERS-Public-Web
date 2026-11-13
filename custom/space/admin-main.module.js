@@ -156,9 +156,9 @@ SaveButton.initUnified(
             }
         }
 
-        if (r1 !== false && r2 !== false) {
-            Feedback.notifySaveSuccess();
-        }
+        // 任一部分失败返回 false：保存条保持可见，编辑内容保留
+        if (r1 === false || r2 === false) return false;
+        Feedback.notifySaveSuccess();
     },
     async () => {
         // Joint Cancel

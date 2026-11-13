@@ -50,6 +50,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--staged', action='store_true')
     args = parser.parse_args()
+    if args.staged and git('ls-files', '--', ':(glob)markdown/**/*.md', ':(glob)data/**/*.md').strip():
+        raise RuntimeError('正文文件只保存在本机与对象存储，请先取消 markdown/**/*.md 的 Git 跟踪（保留本机文件）。')
     baseline = git('show', 'HEAD:' + FILE)
     path = ROOT / FILE
     working = path.read_text(encoding='utf-8')

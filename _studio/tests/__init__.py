@@ -37,12 +37,19 @@ SUITES = (
     Suite('test_06_album_photos_sandbox', 'Test06_AlbumAndPhotosSandbox', False),
     Suite('test_07_space_music_janitor_sandbox', 'Test07_SpaceMusicPortalAndJanitorSandbox', False),
     Suite('test_08_js_runtime', 'Test08_FrontendJsRuntimeAndE2EECrypto', False),
+    Suite('test_08_sync_runtime', 'Test08_SyncRuntime', False),
+    Suite('test_08_crypto_runtime', 'Test08_CryptoRuntime', False),
+    Suite('test_08_photos_runtime', 'Test08_PhotosRuntime', False),
     Suite('test_09_code_standards', 'Test09_CodeStandards', True),
     Suite('test_10_http_security', 'Test10_HttpSecurity', False),
     Suite('test_11_storage_architecture', 'Test11_StorageArchitecture', False),
     Suite('test_12_engineering', 'Test12_Engineering', False),
     Suite('test_13_data_safety', 'Test13_DataSafety', False),
-    Suite('test_13_data_safety', 'Test13_PrivateAdmin', False),
+    Suite('test_13_private_admin', 'Test13_PrivateAdmin', False),
+    Suite('test_14_relay_bus', 'Test14_RelayBusRuntime', False),
+    Suite('test_14_relay_bus', 'Test14_RelayBackendEntrances', False),
+    Suite('test_15_open_components', 'Test15_OpenComponents', False),
+    Suite('test_16_content_sync', 'Test16_ContentSync', False),
 )
 
 

@@ -7,7 +7,9 @@ import { localFetch } from '../../../../data-manage/api-client.module.js';
 import { DataProvider, publicMediaUrl } from '../../../../data-manage/data-provider.module.js';
 
 import { AdminButtonHelper } from '../../../../data-manage/admin/admin-base.module.js';
-import { renderLockedCard, cryptoIconHtml, setupLockActionButton } from '../../../../data-manage/encrypt/admin-lock.module.js';
+import { disableAdminControl, isLocalOnlyUnavailable } from '../../../../data-manage/admin/local-only.module.js';
+import { hasProtectedCmsContent } from '../../../../data-manage/sync/relay-actions.module.js';
+import { renderLockedCard, setupLockActionButton } from '../../../../data-manage/encrypt/admin-lock.module.js';
 import { setupTagDragAndMenu } from '../../admin/tag-interactions.module.js';
 
 const REMOVE_COVER_ICON = new URL('../../../../ui/remove-cover.svg', import.meta.url).href;
@@ -65,414 +67,213 @@ function isFiltering() {
     return (State.AppState.searchQuery || (State.AppState.activeFilters && State.AppState.activeFilters.size > 0));
 }
 
-export function createGridItem(node, State, index) {
-    const el = document.createElement("div");
-    let className = `grid-item type-${node.type}`;
+const COVER_MODULES = ['literature', 'games', 'videos'];
 
-    let manager = null;
-    if (State.IS_ADMIN && Admin) {
-        manager = Admin.getManager?.();
-        if (manager) {
-            const extraClass = manager.getItemClass(index);
-            className += ` ${extraClass}`;
-
-            if (manager.selectedIndices && manager.selectedIndices.includes(index)) {
-                const orderNum = manager.selectedIndices.indexOf(index) + 1;
-                el.setAttribute('data-order-num', orderNum);
-            }
-        }
-
-        if (Drag) {
-            Drag.setupItemDrag?.(el, node);
-        }
-    }
-
-    el.className = className;
+function updateItemState(el, node, state, index) {
+    const manager = state.IS_ADMIN && Admin ? Admin.getManager?.() : null;
+    el.className = `grid-item type-${node.type}${manager ? ` ${manager.getItemClass(index)}` : ''}`;
+    const selectedIndex = manager?.selectedIndices?.indexOf(index) ?? -1;
+    if (selectedIndex >= 0) el.setAttribute('data-order-num', selectedIndex + 1);
+    else el.removeAttribute('data-order-num');
     el.dataset.id = node.id;
-
-    // Admin Actions
-    if (State.IS_ADMIN && Admin && AdminButtonHelper) {
-        const isDeleted = manager ? manager.isDeleted(index) : false;
-        const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
-        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (currentMod === 'videos') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games')) || (window.location.search.includes('module=videos'));
-        const filtering = isFiltering();
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'maers-admin-action-group';
-        wrapper.style.cssText = "position: absolute; top: 5px; right: 5px; z-index: 10; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 140px;";
-
-        const createBtn = (icon, title, onClick) => {
-            const btn = document.createElement('span');
-            btn.className = 'maers-admin-btn';
-            btn.title = title;
-            if (icon === '🔒') btn.innerHTML = cryptoIconHtml(node._private_id ? 'decryption' : 'encryption');
-            else if (icon === 'remove-cover') btn.innerHTML = `<img class="maers-admin-icon--remove-cover" src="${REMOVE_COVER_ICON}" width="18" height="18" alt="" aria-hidden="true">`;
-            else if (icon === '✎') btn.innerHTML = '<span class="maers-admin-edit-icon">✎</span>';
-            else btn.textContent = icon;
-            btn.addEventListener('click', onClick);
-            return btn;
-        };
-
-        // Hide Sort button when filtering (reordering doesn't apply to filtered results)
-        if (!filtering) {
-            wrapper.appendChild(createBtn('≡', 'Select', (e) => Admin.uiPickNode(e, node.id)));
-        }
-        wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
-
-        wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
-
-        // Delete button always visible (works in both normal and filtered mode)
-        const delIcon = isDeleted ? '↺' : '✕';
-        const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
-        if (isDeleted) delBtn.classList.add('btn-delete-active');
-        wrapper.appendChild(delBtn);
-        if (isLitModule) {
-            if (!node.coverImage) {
-                wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
-            } else {
-                wrapper.appendChild(createBtn('remove-cover', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
-            }
-        }
-
-        if (Admin.uiLock) {
-            const lockTitle = node._private_id ? '取消对外加密' : node._private ? '随上级对外加密' : '对外加密' + (node.type === 'folder' ? '（含全部子文档）' : '');
-            const lockBtn = createBtn('🔒', lockTitle, (e) => Admin.uiLock(e, node.id));
-            setupLockActionButton(lockBtn, {
-                isLocked: Boolean(node._private_id),
-                title: lockTitle,
-                onClick: (e) => Admin.uiLock(e, node.id)
-            });
-            wrapper.appendChild(lockBtn);
-        }
-
-        el.appendChild(wrapper);
-        AdminButtonHelper.injectStyles();
-    }
-
     el.setAttribute('data-tags', (node.tags || []).join(' '));
     el.setAttribute('data-type', node.type);
+    return manager;
+}
 
-    // Cover/Icon
-    const currentModule = Controller?.CONFIG?.CURRENT_MODULE;
-    const showCover = currentModule === 'literature' || currentModule === 'games' || currentModule === 'videos';
+function createAdminActions(node, state, manager, index) {
+    if (!state.IS_ADMIN || !Admin || !AdminButtonHelper) return null;
+    const isDeleted = manager ? manager.isDeleted(index) : false;
+    const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
+    const isLitModule = COVER_MODULES.some(module => currentMod === module || window.location.search.includes(`module=${module}`));
+    const filtering = isFiltering();
 
-    if (showCover) {
-        const coverUrl = DataProvider.getCoverUrl(node, 'preview');
-        const coverDiv = document.createElement('div');
-        coverDiv.className = coverUrl ? 'item-cover' : 'item-cover placeholder';
+    const wrapper = document.createElement('div');
+    wrapper.className = 'maers-admin-action-group';
+    wrapper.style.cssText = "position: absolute; top: 5px; right: 5px; z-index: 10; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 140px;";
 
-        if (coverUrl) {
-            const img = document.createElement('img');
-            // Use IntersectionObserver logic instead of just loading='lazy'
-            if (lazyObserver) {
-                img.setAttribute('data-src', coverUrl); // Hold the URL
-                lazyObserver.observe(img); // Observe real visibility
-            } else {
-                img.src = coverUrl; // Fallback
-            }
-            img.loading = 'lazy'; // Still keep native lazy for extra browser support
-            img.decoding = 'async';
-            img.className = 'item-cover-img';
-            img.onload = () => coverDiv.classList.add('loaded');
-            // 错误回退：优先降级至 Cloudflare R2 原图 CDN，若依然失败再展示占位图
-            img.onerror = () => {
-                if (!img.dataset.hasFallenBack && node.coverImage) {
-                    img.dataset.hasFallenBack = "true";
-                    img.src = publicMediaUrl(node.coverImage);
-                    return;
-                }
-                img.style.display = 'none';
-                coverDiv.classList.add('placeholder');
-            };
-            coverDiv.appendChild(img);
+    const createBtn = (icon, title, onClick) => {
+        const btn = document.createElement('span');
+        btn.className = 'maers-admin-btn';
+        btn.title = title;
+        if (icon === 'remove-cover') btn.innerHTML = `<img class="maers-admin-icon--remove-cover" src="${REMOVE_COVER_ICON}" width="18" height="18" alt="" aria-hidden="true">`;
+        else if (icon === '✎') btn.innerHTML = '<span class="maers-admin-edit-icon">✎</span>';
+        else btn.textContent = icon;
+        btn.addEventListener('click', onClick);
+        return btn;
+    };
+
+    // 筛选结果不提供排序入口
+    if (!filtering) {
+        wrapper.appendChild(createBtn('≡', 'Select', (e) => Admin.uiPickNode(e, node.id)));
+    }
+    wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
+
+    wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
+
+    // 普通列表和筛选列表都允许删除与撤销
+    const delIcon = isDeleted ? '↺' : '✕';
+    const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
+    if (isDeleted) delBtn.classList.add('btn-delete-active');
+    if (isLocalOnlyUnavailable() && hasProtectedCmsContent(node, state.AppState.lockedNodes)) {
+        disableAdminControl(delBtn, '整项删除加密内容仅限电脑本地后台');
+    }
+    wrapper.appendChild(delBtn);
+    if (isLitModule) {
+        if (!node.coverImage) {
+            wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
+        } else {
+            wrapper.appendChild(createBtn('remove-cover', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
         }
-        el.appendChild(coverDiv);
     }
 
-    // Title
-    const titleDiv = document.createElement('div');
-    titleDiv.className = 'item-title';
-    titleDiv.textContent = node.title;
-    el.appendChild(titleDiv);
+    if (Admin.uiLock) {
+        // 父节点未加密的私密节点是加密操作的发起点（常驻解密图标）；父节点已加密则仅随上级。
+        const parent = state.AppState.allNodes.find(item => item.id === node.parentId);
+        const inherited = Boolean(node._private && !node._private_id && parent?._private);
+        const isLockRoot = Boolean(node._private && !inherited);
+        const lockTitle = inherited ? '随上级对外加密' : '对外加密' + (node.type === 'folder' ? '（含全部子文档）' : '');
+        const lockBtn = document.createElement('span');
+        lockBtn.className = 'maers-admin-btn';
+        setupLockActionButton(lockBtn, {
+            isLocked: Boolean(node._private_id || node._cloudEnvelope || isLockRoot),
+            title: lockTitle,
+            onClick: (e) => Admin.uiLock(e, node.id)
+        });
+        wrapper.appendChild(lockBtn);
+    }
 
-    // Divider
-    const divDiv = document.createElement('div');
-    divDiv.className = 'item-divider';
-    el.appendChild(divDiv);
+    AdminButtonHelper.injectStyles();
+    return wrapper;
+}
 
-    // Tags
+function createCover(node) {
+    const coverUrl = DataProvider.getCoverUrl(node, 'thumb');
+    const coverDiv = document.createElement('div');
+    coverDiv.className = coverUrl ? 'item-cover' : 'item-cover placeholder';
+    coverDiv.dataset.coverUrl = coverUrl || '';
+
+    if (coverUrl) {
+        const img = document.createElement('img');
+        // 延迟加载与原生懒加载共用同一个图片节点
+        if (lazyObserver) {
+            img.setAttribute('data-src', coverUrl); // 保存待加载地址
+            lazyObserver.observe(img); // 按可见性加载
+        } else {
+            img.src = coverUrl; // 无观察器时直接加载
+        }
+        img.loading = 'lazy'; // 同时保留原生懒加载
+        img.decoding = 'async';
+        img.className = 'item-cover-img';
+        img.onload = () => coverDiv.classList.add('loaded');
+        const alternatives = new Set([DataProvider.getCoverUrl(node, 'preview')]);
+        if (DataProvider.isLocal) {
+            alternatives.add(publicMediaUrl(node.coverImage, { local: true }));
+            alternatives.add(DataProvider.getCoverUrl(node, 'thumb', { local: false }));
+        }
+        alternatives.add(publicMediaUrl(node.coverImage));
+        alternatives.delete(coverUrl);
+        const fallbacks = [...alternatives].filter(Boolean);
+        // 缩略图缺失时先使用预览，最后再尝试原图。
+        img.onerror = () => {
+            const fallback = fallbacks.shift();
+            if (fallback) {
+                img.src = fallback;
+                return;
+            }
+            img.style.display = 'none';
+            coverDiv.classList.add('placeholder');
+        };
+        coverDiv.appendChild(img);
+    }
+    return coverDiv;
+}
+
+async function updateNodeTags(nodeId, newTags, state) {
+    const node = state.AppState.allNodes.find(item => item.id === nodeId);
+    if (!node) return false;
+    const oldTags = [...(node.tags || [])];
+    node.tags = newTags;
+    if (!_isLocalBackend()) {
+        Controller?.refreshView?.(false, true);
+        return false;
+    }
+    const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
+    try {
+        const res = await localFetch(`/api/cms/update_tags?module=${module}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: nodeId, tags: newTags })
+        });
+        if (res.ok) Controller?.refreshView?.(false, true);
+        else node.tags = oldTags;
+    } catch (error) {
+        node.tags = oldTags;
+        console.error('[MAERS.CMS] 标签更新失败', error);
+        window.MAERS?.Toast?.error('标签更新失败');
+    }
+    return false;
+}
+
+function createTags(node, state) {
     const tagsDiv = document.createElement('div');
     tagsDiv.className = 'item-tags';
-    (node.tags || []).forEach(t => {
+    for (const tag of node.tags || []) {
         const span = document.createElement('span');
         span.className = 'mini-tag';
-        if (State.AppState.activeFilters.has(t)) span.classList.add('active');
-        span.textContent = `#${t}`;
-        span.dataset.tag = t;
-        if (State.IS_ADMIN) span.dataset.nodeId = node.id;
+        if (state.AppState.activeFilters.has(tag)) span.classList.add('active');
+        span.textContent = `#${tag}`;
+        span.dataset.tag = tag;
+        if (state.IS_ADMIN) span.dataset.nodeId = node.id;
         tagsDiv.appendChild(span);
-    });
-    el.appendChild(tagsDiv);
-
-    // Setup tag interactions (drag-and-drop + context menu) in admin mode
-    if (State.IS_ADMIN && Admin && tagsDiv.children.length > 0) {
+    }
+    if (state.IS_ADMIN && Admin && tagsDiv.children.length) {
         setupTagDragAndMenu({
             tagsContainer: tagsDiv,
-            getTags: () => {
-                const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
-                return currentNode?.tags || [];
-            },
-            onTagsUpdate: async (newTags) => {
-                const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
-                if (!currentNode) return false;
-
-                const oldTags = [...(currentNode.tags || [])];
-                currentNode.tags = newTags;
-
-                // 线上无后端，仅内存更新后直接刷新视图
-                if (!_isLocalBackend()) {
-                    if (typeof Controller?.refreshView === 'function') {
-                        Controller.refreshView(false, true);
-                    }
-                    return false;
-                }
-
-                // 本地环境：将标签变更请求写入后端数据库
-                const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
-                try {
-                    const res = await localFetch(`/api/cms/update_tags?module=${module}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ id: node.id, tags: newTags })
-                    });
-
-                    if (res.ok) {
-                        if (typeof Controller?.refreshView === 'function') {
-                            Controller.refreshView(false, true);
-                        }
-                        return false;
-                    } else {
-                        currentNode.tags = oldTags;
-                        return false;
-                    }
-                } catch (e) {
-                    console.error('Update tags failed', e);
-                    currentNode.tags = oldTags;
-                    if (window.MAERS?.Toast) window.MAERS.Toast.error('标签更新失败');
-                    return false;
-                }
-            }
+            getTags: () => state.AppState.allNodes.find(item => item.id === node.id)?.tags || [],
+            onTagsUpdate: newTags => updateNodeTags(node.id, newTags, state)
         });
     }
+    return tagsDiv;
+}
 
+export function createGridItem(node, state, index) {
+    const el = document.createElement('div');
+    const manager = updateItemState(el, node, state, index);
+    if (state.IS_ADMIN && Admin) Drag?.setupItemDrag?.(el, node);
+    const actions = createAdminActions(node, state, manager, index);
+    if (actions) el.appendChild(actions);
+    if (COVER_MODULES.includes(Controller?.CONFIG?.CURRENT_MODULE)) el.appendChild(createCover(node));
+    const title = document.createElement('div');
+    title.className = 'item-title';
+    title.textContent = node.title;
+    el.appendChild(title);
+    const divider = document.createElement('div');
+    divider.className = 'item-divider';
+    el.appendChild(divider);
+    el.appendChild(createTags(node, state));
     return el;
 }
 
-/**
- * Patch an existing grid-item element in-place.
- * Updates class, title, tags, admin buttons — but preserves the cover <img> element
- * to avoid image reload flicker.
- */
-function patchGridItem(el, node, State, index) {
-    // 1. Update className (admin state: selected, deleted, etc.)
-    let className = `grid-item type-${node.type}`;
-    let manager = null;
-    if (State.IS_ADMIN && Admin) {
-        manager = Admin.getManager?.();
-        if (manager) {
-            const extraClass = manager.getItemClass(index);
-            className += ` ${extraClass}`;
-
-            if (manager.selectedIndices && manager.selectedIndices.includes(index)) {
-                const orderNum = manager.selectedIndices.indexOf(index) + 1;
-                el.setAttribute('data-order-num', orderNum);
-            } else {
-                el.removeAttribute('data-order-num');
-            }
-        }
+// 原位更新卡片，保留地址未变的封面节点及其加载状态。
+function patchGridItem(el, node, state, index) {
+    const manager = updateItemState(el, node, state, index);
+    const actions = createAdminActions(node, state, manager, index);
+    if (actions) {
+        const previous = el.querySelector('.maers-admin-action-group');
+        if (previous) previous.replaceWith(actions);
+        else el.insertBefore(actions, el.firstChild);
     }
-    el.className = className;
-
-    // 2. Update data attributes
-    el.setAttribute('data-tags', (node.tags || []).join(' '));
-    el.setAttribute('data-type', node.type);
-
-    // 3. Patch Admin Buttons (rebuild — these are tiny, no images)
-    if (State.IS_ADMIN && Admin && AdminButtonHelper) {
-        const oldWrapper = el.querySelector('.maers-admin-action-group');
-        const isDeleted = manager ? manager.isDeleted(index) : false;
-        const currentMod = Controller?.CONFIG?.CURRENT_MODULE || '';
-        const isLitModule = (currentMod === 'literature') || (currentMod === 'games') || (currentMod === 'videos') || (window.location.search.includes('module=literature')) || (window.location.search.includes('module=games')) || (window.location.search.includes('module=videos'));
-        const filtering = isFiltering();
-
-        const wrapper = document.createElement('div');
-        wrapper.className = 'maers-admin-action-group';
-        wrapper.style.cssText = "position: absolute; top: 5px; right: 5px; z-index: 10; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 140px;";
-
-        const createBtn = (icon, title, onClick) => {
-            const btn = document.createElement('span');
-            btn.className = 'maers-admin-btn';
-            btn.title = title;
-            if (icon === '🔒') btn.innerHTML = cryptoIconHtml(node._private_id ? 'decryption' : 'encryption');
-            else if (icon === 'remove-cover') btn.innerHTML = `<img class="maers-admin-icon--remove-cover" src="${REMOVE_COVER_ICON}" width="18" height="18" alt="" aria-hidden="true">`;
-            else if (icon === '✎') btn.innerHTML = '<span class="maers-admin-edit-icon">✎</span>';
-            else btn.textContent = icon;
-            btn.addEventListener('click', onClick);
-            return btn;
-        };
-
-        // Hide Sort button when filtering (reordering doesn't apply to filtered results)
-        if (!filtering) {
-            wrapper.appendChild(createBtn('≡', 'Select', (e) => Admin.uiPickNode(e, node.id)));
-        }
-        wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
-
-        wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
-
-        // Delete button always visible (works in both normal and filtered mode)
-        const delIcon = isDeleted ? '↺' : '✕';
-        const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
-        if (isDeleted) delBtn.classList.add('btn-delete-active');
-        wrapper.appendChild(delBtn);
-        if (isLitModule) {
-            if (!node.coverImage) {
-                wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
-            } else {
-                wrapper.appendChild(createBtn('remove-cover', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
-            }
-        }
-
-        if (Admin.uiLock) {
-            const lockTitle = node._private_id ? '取消对外加密' : node._private ? '随上级对外加密' : '对外加密' + (node.type === 'folder' ? '（含全部子文档）' : '');
-            const lockBtn = createBtn('🔒', lockTitle, (e) => Admin.uiLock(e, node.id));
-            setupLockActionButton(lockBtn, {
-                isLocked: Boolean(node._private_id),
-                title: lockTitle,
-                onClick: (e) => Admin.uiLock(e, node.id)
-            });
-            wrapper.appendChild(lockBtn);
-        }
-
-        if (oldWrapper) {
-            oldWrapper.replaceWith(wrapper);
-        } else {
-            el.insertBefore(wrapper, el.firstChild);
-        }
+    if (COVER_MODULES.includes(Controller?.CONFIG?.CURRENT_MODULE)) {
+        const cover = el.querySelector('.item-cover');
+        const coverUrl = DataProvider.getCoverUrl(node, 'thumb');
+        // 比较原始封面地址，未加载或已回退的图片也能复用。
+        if (cover && coverUrl !== (cover.dataset.coverUrl || null)) cover.replaceWith(createCover(node));
     }
-
-    // 4. Patch Cover Image — PRESERVE existing <img> if URL unchanged
-    const currentModule = Controller?.CONFIG?.CURRENT_MODULE;
-    const showCover = currentModule === 'literature' || currentModule === 'games' || currentModule === 'videos';
-
-    if (showCover) {
-        const newCoverUrl = DataProvider.getCoverUrl(node, 'preview');
-        const existingCoverDiv = el.querySelector('.item-cover');
-
-        if (existingCoverDiv) {
-            const existingImg = existingCoverDiv.querySelector('.item-cover-img');
-            const existingUrl = existingImg ? existingImg.getAttribute('src') : null;
-
-            if (newCoverUrl !== existingUrl) {
-                // Cover changed — rebuild cover div
-                const coverDiv = document.createElement('div');
-                coverDiv.className = newCoverUrl ? 'item-cover' : 'item-cover placeholder';
-
-                if (newCoverUrl) {
-                    const img = document.createElement('img');
-                    if (lazyObserver) {
-                        img.setAttribute('data-src', newCoverUrl);
-                        lazyObserver.observe(img);
-                    } else {
-                        img.src = newCoverUrl;
-                    }
-                    img.loading = 'lazy';
-                    img.decoding = 'async';
-                    img.className = 'item-cover-img';
-                    img.onload = () => coverDiv.classList.add('loaded');
-                    img.onerror = () => {
-                        img.style.display = 'none';
-                        coverDiv.classList.add('placeholder');
-                    };
-                    coverDiv.appendChild(img);
-                }
-                existingCoverDiv.replaceWith(coverDiv);
-            }
-            // else: URL unchanged, do nothing — image stays loaded!
-        }
-    }
-
-    // 5. Patch Title
-    const titleEl = el.querySelector('.item-title');
-    if (titleEl && titleEl.textContent !== node.title) {
-        titleEl.textContent = node.title;
-    }
-
-    // 6. Patch Tags
-    const oldTagsDiv = el.querySelector('.item-tags');
-    if (oldTagsDiv) {
-        const tagsDiv = document.createElement('div');
-        tagsDiv.className = 'item-tags';
-        (node.tags || []).forEach(t => {
-            const span = document.createElement('span');
-            span.className = 'mini-tag';
-            if (State.AppState.activeFilters.has(t)) span.classList.add('active');
-            span.textContent = `#${t}`;
-            span.dataset.tag = t;
-            if (State.IS_ADMIN) span.dataset.nodeId = node.id;
-            tagsDiv.appendChild(span);
-        });
-        oldTagsDiv.replaceWith(tagsDiv);
-
-        // Re-setup tag interactions in admin mode
-        if (State.IS_ADMIN && Admin && tagsDiv.children.length > 0) {
-            setupTagDragAndMenu({
-                tagsContainer: tagsDiv,
-                getTags: () => {
-                    const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
-                    return currentNode?.tags || [];
-                },
-                onTagsUpdate: async (newTags) => {
-                    const currentNode = State.AppState.allNodes.find(n => n.id === node.id);
-                    if (!currentNode) return false;
-
-                    const oldTags = [...(currentNode.tags || [])];
-                    currentNode.tags = newTags;
-
-                    // 线上无后端，仅内存更新后直接刷新视图
-                    if (!_isLocalBackend()) {
-                        if (typeof Controller?.refreshView === 'function') {
-                            Controller.refreshView(false, true);
-                        }
-                        return false;
-                    }
-
-                    const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
-                    try {
-                        const res = await localFetch(`/api/cms/update_tags?module=${module}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: node.id, tags: newTags })
-                        });
-
-                        if (res.ok) {
-                            if (typeof Controller?.refreshView === 'function') {
-                                Controller.refreshView(false, true);
-                            }
-                            return false;
-                        } else {
-                            currentNode.tags = oldTags;
-                            return false;
-                        }
-                    } catch (e) {
-                        console.error('Update tags failed', e);
-                        currentNode.tags = oldTags;
-                        if (window.MAERS?.Toast) window.MAERS.Toast.error('标签更新失败');
-                        return false;
-                    }
-                }
-            });
-        }
-    }
+    const title = el.querySelector('.item-title');
+    if (title && title.textContent !== node.title) title.textContent = node.title;
+    const tags = el.querySelector('.item-tags');
+    if (tags) tags.replaceWith(createTags(node, state));
 }
 
 /**

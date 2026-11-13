@@ -1,7 +1,7 @@
 {
   "name": "MAERS Public Web",
   "short_name": "MAERS",
-  "description": "Personal Knowledge & Creative Hub",
+  "description": "公开发布的空白个人网站与内容工作台模板",
   "start_url": "/index.html",
   "scope": "/",
   "display": "standalone",

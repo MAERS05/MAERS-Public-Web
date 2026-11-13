@@ -33,6 +33,10 @@ export function saveState() {
     try {
         const playing = Player?.currentPlaying || {};
         if (!playing.bvid) return;
+        const category = UI?.libraryData?.[playing.catIdx];
+        const collection = category?.collections?.[playing.colIdx];
+        if (playing.privateContent || category?._private || collection?._private ||
+            collection?.albums?.[playing.albIdx]?._private) return;
 
         // 1. 清理文字后缀
         let rawText = document.querySelector('.header-playing-info .scroll-text')?.innerText || "";

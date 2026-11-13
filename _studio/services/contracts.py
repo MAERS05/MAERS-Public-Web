@@ -10,8 +10,9 @@ Validator = Callable[[JsonValue], None]
 Handler = Callable[[Query, JsonValue, bytes | None], Response]
 
 
-class CmsContext(TypedDict):
+class CmsContext(TypedDict, total=False):
     DATA_DIR: str
+    MARKDOWN_ROOT: str
     PROJECT_ROOT: str
     load_tree: Callable[[str], JsonObject]
     save_tree: Callable[[str, JsonObject], bool]

@@ -57,15 +57,16 @@ def _short_error(test_case, tb):
     return f"{desc} -> {lines[-1] if lines else '未知错误'}"
 
 
-def run_pre_push_check():
+def run_pre_push_check(*, preparing=False):
     """
     推送前极速门禁：仅运行只读契约套件，不加载后端服务。
     返回 {'passed': bool, 'total': int, 'errors': list[str]}
     """
     # 独立进程避免常驻后台复用之前的源码缓存，确保每次检查当前文件。
     suite, _ = build_suite(readonly_only=True)
+    env = {**os.environ, 'MAERS_PREPARING_PUBLISH': '1'} if preparing else None
     result = subprocess.run([sys.executable, '-B', os.path.abspath(__file__), '--fast', '-q'],
-                            capture_output=True, text=True, encoding='utf-8', timeout=120)
+                            capture_output=True, text=True, encoding='utf-8', timeout=120, env=env)
     return {'passed': result.returncode == 0, 'total': suite.countTestCases(),
             'errors': [] if result.returncode == 0 else [(result.stderr or result.stdout)[-6000:]]}
 

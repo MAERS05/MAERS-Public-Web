@@ -18,7 +18,7 @@ function restoreGlobalView(e) {
 
     if (t.closest(".main-card, .home-container, .immersive-layer")) return;
     if (t.closest(".zoom-trigger-icon") || t.closest(".zoom-trigger-whole")) return;
-    if (t.closest(".theme-switch-wrapper") || t.closest(".auto-mode-btn") || t.closest(".mode-text-btn") || t.closest(".lightbox") || t.closest(".lightbox-overlay")) return;
+    if (t.closest(".theme-switch-wrapper") || t.closest(".auto-mode-btn") || t.closest(".mode-text-btn") || t.closest(".lightbox") || t.closest(".lightbox-overlay") || t.closest('.maers-photoswipe')) return;
     if (t.closest(".tag-drawer") || t.closest(".drawer-overlay") || t.closest(".admin-modal") || t.closest(".toast-container")) return;
 
     document.documentElement.classList.remove("shrink-view");
@@ -172,7 +172,7 @@ export function initZoomSystem() {
             decodeURIComponent(window.location.pathname).split("/").pop() ||
             "index.html";
 
-        let rule = configList.find((r) => r.path === currentPath);
+        let rule = configList.find((r) => r.path === currentPath || r.path === `${currentPath}.html`);
         if (!rule) rule = configList.find((r) => r.path === "*");
 
         if (!rule || !rule.selector) return;

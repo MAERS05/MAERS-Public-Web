@@ -73,32 +73,14 @@
         background: #78ffd6;
         color: #000;
         border-color: #78ffd6;
-        box-shadow: 0 0 15px rgba(120, 255, 214, 0.6);
+        box-shadow: none;
     }
 
-    /* 2. 选中图片的边框呼吸效果 */
-    @keyframes pick-pulse {
-        0% {
-            box-shadow: 0 0 0 0 rgba(120, 255, 214, 0.4);
-            border-color: #78ffd6;
-            transform: scale(0.98);
-        }
-
-        50% {
-            box-shadow: 0 0 0 6px rgba(120, 255, 214, 0);
-            border-color: #78ffd6;
-            transform: scale(0.98);
-        }
-
-        100% {
-            box-shadow: 0 0 0 0 rgba(120, 255, 214, 0);
-            border-color: #78ffd6;
-            transform: scale(0.98);
-        }
-    }
-
-    .photo-item.is-picked {
-        animation: pick-pulse 2s infinite;
+    /* 2. 选中图片保持固定高亮与缩放，无需重复播放相同关键帧。 */
+    body .photo-item.is-picked {
+        box-shadow: none;
+        border-color: #78ffd6;
+        transform: scale(0.98);
         z-index: 100;
         opacity: 1 !important;
     }
@@ -118,7 +100,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        box-shadow: none;
         z-index: 30;
         pointer-events: none;
         animation: pop-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -159,7 +141,7 @@
         transform: scale(0.95) !important;
         border-color: #78ffd6 !important;
         background: rgba(120, 255, 214, 0.05) !important;
-        box-shadow: 0 0 15px rgba(120, 255, 214, 0.3), inset 0 0 0 1px #78ffd6 !important;
+        box-shadow: none !important;
         z-index: 100;
         transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
     }

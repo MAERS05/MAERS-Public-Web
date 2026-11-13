@@ -1,6 +1,7 @@
 """浏览器测试专用服务：生产 HTTP/路由逻辑，所有业务数据隔离到临时目录。"""
-import http.server
 import os
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -9,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / '_studio'))
 from tests.sandbox import SandboxTestCase, cms, photos, config
 from tests.helpers import make_test_png_bytes
-from services import storage, private_session
+from services import storage, storage_journal, private_session
 import routes
 import server
 
@@ -17,16 +18,17 @@ import server
 def seed() -> None:
     private_session.close({})
     storage.remove(Path(config.DATA_DIR) / 'crypto-keyring.json')
+    storage.remove(Path(storage_journal.local_root()) / 'crypto-local-access.json')
     for module in cms.JS_SYNC_MAP:
         cms.save_json(Path(config.DATA_DIR) / f'{module}-tree.json', {'root': []})
-    storage.write_text(Path(config.DATA_DIR) / 'notes/browser.md', '# 浏览器测试\n\n正文内容与 [[第二篇]]。\n\n## 小节\n\n- [ ] 未完成任务\n')
-    storage.write_text(Path(config.DATA_DIR) / 'notes/second.md', '# 第二篇\n\n链接导航成功。')
+    storage.write_text(Path(config.MARKDOWN_ROOT) / 'notes/browser.md', '# 浏览器测试\n\n正文内容与 [[第二篇]]。\n\n## 小节\n\n- [ ] 未完成任务\n')
+    storage.write_text(Path(config.MARKDOWN_ROOT) / 'notes/second.md', '# 第二篇\n\n链接导航成功。')
     cms.save_module_tree('notes', {'root': [
-        {'id': 'browser-note', 'type': 'note', 'title': '浏览器测试', 'content': 'notes/browser.md', 'tags': []},
-        {'id': 'second-note', 'type': 'note', 'title': '第二篇', 'content': 'notes/second.md', 'tags': []}]})
+        {'id': 'browser-note', 'type': 'note', 'title': '浏览器测试', 'content': 'markdown/notes/browser.md', 'tags': []},
+        {'id': 'second-note', 'type': 'note', 'title': '第二篇', 'content': 'markdown/notes/second.md', 'tags': []}]})
     for name, data in [('index-cards', [{'id': 'notes', 'title': '笔记', 'url': 'notes.html', 'icon': '📝'}]),
                        ('admin-portal', []), ('changelog', []), ('album-config', []), ('music-data', []),
-                       ('space-tree', {'root': []}), ('space-collections', []), ('photos-data', {})]:
+                       ('space-tree', {'root': []}), ('photos-data', {})]:
         cms.save_json(Path(config.DATA_DIR) / f'{name}.json', data)
     for scope in ['cms-' + m for m in cms.JS_SYNC_MAP] + ['cms', 'photos', 'space']:
         cms.save_json(Path(config.DATA_DIR) / 'tags' / f'{scope}-tag-categories.json', [])
@@ -34,11 +36,27 @@ def seed() -> None:
 
 
 class BrowserHandler(server.Handler):
+    # 复用连接，避免 Windows 浏览器回归耗尽临时端口。
+    protocol_version = 'HTTP/1.1'
     def translate_path(self, path: str) -> str:
-        self.directory = config.PROJECT_ROOT if urlsplit(path).path.startswith(('/data/', '/photos/')) else str(ROOT)
-        return http.server.SimpleHTTPRequestHandler.translate_path(self, path)
+        if urlsplit(path).path.startswith('/__test/published/'):
+            self.directory = str(Path(config.PROJECT_ROOT) / 'dist')
+            return super().translate_path(path.removeprefix('/__test/published'))
+        data_path = urlsplit(path).path.startswith(('/data/', '/markdown/', '/photos/images/',
+                                                    '/photos/previews/', '/photos/thumbnails/'))
+        self.directory = config.PROJECT_ROOT if data_path else str(ROOT)
+        return super().translate_path(path)
 
     def do_POST(self) -> None:
+        if self.path == '/__test/publish':
+            script = Path(config.PROJECT_ROOT) / '_studio/tooling/build-site.mjs'
+            script.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(ROOT / '_studio/tooling/build-site.mjs', script)
+            environment = {**os.environ, 'GIT_CEILING_DIRECTORIES': str(Path(config.PROJECT_ROOT).parent)}
+            subprocess.run([shutil.which('node'), str(script)], cwd=config.PROJECT_ROOT, env=environment,
+                           check=True, capture_output=True, timeout=30)
+            self._send_json(200, {'status': 'success'})
+            return
         if self.path == '/__test/reset':
             seed()
             self._send_json(200, {'status': 'success'})
@@ -49,9 +67,9 @@ class BrowserHandler(server.Handler):
                 name = '20261028_120000_42.png'
                 key = f'photos/images/{category}/{name}'
                 storage.write_bytes(Path(config.PROJECT_ROOT) / key, make_test_png_bytes('blue'))
-                row = photos.handle_register_r2({'category': category, 'path': key, 'name': name})
+                row = photos.register_photo({'category': category, 'path': key, 'name': name})
                 node_id = f'cloud-{module}'
-                cover = f'https://media.example.com/{key}' if module == 'literature' else key
+                cover = f'https://images.example.com/{key}' if module == 'literature' else key
                 cms.save_module_tree(module, {'root': [{'id': node_id, 'type': 'note', 'title': '手机上传封面',
                     'content': '', 'tags': [], 'coverImage': cover}]})
                 result[module] = {'nodeId': node_id, **row}

@@ -203,7 +203,7 @@ export function startLoop(engine) {
     let lastTime = performance.now();
 
     const update = (time) => {
-        if (engine.isGridMode || engine.books.length === 0) {
+        if (engine.isGridMode || !engine.books.length || !engine.realBooks.length) {
             engine.rafId = requestAnimationFrame(update);
             return;
         }
@@ -267,7 +267,7 @@ export function startLoop(engine) {
                 if (book.el.classList.contains('is-hovered')) {
                     zIndex = 10000;
                     book.el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) scale(1.15) translateY(-10px)`;
-                    book.el.style.boxShadow = '0 20px 50px rgba(0,0,0,0.6)';
+                    book.el.style.boxShadow = 'none';
                 } else {
                     book.el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0)`;
                     book.el.style.boxShadow = 'none';

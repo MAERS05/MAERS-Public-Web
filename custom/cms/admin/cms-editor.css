@@ -50,7 +50,6 @@ body.cms-text-admin .main-card {
     transition: all 0.2s;
     display: inline-block;
     vertical-align: middle;
-    margin-right: 8px;
 }
 
 .cms-create-btn:hover {
@@ -60,7 +59,7 @@ body.cms-text-admin .main-card {
 
 html.light-mode .cms-create-btn {
     background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.16);
     color: #333;
 }
 
@@ -208,7 +207,7 @@ html.light-mode .reader-admin-btn.primary {
 
 html.light-mode .cms-source-drawer {
     background: rgba(250, 249, 246, 0.98);
-    border-left: 1px solid rgba(0, 0, 0, 0.1);
+    border-left: 1px solid rgba(0, 0, 0, 0.16);
 }
 
 .cms-source-drawer-header {
@@ -216,13 +215,13 @@ html.light-mode .cms-source-drawer {
     align-items: center;
     justify-content: space-between;
     padding: 12px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     flex-shrink: 0;
     gap: 8px;
 }
 
 html.light-mode .cms-source-drawer-header {
-    border-bottom-color: rgba(0, 0, 0, 0.08);
+    border-bottom-color: rgba(0, 0, 0, 0.16);
 }
 
 .cms-source-drawer-title {
@@ -255,21 +254,32 @@ html.light-mode .cms-source-close-btn {
     background: rgba(0, 0, 0, 0.06);
 }
 
-.cms-source-textarea {
+.cms-source-editor {
     flex: 1;
+    min-height: 0;
     width: 100%;
     resize: none;
     border: none;
     outline: none;
-    padding: 20px;
     box-sizing: border-box;
     background: transparent;
     color: var(--text-main);
     font-family: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.95rem;
     line-height: 1.65;
-    overflow-y: auto;
+    overflow: hidden;
 }
+
+.cms-source-editor .cm-editor { height: 100%; background: transparent; }
+.cms-source-editor .cm-scroller { overflow: auto; font-family: inherit; line-height: 1.65; }
+.cms-source-editor .cm-content { padding: 20px 0; caret-color: var(--text-main); }
+.cms-source-editor .cm-line { padding: 0 16px; }
+.cms-source-editor .cm-gutters { background: var(--card-bg); color: var(--text-sub); border-color: var(--border-color); }
+.cms-source-editor .cm-activeLine, .cms-source-editor .cm-activeLineGutter { background: rgba(128, 128, 128, 0.12); }
+.cms-source-editor .cm-selectionBackground,
+.cms-source-editor .cm-focused .cm-selectionBackground { background: rgba(80, 150, 220, 0.3); }
+.cms-source-editor .cm-focused { outline: none; }
+.cms-source-editor[aria-busy="true"]::before { content: '正在加载源码编辑器…'; padding: 20px; display: block; }
 
 /* ==========================================================================
    4. 阅读器内容增强：图片、双链 (.cms-wikilink) 与 GitHub Alerts (.cms-alert)
@@ -282,7 +292,7 @@ html.light-mode .cms-source-close-btn {
     border-radius: 8px;
     cursor: zoom-in;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+    box-shadow: none;
     display: inline-block;
     margin: 10px 0;
 }
@@ -290,7 +300,7 @@ html.light-mode .cms-source-close-btn {
 .markdown-body img:not(.cms-diagram-fs-icon):hover,
 .vditor-reset img:not(.cms-diagram-fs-icon):hover {
     transform: scale(1.02);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+    box-shadow: none;
 }
 
 /* 站内文档胶囊与 [[双链]] 样式 */
@@ -323,7 +333,7 @@ html.light-mode .cms-source-close-btn {
     border-color: rgba(56, 189, 248, 0.5) !important;
     color: #bae6fd !important;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.15);
+    box-shadow: none;
 }
 
 .markdown-body a.cms-doc-pill--cross,
@@ -456,7 +466,7 @@ html:not(.light-mode) .vditor-reset table td {
 .vditor-reset pre:has(.cms-diagram-card) {
     background: transparent !important;
     border: none !important;
-    box-shadow: none !important;
+    box-shadow:none !important;
     padding: 0 !important;
     margin: 0 !important;
     border-radius: 0 !important;

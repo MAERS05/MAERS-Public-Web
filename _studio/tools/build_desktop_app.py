@@ -3,11 +3,12 @@
 桌面启动程序构建脚本 (_studio/tools/build_desktop_app.py)
 职责：
 1. 调用 Windows 内置 .NET C# 编译器 (csc.exe)，结合项目图标 (ui/icon.ico) 编译纯桌面软件模式的 Maersy.exe：
+   - 检测本机运行环境，缺少 Python、Node.js 或 npm 工具时自动准备；
    - 后台静默启动 Python 服务 _studio/server.py（完全无黑色命令行窗口）；
    - 通过 Chromium (Edge/Chrome) --app=http://localhost:8001/admin 模式以无地址栏独立软件窗口启动；
-   - 实时监测独立窗口句柄 (HWND) 生命周期，在系统内切换各子模块页面不中断，关闭软件窗口时自动停止后台 Python 服务；
+   - 实时监测独立窗口句柄 (HWND) 生命周期，关窗后等待后台写入结束，再通过本机接口退出；
    - 重复双击时直接唤醒并置顶已打开的独立窗口，防止重复多开。
-2. 生成项目根目录启动器；仅 --install-desktop 显式同步桌面：
+2. 生成可移植启动器，只有 --install-desktop 显式复制到桌面：
    - 项目根目录：Maersy.exe
    - 系统桌面：Desktop/Maersy.exe
 用法：python _studio/tools/build_desktop_app.py
@@ -62,9 +63,11 @@ def find_csc_compiler():
 
 
 def generate_launcher_cs_source(fallback_project_root, fallback_python_exe):
-    """生成 C# 原生启动器源码（无黑框 + 独立软件窗口 + 关窗即停服务 + 防多开置顶唤醒）"""
+    """生成 C# 原生启动器源码，静默等待服务就绪及退出前的数据写入。"""
     escaped_root = fallback_project_root.replace("\\", "\\\\")
     escaped_py = fallback_python_exe.replace("\\", "\\\\")
+    with open(os.path.join(TOOLS_DIR, "desktop_runtime.cs"), encoding="utf-8") as source:
+        runtime_source = source.read()
     return f"""using System;
 using System.IO;
 using System.Net;
@@ -72,6 +75,8 @@ using System.Text;
 using System.Threading;
 using System.Diagnostics;
 using System.Reflection;
+using System.Collections.Generic;
+using System.Web.Script.Serialization;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -86,11 +91,12 @@ namespace MAERSLauncher
 {{
     internal static class Program
     {{
-        // 开源可移植构建不嵌入本机路径；从启动器所在目录发现项目，运行时查找 Python
+        // 公开构建不写入本机路径；从程序所在目录定位项目并在运行时寻找 Python
         private const string FallbackProjectRoot = "{escaped_root}";
         private const string FallbackPythonExe = "{escaped_py}";
         private static int DefaultPort;
         private const string EntryPath = "/admin";
+        private static readonly object LogLock = new object();
 
         // Win32 窗口管理 API：用于检测独立应用窗口打开/关闭状态及置顶唤醒
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
@@ -119,68 +125,108 @@ namespace MAERSLauncher
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
 
+        [DllImport("shell32.dll")]
+        private static extern int SHGetPropertyStoreForWindow(IntPtr hwnd, ref Guid iid,
+            [Out, MarshalAs(UnmanagedType.Interface)] out IPropertyStore propertyStore);
+
+        [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IPropertyStore
+        {{
+            int GetCount(out uint cProps);
+            int GetAt(uint iProp, out PROPERTYKEY pkey);
+            int GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        }}
+
+        [StructLayout(LayoutKind.Sequential, Pack = 4)]
+        private struct PROPERTYKEY
+        {{
+            public Guid fmtid;
+            public uint pid;
+        }}
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct PROPVARIANT
+        {{
+            [FieldOffset(0)]
+            public ushort vt;
+            [FieldOffset(8)]
+            public IntPtr pointerValue;
+        }}
+
+        [DllImport("ole32.dll")]
+        private static extern int PropVariantClear(ref PROPVARIANT pvar);
+
         private const int SW_RESTORE = 9;
 
         [STAThread]
         private static void Main()
         {{
             Process serverProc = null;
+            Process browserProc = null;
+            Mutex lifecycleOwner = null;
+            bool ownsLifecycle = false;
+            string serverToken = null;
             try
             {{
                 string projectDir = ResolveProjectDirectory();
                 if (projectDir == null) throw new Exception("未找到 MAERS 项目目录。");
-                DefaultPort = ReadServerPort(projectDir);
+                var runtime = new DesktopRuntime(projectDir);
+                string python = runtime.PreparePython(FallbackPythonExe);
+                DefaultPort = ReadServerPort(projectDir, python);
                 string appUrl = "http://localhost:" + DefaultPort + EntryPath;
 
-                // 1. 若独立窗口已打开且服务在线，直接还原并置顶唤醒，防止重复开启
+                // 同一端口只驻留一个窗口守护者；旧守护者退出后允许接管遗留服务。
+                lifecycleOwner = new Mutex(false, @"Local\\MAERS_Studio_" + DefaultPort);
+                try {{ ownsLifecycle = lifecycleOwner.WaitOne(0); }}
+                catch (AbandonedMutexException) {{ ownsLifecycle = true; }}
                 IntPtr existingWin = FindMaersAppWindow();
-                if (existingWin != IntPtr.Zero && IsMaersServerRunning(DefaultPort))
+                if (!ownsLifecycle)
                 {{
-                    if (IsIconic(existingWin)) ShowWindow(existingWin, SW_RESTORE);
-                    SetForegroundWindow(existingWin);
+                    if (existingWin != IntPtr.Zero)
+                    {{
+                        ActivateWindow(existingWin);
+                    }}
+                    else if (IsMaersServerRunning(DefaultPort))
+                    {{
+                        using (Process reopened = OpenStandaloneWindow(appUrl)) {{ }}
+                    }}
                     return;
                 }}
 
                 // 2. 若后台服务尚未在配置端口运行，则以无黑框静默方式启动 _studio/server.py
                 if (!IsMaersServerRunning(DefaultPort))
                 {{
-                    if (projectDir == null)
+                    try {{ runtime.PrepareTooling(); }}
+                    catch (Exception ex)
                     {{
                         MessageBox.Show(
-                            "未找到 MAERS 后台服务脚本 (_studio/server.py)。\\n请将此程序置于项目目录或重新运行构建脚本。",
-                            "MAERS Public Web 启动失败",
+                            "本机私密管理或构建工具准备失败，可以先使用基础功能。\\n" + ex.Message,
+                            "MAERS Public Web 环境准备",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning
                         );
-                        return;
                     }}
 
-                    serverProc = StartSilentPythonServer(projectDir);
-                    if (!WaitUntilServerReady(DefaultPort, 15000))
-                    {{
-                        StopServerProcess(serverProc);
-                        MessageBox.Show(
-                            "本地服务启动超时，请确认系统已安装 Python 且配置端口未被其他程序占用。",
-                            "MAERS Public Web 启动失败",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning
-                        );
-                        return;
-                    }}
+                    serverProc = StartSilentPythonServer(projectDir, python);
                 }}
-
-                // 3. 通过 Chromium (Edge / Chrome) --app 模式打开无地址栏、无书签栏的独立桌面软件窗口
-                Process browserProc = OpenStandaloneWindow(appUrl);
-
-                // 4. 若本次启动拉起了后台服务，则监测独立软件窗口生命周期，关闭窗口时自动停止后台服务
-                if (serverProc != null)
+                if (!WaitUntilServerReady(DefaultPort, serverProc))
                 {{
-                    MonitorWindowAndStopServer(serverProc, browserProc);
+                    if (serverProc != null) StopServerProcess(serverProc, null);
+                    return;
                 }}
+                serverToken = ReadServerToken();
+                if (string.IsNullOrEmpty(serverToken)) throw new Exception("无法取得本地服务会话。");
+
+                // 已有窗口也需要接管，不能仅唤醒后退出而留下无人管理的服务。
+                if (existingWin != IntPtr.Zero) ActivateWindow(existingWin);
+                else browserProc = OpenStandaloneWindow(appUrl);
+
+                // 新启动与复用的服务遵守同一关窗退出规则。
+                MonitorWindowAndStopServer(serverProc, existingWin, serverToken);
             }}
             catch (Exception ex)
             {{
-                StopServerProcess(serverProc);
+                if (serverProc != null) StopServerProcess(serverProc, serverToken);
                 MessageBox.Show(
                     "启动 MAERS Public Web 时发生异常：\\n" + ex.Message,
                     "MAERS Public Web 启动错误",
@@ -188,73 +234,51 @@ namespace MAERSLauncher
                     MessageBoxIcon.Error
                 );
             }}
+            finally
+            {{
+                if (browserProc != null) browserProc.Dispose();
+                if (serverProc != null) serverProc.Dispose();
+                if (ownsLifecycle) lifecycleOwner.ReleaseMutex();
+                if (lifecycleOwner != null) lifecycleOwner.Dispose();
+            }}
         }}
 
-        // 后台无黑框静默启动 python _studio/server.py
-        private static Process StartSilentPythonServer(string projectDir)
+        private static void ActivateWindow(IntPtr window)
+        {{
+            if (IsIconic(window)) ShowWindow(window, SW_RESTORE);
+            SetForegroundWindow(window);
+        }}
+
+        // 后台无黑框静默启动 python _studio/server.py（由子进程直接写入 studio.log，避免父进程退出引发断管死锁）
+        private static Process StartSilentPythonServer(string projectDir, string python)
         {{
             string studioDir = Path.Combine(projectDir, "_studio");
             string scriptPath = Path.Combine(studioDir, "server.py");
+            string localDir = Path.Combine(studioDir, ".local");
+            Directory.CreateDirectory(localDir);
+            string logPath = Path.Combine(localDir, "studio.log");
+
             ProcessStartInfo psi = new ProcessStartInfo();
-            psi.FileName = ResolvePythonExecutable();
-            psi.Arguments = "-B \\"" + scriptPath + "\\"";
+            psi.FileName = python;
+            psi.Arguments = "-B -u \\"" + scriptPath + "\\"";
             psi.WorkingDirectory = studioDir;
             psi.CreateNoWindow = true;
             psi.UseShellExecute = false;
             psi.WindowStyle = ProcessWindowStyle.Hidden;
             psi.EnvironmentVariables["PYTHONIOENCODING"] = "utf-8";
             psi.EnvironmentVariables["PYTHONUTF8"] = "1";
-            return Process.Start(psi);
+            psi.EnvironmentVariables["MAERS_STUDIO_LOG"] = logPath;
+
+            Process child = new Process();
+            child.StartInfo = psi;
+            child.Start();
+            return child;
         }}
 
-        // 定位 python.exe 路径
-        private static string ResolvePythonExecutable()
+        // 用已确认的解释器读取当前端口配置。
+        private static int ReadServerPort(string projectDir, string python)
         {{
-            if (!string.IsNullOrEmpty(FallbackPythonExe) && File.Exists(FallbackPythonExe))
-            {{
-                return FallbackPythonExe;
-            }}
-
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string progFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
-            string[] candidates = new string[]
-            {{
-                Path.Combine(localAppData, "Programs", "Python", "Python313", "python.exe"),
-                Path.Combine(localAppData, "Programs", "Python", "Python312", "python.exe"),
-                Path.Combine(localAppData, "Programs", "Python", "Python311", "python.exe"),
-                Path.Combine(localAppData, "Programs", "Python", "Python310", "python.exe"),
-                Path.Combine(progFiles, "Python313", "python.exe"),
-                Path.Combine(progFiles, "Python312", "python.exe"),
-                Path.Combine(progFiles, "Python311", "python.exe"),
-                @"C:\\Python312\\python.exe",
-                @"C:\\Python311\\python.exe"
-            }};
-            foreach (string p in candidates)
-            {{
-                if (File.Exists(p)) return p;
-            }}
-
-            string pathEnv = Environment.GetEnvironmentVariable("PATH") ?? "";
-            foreach (string dir in pathEnv.Split(';'))
-            {{
-                string trimmed = dir.Trim();
-                if (string.IsNullOrEmpty(trimmed) || trimmed.IndexOf("WindowsApps", StringComparison.OrdinalIgnoreCase) >= 0)
-                    continue;
-                try
-                {{
-                    string candidate = Path.Combine(trimmed, "python.exe");
-                    if (File.Exists(candidate)) return candidate;
-                }}
-                catch {{ }}
-            }}
-
-            return "python";
-        }}
-
-        // 轮询等待本地服务就绪
-        private static int ReadServerPort(string projectDir)
-        {{
-            var info = new ProcessStartInfo(ResolvePythonExecutable());
+            var info = new ProcessStartInfo(python);
             info.Arguments = "-B \\"" + Path.Combine(projectDir, "_studio", "config.py") + "\\" --port";
             info.WorkingDirectory = projectDir;
             info.UseShellExecute = false;
@@ -270,15 +294,29 @@ namespace MAERSLauncher
             }}
         }}
 
-        private static bool WaitUntilServerReady(int port, int timeoutMs)
+        private static bool WaitUntilServerReady(int port, Process child)
         {{
-            Stopwatch sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < timeoutMs)
+            Stopwatch elapsed = Stopwatch.StartNew();
+            while (true)
             {{
-                if (IsMaersServerRunning(port)) return true;
-                Thread.Sleep(100);
+                Dictionary<string, object> status = ReadStudioStatus(port);
+                if (status != null)
+                {{
+                    string state = Convert.ToString(status["state"]);
+                    if (state == "ready" && !Convert.ToBoolean(status["draining"])) return true;
+                    if (state == "error")
+                    {{
+                        MessageBox.Show(Convert.ToString(status["message"]) + "。详细记录位于 _studio/.local/studio.log。", "MAERS Public Web 启动失败");
+                        return false;
+                    }}
+                }}
+                if ((child != null && child.HasExited) || (child == null && status == null && elapsed.ElapsedMilliseconds > 10000))
+                {{
+                    MessageBox.Show("本地服务未能启动，请查看 _studio/.local/studio.log。", "MAERS Public Web 启动失败");
+                    return false;
+                }}
+                Thread.Sleep(150);
             }}
-            return IsMaersServerRunning(port);
         }}
 
         // 以 --app 模式启动无地址栏独立软件窗口（优先匹配系统默认浏览器以共享本地缓存与窗口尺寸记忆）
@@ -350,51 +388,50 @@ namespace MAERSLauncher
         }}
 
         // 监测独立窗口句柄：当窗口被用户关闭后，自动停止后台 Python 服务进程
-        private static void MonitorWindowAndStopServer(Process serverProc, Process browserProc)
+        private static void MonitorWindowAndStopServer(Process serverProc, IntPtr existingWindow, string serverToken)
         {{
-            IntPtr trackedHwnd = IntPtr.Zero;
-            Stopwatch waitOpen = Stopwatch.StartNew();
-
-            // 阶段 1：等待独立窗口创建完成（最多等待 15 秒）
-            while (waitOpen.ElapsedMilliseconds < 15000)
+            bool closed = WaitForWindowClose(existingWindow, FindMaersAppWindow, IsWindow,
+                delegate {{ return IsTrackedServerRunning(serverProc, serverToken); }}, Thread.Sleep);
+            if (closed) StopServerProcess(serverProc, serverToken);
+            else if (IsTrackedServerRunning(serverProc, serverToken))
             {{
-                if (serverProc.HasExited) return;
-                trackedHwnd = FindMaersAppWindow();
-                if (trackedHwnd != IntPtr.Zero) break;
-                Thread.Sleep(150);
+                throw new Exception("未能识别 MAERS 独立窗口，请使用 Edge 或 Chrome 打开桌面入口。");
             }}
-
-            // 若捕获到了顶层窗口句柄，持续监测该窗口或任意 MAERS Public Web / Admin 窗口是否仍处于打开状态
-            if (trackedHwnd != IntPtr.Zero)
-            {{
-                while (!serverProc.HasExited)
-                {{
-                    if (IsWindow(trackedHwnd))
-                    {{
-                        Thread.Sleep(400);
-                        continue;
-                    }}
-                    // 原窗口句柄销毁后，再检查是否还有其他 MAERS Public Web / Admin 窗口打开
-                    IntPtr another = FindMaersAppWindow();
-                    if (another != IntPtr.Zero)
-                    {{
-                        trackedHwnd = another;
-                        Thread.Sleep(400);
-                        continue;
-                    }}
-                    break;
-                }}
-            }}
-            else if (browserProc != null)
-            {{
-                // 极端回退：若未捕获到窗口句柄则等待浏览器进程结束
-                try {{ browserProc.WaitForExit(); }} catch {{ }}
-            }}
-
-            StopServerProcess(serverProc);
         }}
 
-        // 查找当前打开的 MAERS Public Admin / MAERS Public Web 浏览器窗口句柄
+        // 窗口才是退出依据；Chrome / Edge 可复用其他浏览器窗口的进程。
+        private static bool WaitForWindowClose(IntPtr trackedHwnd, Func<IntPtr> findWindow,
+            Func<IntPtr, bool> isWindow, Func<bool> serverRunning, Action<int> pause)
+        {{
+            for (int attempt = 0; trackedHwnd == IntPtr.Zero && attempt < 100; attempt++)
+            {{
+                if (!serverRunning()) return false;
+                trackedHwnd = findWindow();
+                if (trackedHwnd == IntPtr.Zero) pause(150);
+            }}
+            if (trackedHwnd == IntPtr.Zero) return false;
+            int absent = 0;
+            while (serverRunning())
+            {{
+                if (isWindow(trackedHwnd)) absent = 0;
+                else
+                {{
+                    IntPtr another = findWindow();
+                    if (another != IntPtr.Zero) {{ trackedHwnd = another; absent = 0; }}
+                    else if (++absent >= 3) return true;
+                }}
+                pause(400);
+            }}
+            return false;
+        }}
+
+        private static bool IsTrackedServerRunning(Process proc, string token)
+        {{
+            if (proc != null) return !proc.HasExited;
+            return !string.IsNullOrEmpty(token) && string.Equals(ReadServerToken(), token, StringComparison.Ordinal);
+        }}
+
+        // 查找当前打开的本地 MAERS --app 独立桌面窗口句柄（严格排除普通多标签浏览器中的线上网页）
         private static IntPtr FindMaersAppWindow()
         {{
             IntPtr found = IntPtr.Zero;
@@ -411,8 +448,7 @@ namespace MAERSLauncher
                 GetWindowText(hWnd, titleSb, titleSb.Capacity);
                 string title = titleSb.ToString();
 
-                if (title.StartsWith("MAERS Public Admin", StringComparison.OrdinalIgnoreCase) ||
-                    title.StartsWith("MAERS Public Web", StringComparison.OrdinalIgnoreCase))
+                if (IsMaersStandaloneWindowTitle(title, HasChromiumStandaloneAppId(hWnd)))
                 {{
                     found = hWnd;
                     return false;
@@ -422,47 +458,152 @@ namespace MAERSLauncher
             return found;
         }}
 
-        // 安全终止后台 Python 服务进程
-        private static void StopServerProcess(Process proc)
+        // 读取窗口的 Windows Shell AppUserModelID，区分 Chromium --app 独立窗口 (_crx_) 与普通浏览器窗口
+        private static bool HasChromiumStandaloneAppId(IntPtr hWnd)
         {{
-            if (proc == null) return;
             try
             {{
-                if (!proc.HasExited)
+                Guid iid = new Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99");
+                IPropertyStore store;
+                if (SHGetPropertyStoreForWindow(hWnd, ref iid, out store) != 0 || store == null) return false;
+                PROPERTYKEY key = new PROPERTYKEY
                 {{
-                    proc.Kill();
-                    proc.WaitForExit(2000);
+                    fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"),
+                    pid = 5
+                }};
+                PROPVARIANT pv;
+                if (store.GetValue(ref key, out pv) != 0) return false;
+                try
+                {{
+                    if (pv.vt != 31 || pv.pointerValue == IntPtr.Zero) return false;
+                    string appId = Marshal.PtrToStringUni(pv.pointerValue) ?? "";
+                    return appId.IndexOf("_crx_", StringComparison.OrdinalIgnoreCase) >= 0;
                 }}
-            }}
-            catch {{ }}
-        }}
-
-        // 探测指定端口是否已运行 MAERS-Public-Web 服务
-        private static bool IsMaersServerRunning(int port)
-        {{
-            try
-            {{
-                HttpWebRequest req = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + port + "/manifest.json");
-                req.Method = "GET";
-                req.Timeout = 400;
-                req.ReadWriteTimeout = 400;
-                req.Proxy = null;
-                using (HttpWebResponse res = (HttpWebResponse)req.GetResponse())
+                finally
                 {{
-                    if (res.StatusCode != HttpStatusCode.OK) return false;
-                    string appHeader = res.Headers["X-MAERS-App"];
-                    if (appHeader == "MAERS-Public-Web") return true;
-                    using (StreamReader sr = new StreamReader(res.GetResponseStream()))
-                    {{
-                        string content = sr.ReadToEnd();
-                        return content != null && content.IndexOf("MAERS Public Web", StringComparison.OrdinalIgnoreCase) >= 0;
-                    }}
+                    PropVariantClear(ref pv);
                 }}
             }}
             catch
             {{
                 return false;
             }}
+        }}
+
+        // 判定窗口标题是否属于当前端口的本地独立应用窗口，物理隔离线上 PWA、跨端口实例与普通浏览器标签页
+        private static bool IsMaersStandaloneWindowTitle(string title, bool hasStandaloneAppId)
+        {{
+            if (string.IsNullOrEmpty(title)) return false;
+            string normalized = title.Replace("\\u200B", "").Trim();
+            string[] browserSuffixes = new string[]
+            {{
+                " - Google Chrome",
+                " - Microsoft Edge",
+                " - Brave",
+                " - Vivaldi",
+                " - Opera",
+                " - Chromium",
+                " - Cent Browser"
+            }};
+            foreach (string suffix in browserSuffixes)
+            {{
+                if (normalized.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return false;
+            }}
+            int port = DefaultPort > 0 ? DefaultPort : 8000;
+            string expectedBadge = "[Local:" + port + "]";
+            if (normalized.EndsWith(expectedBadge, StringComparison.OrdinalIgnoreCase))
+            {{
+                return hasStandaloneAppId ||
+                    normalized.StartsWith("MAERS Admin", StringComparison.OrdinalIgnoreCase) ||
+                    normalized.StartsWith("MAERS Public Web", StringComparison.OrdinalIgnoreCase) ||
+                    normalized.StartsWith("404 ", StringComparison.OrdinalIgnoreCase);
+            }}
+            return false;
+        }}
+
+        // 退出前等待服务提交或回滚已接收的操作，禁止直接杀进程。
+        private static void StopServerProcess(Process proc, string expectedToken)
+        {{
+            if (proc == null && string.IsNullOrEmpty(expectedToken)) return;
+            for (int attempt = 0; attempt < 3; attempt++)
+            {{
+                try
+                {{
+                    if (proc != null && proc.HasExited) return;
+                    string token = ReadServerToken();
+                    if (string.IsNullOrEmpty(token))
+                    {{
+                        Thread.Sleep(150);
+                        continue;
+                    }}
+                    if (expectedToken != null && token != expectedToken) return;
+                    HttpWebRequest shutdown = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + DefaultPort + "/api/studio/shutdown");
+                    shutdown.Method = "POST";
+                    shutdown.ContentType = "application/json";
+                    shutdown.Headers["Origin"] = "http://127.0.0.1:" + DefaultPort;
+                    shutdown.Headers["X-MAERS-Token"] = token;
+                    shutdown.Timeout = 3000;
+                    shutdown.ReadWriteTimeout = 3000;
+                    shutdown.KeepAlive = false;
+                    shutdown.Proxy = null;
+                    byte[] body = Encoding.UTF8.GetBytes("{{}}");
+                    shutdown.ContentLength = body.Length;
+                    using (Stream output = shutdown.GetRequestStream()) output.Write(body, 0, body.Length);
+                    if (ReadJson(shutdown) == null)
+                    {{
+                        Thread.Sleep(150);
+                        continue;
+                    }}
+                    if (proc != null) proc.WaitForExit();
+                    else while (IsTrackedServerRunning(null, token)) Thread.Sleep(150);
+                    return;
+                }}
+                catch (WebException) {{ Thread.Sleep(150); }}
+                catch (InvalidOperationException) {{ return; }}
+                catch (IOException) {{ Thread.Sleep(150); }}
+            }}
+        }}
+
+        private static string ReadServerToken()
+        {{
+            HttpWebRequest session = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + DefaultPort + "/api/session");
+            session.Headers["X-MAERS-Client"] = "studio";
+            session.Timeout = 1500;
+            session.ReadWriteTimeout = 1500;
+            session.KeepAlive = false;
+            session.Proxy = null;
+            Dictionary<string, object> credentials = ReadJson(session);
+            return credentials != null && credentials.ContainsKey("token") ? Convert.ToString(credentials["token"]) : null;
+        }}
+
+        private static Dictionary<string, object> ReadJson(HttpWebRequest request)
+        {{
+            try
+            {{
+                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                {{
+                    if (response.Headers["X-MAERS-App"] != "MAERS-Public-Web") return null;
+                    using (StreamReader input = new StreamReader(response.GetResponseStream()))
+                        return new JavaScriptSerializer().Deserialize<Dictionary<string, object>>(input.ReadToEnd());
+                }}
+            }}
+            catch (WebException) {{ return null; }}
+        }}
+
+        private static Dictionary<string, object> ReadStudioStatus(int port)
+        {{
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create("http://127.0.0.1:" + port + "/api/studio/status");
+            request.Proxy = null;
+            request.KeepAlive = false;
+            request.Timeout = 1500;
+            request.ReadWriteTimeout = 1500;
+            return ReadJson(request);
+        }}
+
+        // 探测指定端口是否已运行 MAERS-Public-Web 服务
+        private static bool IsMaersServerRunning(int port)
+        {{
+            return ReadStudioStatus(port) != null;
         }}
 
         // 解析有效的项目根目录（支持置于项目根目录、_studio 目录或桌面任意位置）
@@ -492,7 +633,40 @@ namespace MAERSLauncher
         }}
     }}
 }}
+{runtime_source}
 """
+
+
+def _retire_dir_for(target_path):
+    """返回与目标可执行文件同盘符的隐藏暂存目录，用于无痕移走运行中的旧映像。"""
+    target_drive = os.path.splitdrive(os.path.abspath(target_path))[0].upper()
+    local_dir = os.path.join(STUDIO_DIR, ".local")
+    if os.path.splitdrive(os.path.abspath(local_dir))[0].upper() == target_drive:
+        os.makedirs(local_dir, exist_ok=True)
+        return local_dir
+    temp_dir = tempfile.gettempdir()
+    if os.path.splitdrive(os.path.abspath(temp_dir))[0].upper() == target_drive:
+        return temp_dir
+    return os.path.dirname(os.path.abspath(target_path))
+
+
+def replace_executable_safely(source_exe, target_exe):
+    """安全替换可执行文件；若目标正在运行被锁定，先同卷原子移入暂存目录再写入新版本。"""
+    retire_dir = _retire_dir_for(target_exe)
+    for name in os.listdir(retire_dir):
+        if name.startswith(".maersy-retired-") and name.endswith(".exe"):
+            try:
+                os.remove(os.path.join(retire_dir, name))
+            except OSError:
+                pass
+    try:
+        shutil.copy2(source_exe, target_exe)
+    except PermissionError:
+        retired = os.path.join(retire_dir, f".maersy-retired-{os.getpid()}.exe")
+        if os.path.exists(retired):
+            os.remove(retired)
+        os.replace(target_exe, retired)
+        shutil.copy2(source_exe, target_exe)
 
 
 def main():
@@ -515,6 +689,7 @@ def main():
 
     cs_source = generate_launcher_cs_source('', '')
     temp_cs = os.path.join(tempfile.gettempdir(), f"MAERS_Public_Web_Launcher_{os.getpid()}.cs")
+    temp_exe = os.path.join(tempfile.gettempdir(), f"MAERS_Public_Web_Launcher_{os.getpid()}.exe")
 
     print(f"[2/3] 正在编译原生桌面启动程序 (纯桌面软件模式): {ROOT_EXE_PATH}")
     try:
@@ -527,27 +702,34 @@ def main():
             "/nologo",
             "/target:winexe",
             "/optimize+",
-            f"/out:{ROOT_EXE_PATH}",
+            f"/out:{temp_exe}",
             f"/win32icon:{ICON_PATH}",
             "/r:System.dll",
+            "/r:System.Drawing.dll",
+            "/r:System.Web.Extensions.dll",
             "/r:System.Windows.Forms.dll",
             temp_cs,
         ]
         subprocess.run(cmd, check=True)
-    finally:
-        if os.path.exists(temp_cs):
-            os.remove(temp_cs)
+        replace_executable_safely(temp_exe, ROOT_EXE_PATH)
 
-    if os.path.isdir(DESKTOP_DIR) and '--install-desktop' in sys.argv:
-        print(f"[3/3] 正在同步更新系统桌面启动程序: {DESKTOP_EXE_PATH}")
-        shutil.copy2(ROOT_EXE_PATH, DESKTOP_EXE_PATH)
-        try:
-            import ctypes
-            # SHCNE_ASSOCCHANGED (0x08000000) 通知 Windows 资源管理器立即刷新桌面图标缓存
-            ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)
-            subprocess.run(["ie4uinit.exe", "-show"], check=False)
-        except Exception:
-            pass
+        if os.path.isdir(DESKTOP_DIR) and '--install-desktop' in sys.argv:
+            print(f"[3/3] 正在同步更新系统桌面启动程序: {DESKTOP_EXE_PATH}")
+            replace_executable_safely(temp_exe, DESKTOP_EXE_PATH)
+            try:
+                import ctypes
+                # SHCNE_ASSOCCHANGED (0x08000000) 通知 Windows 资源管理器立即刷新桌面图标缓存
+                ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)
+                subprocess.run(["ie4uinit.exe", "-show"], check=False)
+            except Exception:
+                pass
+    finally:
+        for temp_path in (temp_cs, temp_exe):
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                except OSError:
+                    pass
 
     print("✅ 构建完成！")
 

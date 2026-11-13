@@ -48,7 +48,7 @@
     gap: 8px;
     padding: 10px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 6px;
     min-height: 48px;
     align-items: center;
@@ -173,7 +173,7 @@
 /* Light Mode Modal Overrides */
 .light-mode .modal-content {
     background: #ffffff;
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.16);
     color: #1a1a1a;
 }
 
@@ -188,7 +188,7 @@
 .light-mode .modal-content input,
 .light-mode .modal-content textarea {
     background: #f5f5f5;
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.16);
     color: #1a1a1a;
 }
 

@@ -20,6 +20,17 @@
     z-index: 10;
 }
 
+.admin-header:has(#maers-storage-settings-btn) {
+    flex-direction: column;
+    gap: 18px;
+}
+
+.admin-header-actions:has(#maers-storage-settings-btn) {
+    position: static;
+    align-self: flex-end;
+    flex-wrap: wrap;
+}
+
 h1.admin-title {
     margin: 0;
     /* Reset margins */
@@ -92,7 +103,7 @@ html.light-mode .admin-card img[src*="space-icon"] {
 .admin-card:hover {
     background: var(--pill-hover-bg);
     transform: translateY(-8px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     border-color: var(--pill-border);
 }
 

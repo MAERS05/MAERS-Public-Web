@@ -1,8 +1,22 @@
 /** MAERS 阅读器导图：全屏视口、SVG 平移缩放及图表资源释放。 */
 let _exitDiagramFullscreen = null;
 
-// Transfer the current roam center relative to the diagram's layout bounds.
-// Keep out-of-bounds coordinates: a deliberately clipped diagram stays clipped.
+// Capture rendered geometry after native roaming, including TreeView's nested
+// layout origin. The parent matrix carries camera zoom; the node also has its
+// own symbol scale, which must not be mistaken for camera zoom.
+function _treeViewportAnchor(series, width, height) {
+    if (series.subType !== 'tree') return null;
+    const data = series.getData(), root = data.tree?.root.children[0];
+    const graphic = root && data.getItemGraphicEl(root.dataIndex);
+    const matrix = graphic?.getComputedTransform();
+    const camera = graphic?.parent?.getComputedTransform();
+    if (!matrix || !camera) return null;
+    return { dataIndex: root.dataIndex, x: matrix[4] - width / 2,
+        y: matrix[5] - height / 2, zoom: Math.hypot(camera[0], camera[1]) };
+}
+
+// Keep a tree's rendered anchor at the same pixel offset from the canvas center.
+// This also preserves a deliberately clipped view without clamping its center.
 export function resizeDiagramChart(chart, width, height) {
     if (!chart || chart.isDisposed() || width <= 0 || height <= 0) return;
     if (chart.getWidth() === width && chart.getHeight() === height) return;
@@ -10,21 +24,39 @@ export function resizeDiagramChart(chart, width, height) {
     chart.getModel().eachSeries((series) => {
         const coord = series.coordinateSystem;
         if (coord?.type !== 'view' || typeof series.setCenter !== 'function') return;
+        const anchor = _treeViewportAnchor(series, chart.getWidth(), chart.getHeight());
+        if (anchor) {
+            views.push({ series, anchor, zoom: anchor.zoom });
+            return;
+        }
         const rect = coord.getBoundingRect();
-        const center = coord.getCenter();
+        const center = coord.pointToData([chart.getWidth() / 2, chart.getHeight() / 2]);
         if (rect.width > 0 && rect.height > 0) {
             views.push({ series, x: (center[0] - rect.x) / rect.width,
                 y: (center[1] - rect.y) / rect.height, zoom: coord.getZoom() });
         }
     });
     const options = { width, height, animation: { duration: 0 } };
-    // Re-layout first to obtain the destination bounds, then transfer its view.
-    // Both passes finish in one animation frame without replacing the live data.
+    // Use the displayed zoom for the destination layout before measuring its
+    // anchor. Both passes finish in one frame and retain live/collapsed nodes.
+    views.forEach(({ series, zoom }) => series.setZoom(zoom));
     chart.resize(options);
-    views.forEach(({ series, x, y, zoom }) => {
-        const rect = series.coordinateSystem.getBoundingRect();
-        series.setCenter([rect.x + x * rect.width, rect.y + y * rect.height]);
-        series.setZoom(zoom);
+    views.forEach(({ series, anchor, x, y }) => {
+        const coord = series.coordinateSystem;
+        const center = coord.getCenter();
+        let anchorPoint, viewportPoint;
+        if (anchor) {
+            const matrix = series.getData().getItemGraphicEl(anchor.dataIndex)?.getComputedTransform();
+            if (!matrix) return;
+            anchorPoint = coord.pointToData([matrix[4], matrix[5]]);
+            viewportPoint = coord.pointToData([width / 2 + anchor.x, height / 2 + anchor.y]);
+        } else {
+            const rect = coord.getBoundingRect();
+            anchorPoint = [rect.x + x * rect.width, rect.y + y * rect.height];
+            viewportPoint = coord.pointToData([width / 2, height / 2]);
+        }
+        series.setCenter([center[0] + anchorPoint[0] - viewportPoint[0],
+            center[1] + anchorPoint[1] - viewportPoint[1]]);
     });
     if (views.length) chart.resize(options);
 }
@@ -117,8 +149,12 @@ function _mountSvgDiagramInteraction(card, svg) {
         apply();
     };
     card.addEventListener('pointerdown', e => {
-        if (e.button !== 0 || isControl(e.target) || !toLocal(e.clientX, e.clientY)) return;
+        if (e.button !== 0) return;
         if (!pointers.size) suppressClick = false;
+        const selectingText = e.pointerType !== 'touch' && e.target.closest('[data-mindmap-label]');
+        if (selectingText || isControl(e.target) || !toLocal(e.clientX, e.clientY)) return;
+        const selection = document.getSelection?.();
+        if (selection && !selection.isCollapsed && svg.contains(selection.anchorNode)) selection.removeAllRanges();
         // 节点自己捕获指针，轻点仍能触发折叠；手势结束后不把点击改派到卡片。
         const capture = e.target.closest('[data-mindmap-node]') || card;
         pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, startX: e.clientX, startY: e.clientY, capture });
@@ -191,9 +227,11 @@ export function mountDiagramFullscreenButton(diagramEl) {
     let placeholder = null;
     let portal = null;
     let resizeFrame = 0;
+    let resizeTimer = 0;
     let cardObserver = null;
     diagramEl.__disposeDiagramDOM?.();
     const resizeChart = () => {
+        clearTimeout(resizeTimer);
         cancelAnimationFrame(resizeFrame);
         resizeFrame = requestAnimationFrame(() => {
             if (!diagramEl.isConnected) return;
@@ -209,6 +247,11 @@ export function mountDiagramFullscreenButton(diagramEl) {
                 resizeDiagramChart(chart, width, height);
             }
         });
+    };
+    // 抽屉和目录的宽度过渡只在尺寸稳定后重绘；全屏切换仍直接调度。
+    const queueResize = () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(resizeChart, 80);
     };
     const updateButton = (active) => {
         btn.title = active ? '退出全屏' : '全屏查看';
@@ -261,13 +304,14 @@ export function mountDiagramFullscreenButton(diagramEl) {
     diagramEl.appendChild(btn);
     // 同时响应源码抽屉、目录与全屏的尺寸变化；销毁正文时一并释放监听。
     if (typeof ResizeObserver !== 'undefined') {
-        cardObserver = new ResizeObserver(resizeChart);
+        cardObserver = new ResizeObserver(queueResize);
         cardObserver.observe(diagramEl);
-    } else window.addEventListener('resize', resizeChart);
+    } else window.addEventListener('resize', queueResize);
     diagramEl.__disposeDiagramDOM = () => {
         if (portal) exitFullscreen();
         cardObserver?.disconnect();
-        window.removeEventListener('resize', resizeChart);
+        window.removeEventListener('resize', queueResize);
+        clearTimeout(resizeTimer);
         cancelAnimationFrame(resizeFrame);
         delete diagramEl.__disposeDiagramDOM;
     };
@@ -294,7 +338,9 @@ export function exitReaderDiagramFullscreen() {
 export function disposeReaderDiagrams(container) {
     exitReaderDiagramFullscreen();
     if (!container) return;
-    const selector = '.cms-diagram-card, .language-mindmap, .language-markmap, .language-echarts';
+    container.__disposeDeferredDiagrams?.();
+    container.querySelector?.('#reader-content')?.__disposeDeferredDiagrams?.();
+    const selector = '.cms-diagram-card, .language-mindmap, .language-markmap, .language-mermaid, .language-echarts, .language-flowchart, .language-graphviz';
     const diagrams = [...(container.matches?.(selector) ? [container] : []), ...container.querySelectorAll(selector)];
     diagrams.forEach(el => {
         el.__disposeDiagramDOM?.();

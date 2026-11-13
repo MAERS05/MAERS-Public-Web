@@ -4,7 +4,31 @@
  * @version 3.0.0 - ES6 Module
  */
 
+import { uploadFetch } from './upload-progress.module.js';
+
 const sessions = new Map();
+const LOCAL_WRITE_WARNING = Object.freeze({ upload: 64 * 1024 * 1024, json: 16 * 1024 * 1024 });
+export const STUDIO_ENTRY_KEY = 'maers_admin_entry';
+
+function isLoopback(url) {
+    return url.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(url.hostname);
+}
+
+export function isAdminAddress(url) {
+    return /\/admin(?:-|\.|\/?$)/.test(url.pathname) || url.searchParams.get('mode') === 'admin';
+}
+
+export function isStudioAdminPage() {
+    const url = new URL(window.location.href);
+    return isLoopback(url) && (window.IS_ADMIN === true || isAdminAddress(url));
+}
+
+/** 线上管理页单独验证入口，不把浏览器密钥交给本机管理接口。 */
+export function isOnlineAdminPage(url = new URL(window.location.href)) {
+    const local = ['localhost', '127.0.0.1', '[::1]', ''].includes(url.hostname) ||
+        /^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.)/.test(url.hostname);
+    return !local && (window.IS_ADMIN === true || isAdminAddress(url));
+}
 
 function getSession(origin) {
     if (!sessions.has(origin)) {
@@ -26,16 +50,30 @@ function getSession(origin) {
     return sessions.get(origin);
 }
 
+function confirmLargeLocalWrite(path, body) {
+    const upload = path === '/upload' || path === '/upload/';
+    const limit = LOCAL_WRITE_WARNING[upload ? 'upload' : 'json'];
+    let size = body?.size ?? body?.byteLength ?? 0;
+    if (typeof body === 'string' && body.length * 3 >= limit) size = new TextEncoder().encode(body).byteLength;
+    if (size < limit) return;
+    const label = upload ? '图片' : '保存数据';
+    if (!window.confirm(`${label}约 ${(size / (1024 * 1024)).toFixed(1)} MiB，可能导致本地后台崩溃。确认继续？`)) {
+        throw new DOMException('已取消本地写入', 'AbortError');
+    }
+}
+
 /** 本地写请求附带会话令牌；保留原始 Response，供业务代码判断状态。 */
 export async function localFetch(url, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
-    const target = new URL(url, window.location.href);
-    const isLocal = target.protocol === 'http:' && ['localhost', '127.0.0.1'].includes(target.hostname);
-    if (!isLocal) return fetch(url, options);
-    const admin = window.IS_ADMIN === true || /\/admin(?:-|\.|\/?$)/.test(window.location.pathname) ||
-        new URLSearchParams(window.location.search).get('mode') === 'admin';
+    const target = new URL(url, (typeof document !== 'undefined' && document.baseURI) || window.location.href);
+    if (!isLoopback(target)) return fetch(url, options);
+    if (method === 'POST') confirmLargeLocalWrite(target.pathname, options.body);
+    const current = new URL(window.location.href);
+    const admin = window.IS_ADMIN === true || isAdminAddress(current);
     if (admin && target.origin === window.location.origin &&
-        !target.pathname.startsWith('/api/crypto/') && target.pathname !== '/data/crypto-keyring.json') {
+        !target.pathname.startsWith('/api/crypto/') && !target.pathname.startsWith('/api/studio/') &&
+        target.pathname !== '/api/album/job' &&
+        target.pathname !== '/data/crypto-keyring.json') {
         await (await import('./encrypt/admin-session.module.js')).ensureAdminSession();
     }
     if ((method === 'GET' || method === 'HEAD') && !admin) return fetch(url, options);
@@ -45,7 +83,7 @@ export async function localFetch(url, options = {}) {
     const send = sessionToken => {
         const headers = new Headers(options.headers);
         headers.set('X-MAERS-Token', sessionToken);
-        return fetch(url, { ...options, headers, redirect: 'error' });
+        return uploadFetch(url, { ...options, headers, redirect: 'error' }, options.onUploadProgress);
     };
     const response = await send(token);
     if (response.status !== 403) return response;
@@ -60,7 +98,7 @@ export async function localFetch(url, options = {}) {
     // 仅在服务明确表示令牌过期、尚未分发操作时重试一次，避免重复执行写入。
     if (sessions.get(target.origin) === session) sessions.delete(target.origin);
     const refreshed = await getSession(target.origin);
-    if (admin && !target.pathname.startsWith('/api/crypto/')) {
+    if (admin && !target.pathname.startsWith('/api/crypto/') && target.pathname !== '/api/album/job') {
         const management = await import('./encrypt/admin-session.module.js');
         management.resetAdminSession();
         await management.ensureAdminSession();
@@ -79,7 +117,9 @@ export class ApiClient {
     async request(endpoint, options = {}) {
         const url = `${this.baseUrl}${endpoint}`;
         try {
-            const response = await localFetch(url, options);
+            const response = options.progress
+                ? await (await import('./operation-progress.module.js')).operationFetch(url, options, options.progress)
+                : await localFetch(url, options);
 
             // 统一错误处理
             if (!response.ok) {
@@ -120,11 +160,12 @@ export class ApiClient {
     }
 
     // 上传文件专用
-    upload(endpoint, file, params = {}) {
+    upload(endpoint, file, params = {}, options = {}) {
         const queryString = new URLSearchParams(params).toString();
         const url = queryString ? `${endpoint}?${queryString}` : endpoint;
 
         return this.request(url, {
+            ...options,
             method: 'POST',
             body: file
         });

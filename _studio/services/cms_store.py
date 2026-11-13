@@ -14,39 +14,46 @@ def walk(nodes):
         yield from walk(node.get('children') or [])
 
 
+def _validate_node(node, seen):
+    """校验单个节点的字段；密文节点保持不展开。"""
+    if not isinstance(node, dict) or not isinstance(node.get('id'), str) or not node['id']:
+        raise ValueError('Invalid node id')
+    if node['id'] in seen or node['id'] == 'root':
+        raise ValueError('Duplicate or reserved node id')
+    seen.add(node['id'])
+    if node.get('_enc'):
+        if not isinstance(node['_enc'], str) or not node['_enc'].startswith('enc:'):
+            raise ValueError('Invalid encrypted node')
+        return None
+    if node.get('type') not in ('note', 'folder') or not isinstance(node.get('title'), str):
+        raise ValueError('Invalid node type or title')
+    tags = node.get('tags', [])
+    if not isinstance(tags, list) or any(not isinstance(tag, str) for tag in tags):
+        raise ValueError('Node tags must be strings')
+    content = node.get('content', '')
+    if not isinstance(content, str) and not (node['type'] == 'folder' and content is None):
+        raise ValueError('Invalid node content')
+    if node.get('coverImage') is not None and not isinstance(node['coverImage'], str):
+        raise ValueError('Invalid cover image')
+    children = node.get('children')
+    if children is not None and (not isinstance(children, list) or (children and node['type'] != 'folder')):
+        raise ValueError('Only folders can contain children')
+    return children
+
+
+def _validate_children(nodes, seen, depth=0):
+    if depth > 100:
+        raise ValueError('CMS tree is too deep')
+    for node in nodes:
+        children = _validate_node(node, seen)
+        if children is not None:
+            _validate_children(children, seen, depth + 1)
+
+
 def validate(tree: JsonObject) -> JsonObject:
     if not isinstance(tree, dict) or not isinstance(tree.get('root'), list):
         raise ValueError('CMS tree must contain a root array')
-    seen = set()
-
-    def visit(nodes, depth=0):
-        if depth > 100:
-            raise ValueError('CMS tree is too deep')
-        for node in nodes:
-            if not isinstance(node, dict) or not isinstance(node.get('id'), str) or not node['id']:
-                raise ValueError('Invalid node id')
-            if node['id'] in seen or node['id'] == 'root':
-                raise ValueError('Duplicate or reserved node id')
-            seen.add(node['id'])
-            if node.get('_enc'):
-                if not isinstance(node['_enc'], str) or not node['_enc'].startswith('enc:'):
-                    raise ValueError('Invalid encrypted node')
-                continue
-            if node.get('type') not in ('note', 'folder') or not isinstance(node.get('title'), str):
-                raise ValueError('Invalid node type or title')
-            if not isinstance(node.get('tags', []), list) or any(not isinstance(t, str) for t in node.get('tags', [])):
-                raise ValueError('Node tags must be strings')
-            content = node.get('content', '')
-            if not isinstance(content, str) and not (node['type'] == 'folder' and content is None):
-                raise ValueError('Invalid node content')
-            if node.get('coverImage') is not None and not isinstance(node['coverImage'], str):
-                raise ValueError('Invalid cover image')
-            children = node.get('children')
-            if children is not None:
-                if not isinstance(children, list) or (children and node['type'] != 'folder'):
-                    raise ValueError('Only folders can contain children')
-                visit(children, depth + 1)
-    visit(tree['root'])
+    _validate_children(tree['root'], set())
     return tree
 
 
@@ -55,6 +62,23 @@ def load(path: str) -> JsonObject:
         raise FileNotFoundError('CMS source is missing; restore it before continuing')
     with open(path, encoding='utf-8') as source:
         return validate(json.load(source))
+
+
+def _cache_row(module, parent, order, node):
+    locked = bool(node.get('_enc'))
+    return (
+        node['id'], module, parent, 'locked' if locked else node['type'],
+        '' if locked else node['title'], node['_enc'] if locked else node.get('content', ''),
+        json.dumps([] if locked else node.get('tags', []), ensure_ascii=False),
+        node.get('created_at', 0), order, None if locked else node.get('coverImage'))
+
+
+def _insert_nodes(connection, module, nodes, parent='root'):
+    for order, node in enumerate(nodes):
+        connection.execute('INSERT INTO nodes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                           _cache_row(module, parent, order, node))
+        if not node.get('_enc'):
+            _insert_nodes(connection, module, node.get('children') or [], node['id'])
 
 
 def rebuild(database: str, trees: dict[str, JsonObject]) -> None:
@@ -70,18 +94,8 @@ def rebuild(database: str, trees: dict[str, JsonObject]) -> None:
             id TEXT PRIMARY KEY, module TEXT, parent_id TEXT, type TEXT, title TEXT,
             content TEXT, tags TEXT, created_at REAL, sort_order INTEGER, coverImage TEXT)''')
 
-        def insert(module, nodes, parent='root'):
-            for order, node in enumerate(nodes):
-                locked = bool(node.get('_enc'))
-                connection.execute('INSERT INTO nodes VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', (
-                    node['id'], module, parent, 'locked' if locked else node['type'],
-                    '' if locked else node['title'], node['_enc'] if locked else node.get('content', ''),
-                    json.dumps([] if locked else node.get('tags', []), ensure_ascii=False),
-                    node.get('created_at', 0), order, None if locked else node.get('coverImage')))
-                if not locked:
-                    insert(module, node.get('children') or [], node['id'])
         for module, tree in trees.items():
-            insert(module, validate(tree)['root'])
+            _insert_nodes(connection, module, validate(tree)['root'])
         connection.commit()
         connection.close()
         connection = None

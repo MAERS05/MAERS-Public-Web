@@ -35,7 +35,7 @@ export function initView(modules) {
  * @param {Object} appState - Application state
  * @param {Object} config - Configuration object
  */
-export function init(appState, config) {
+export async function init(appState, config) {
     // Restore Dynamic Style Loading (Critical for specific modules like Literature)
     if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
@@ -64,7 +64,7 @@ export function init(appState, config) {
     const IS_ADMIN = Controller?.CONFIG?.IS_ADMIN || false;
     if (IS_ADMIN && Admin?.initAdmin) {
         Admin.initAdmin(State, Controller, Render, Search, Tags);
-        if (Admin.initAdminFeatures) Admin.initAdminFeatures();
+        await Admin.initAdminFeatures();
     }
 }
 
@@ -100,7 +100,6 @@ export const View = {
     closeLightbox: () => Lightbox?.closeLightbox(),
 
     // Admin Module
-    // Admin Module
     uiCreateNode: (type) => Admin?.uiCreateNode(type),
     uiRenameNode: (e, id, old) => Admin?.uiRenameNode(e, id, old),
     uiDeleteNode: (e, id) => Admin?.uiDeleteNode(e, id),
@@ -131,7 +130,6 @@ export function setupViewEventListeners() {
     const closeDrawerBtn = document.querySelector(".btn-close-drawer");
     const clearTagsBtn = document.querySelector(".btn-clear-tags");
     const drawerSearch = document.getElementById("tag-drawer-search");
-    const drawerList = document.getElementById("drawer-list");
 
     if (tagToggleBtn)
         tagToggleBtn.addEventListener("click", () => View.toggleTagDrawer());

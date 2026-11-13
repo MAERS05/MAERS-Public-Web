@@ -197,7 +197,7 @@ function _injectStyles() {
             display: flex;
             align-items: center;
             gap: 6px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            box-shadow: none;
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             user-select: none;
         }
@@ -225,7 +225,7 @@ function _injectStyles() {
             height: 7px;
             border-radius: 50%;
             background: #ff4757;
-            box-shadow: 0 0 8px rgba(255,71,87,0.8);
+            box-shadow: none;
             animation: wn-pulse 1.8s ease-in-out infinite;
         }
         @keyframes wn-pulse {
@@ -274,7 +274,7 @@ function _injectStyles() {
             -webkit-backdrop-filter: blur(24px);
             border-radius: 18px;
             border: 1px solid rgba(255,255,255,0.12);
-            box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+            box-shadow: none;
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -286,8 +286,8 @@ function _injectStyles() {
         }
         html.light-mode #whats-new-panel {
             background: rgba(255, 255, 255, 0.96);
-            border-color: rgba(0,0,0,0.1);
-            box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+            border-color: rgba(0,0,0,0.16);
+            box-shadow: none;
         }
 
         /* ── 头部 ── */
@@ -296,11 +296,11 @@ function _injectStyles() {
             align-items: center;
             justify-content: space-between;
             padding: 18px 20px 14px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.15);
             flex-shrink: 0;
         }
         html.light-mode #whats-new-header {
-            border-bottom-color: rgba(0,0,0,0.08);
+            border-bottom-color: rgba(0,0,0,0.16);
         }
         .wn-title-box {
             display: flex;
@@ -406,13 +406,13 @@ function _injectStyles() {
         /* ── 底部 ── */
         #whats-new-footer {
             padding: 12px 20px 16px;
-            border-top: 1px solid rgba(255,255,255,0.08);
+            border-top: 1px solid rgba(255,255,255,0.15);
             display: flex;
             justify-content: flex-end;
             flex-shrink: 0;
         }
         html.light-mode #whats-new-footer {
-            border-top-color: rgba(0,0,0,0.08);
+            border-top-color: rgba(0,0,0,0.16);
         }
         .wn-confirm-btn {
             width: 100%;

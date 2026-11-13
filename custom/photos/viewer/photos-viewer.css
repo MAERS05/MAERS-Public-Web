@@ -45,6 +45,29 @@
     flex-grow: 99999;
 }
 
+.photo-pager:not([hidden]) {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 0 10px 4px;
+}
+
+.photo-pager .header-action-btn {
+    height: 32px;
+    padding: 0 10px;
+}
+
+.photo-pager .header-action-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.photo-pager .header-action-btn:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+}
+
 
 
 /* ==========================================================================
@@ -67,7 +90,7 @@
 
 .photo-item:hover {
     transform: scale(1.05) translateY(-8px);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    box-shadow: none;
     z-index: 50;
 }
 
@@ -87,186 +110,82 @@
     opacity: 1;
 }
 
-/* ==========================================================================
-   Lightbox Viewer
-   ========================================================================== */
-
-.lightbox {
-    touch-action: manipulation;
+.maers-photoswipe { --pswp-icon-color: #fff; z-index: 10010; }
+.maers-photoswipe .pswp__top-bar { height: 48px; padding: 4px 12px; background: transparent; }
+.maers-photoswipe .pswp__button--close { width: 36px; height: 40px; margin-right: 4px; }
+.maers-photoswipe .pswp__button--close .pswp__icn { width: 22px; height: 22px; top: 9px; left: 7px; }
+.maers-photoswipe .maers-photo-caption {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: 0.3s;
-    z-index: 3000;
-}
-
-.lightbox.active {
-    opacity: 1;
-    pointer-events: all;
-}
-
-#lightbox-img {
-    width: 95vw;
-    height: 85vh;
-    object-fit: contain;
-    border-radius: 4px;
-    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
-    transition: opacity 0.3s ease, filter 0.3s ease;
-}
-
-#lightbox-img.loading-hd {
-    opacity: 0.5;
-    filter: blur(5px);
-}
-
-/* ==========================================================================
-   Lightbox Controls
-   ========================================================================== */
-
-.close-lightbox {
-    position: absolute;
-    top: 30px;
-    right: 40px;
-    color: white;
-    font-size: 3rem;
-    cursor: pointer;
-    border: none;
-    background: none;
-}
-
-.lb-nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    font-size: 2rem;
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-    z-index: 3010;
-    user-select: none;
-    backdrop-filter: blur(5px);
-}
-
-.lb-nav:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: translateY(-50%) scale(1.1);
-}
-
-.lb-nav:active {
-    transform: translateY(-50%) scale(0.95);
-}
-
-.lb-prev {
-    left: 20px;
-}
-
-.lb-next {
-    right: 20px;
-}
-
-/* ==========================================================================
-   HD Switch & View Raw Button
-   ========================================================================== */
-
-.hd-switch-wrapper {
-    position: absolute;
-    top: 30px;
-    left: 40px;
-    width: 44px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    cursor: pointer;
-    z-index: 3020;
-    padding: 0;
-    box-sizing: border-box;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(4px);
-}
-
-.hd-switch-wrapper:hover {
-    background: rgba(255, 255, 255, 0.25);
-    transform: scale(1.05);
-}
-
-.hd-text {
-    font-weight: 900;
-    font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.6);
-    line-height: 1;
-    pointer-events: none;
-}
-
-.hd-switch-wrapper.active {
-    background: rgba(120, 255, 214, 0.9);
-    border-color: transparent;
-    box-shadow: 0 0 15px rgba(120, 255, 214, 0.4);
-}
-
-.hd-switch-wrapper.active .hd-text {
-    color: #000;
-}
-
-.btn-view-raw {
-    position: absolute;
-    top: 68px;
-    width: 80px;
-    height: 28px;
-    left: 22px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 700;
-    font-size: 0.75rem;
-    letter-spacing: 2px;
-    padding-left: 3px;
-    border-radius: 6px;
-    text-decoration: none;
-    cursor: pointer;
-    z-index: 3020;
+    inset-inline: 5%;
+    bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    color: #e0e0e0;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.5;
     white-space: nowrap;
-    transition: all 0.3s ease;
-    backdrop-filter: blur(4px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    pointer-events: none;
 }
-
-.btn-view-raw:hover {
-    background: rgba(255, 255, 255, 0.25);
+.maers-photoswipe .pswp__counter {
+    position: fixed;
+    inset-inline: 0;
+    bottom: calc(68px + env(safe-area-inset-bottom, 0px));
+    height: 24px;
+    margin: 0;
+    line-height: 24px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-align: center;
+    text-shadow: none;
+    pointer-events: none;
+}
+.maers-photoswipe .pswp__button--arrow {
+    position: fixed;
+    top: auto;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    visibility: visible;
+}
+.maers-photoswipe .pswp__button--arrow--prev { left: calc(50% - 64px); right: auto; }
+.maers-photoswipe .pswp__button--arrow--next { left: calc(50% + 16px); right: auto; }
+.maers-photoswipe .pswp__button--arrow .pswp__icn {
+    width: 32px;
+    height: 32px;
+    top: 8px;
+    left: 8px;
+    right: auto;
+    margin: 0;
+}
+.maers-photoswipe .pswp__preloader { width: 30px; height: 40px; }
+.maers-photoswipe .pswp__preloader .pswp__icn { width: 18px; height: 18px; top: 11px; left: 6px; }
+body.is-photo-viewing .theme-switch-wrapper,
+body.is-photo-viewing .auto-mode-btn { visibility: hidden; pointer-events: none !important; }
+.maers-photoswipe .pswp__button--quality {
+    width: auto;
+    min-width: 40px;
+    height: 24px;
+    margin: 8px 4px;
+    padding: 0 7px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.55);
+    border-radius: 5px;
+    background: rgba(35, 35, 35, 0.9);
     color: #fff;
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.05);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
 }
-
-/* ==========================================================================
-   Touch Optimization
-   ========================================================================== */
-
-.photo-item,
-.lb-nav {
-    touch-action: manipulation;
-}
+.maers-photoswipe .pswp__button--quality:hover { background: #444; }
+.maers-photoswipe .pswp__button--quality:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.maers-photoswipe .pswp__button--quality:active { transform: scale(0.95); }
+.maers-photoswipe .pswp__button--quality[aria-pressed="true"] { color: var(--accent-color, #78ffd6); border-color: currentColor; }
+.maers-photoswipe .pswp__button--quality[aria-busy="true"] { opacity: 0.65; cursor: progress; }
+.maers-photoswipe .pswp__button--quality[data-load-state="error"] { border-style: dashed; }
 
 .photo-admin-actions {
     position: absolute;
@@ -324,7 +243,7 @@
 .photo-tag-chip.active {
     background: #78ffd6;
     color: #000;
-    box-shadow: 0 0 10px rgba(120, 255, 214, 0.6);
+    box-shadow: none;
     /* Space uses scale(1.1), but we add pointer-events */
     transform: scale(1.05);
     /* slightly less than Space to potentially avoid overlap */

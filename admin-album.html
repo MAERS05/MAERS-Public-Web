@@ -7,7 +7,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-    <title>MAERS Public Admin - Album</title>
+    <title>MAERS Admin - Album</title>
 
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
@@ -20,18 +20,13 @@
     <link rel="stylesheet" href="custom/album/viewer/album-viewer.css">
     <link rel="stylesheet" href="static-style/responsive.css">
     <script type="module" src="shared/utils.module.js"></script>
-    <script type="module" src="shared/style-injector.module.js"></script>
     <script type="module" src="shared/layout.module.js"></script>
     <!-- [MIGRATED] 统一使用 theme.module.js -->
     <script type="module">
         import { initTheme } from './shared/theme.module.js';
         initTheme();
     </script>
-    <script>
-        window.addEventListener('DOMContentLoaded', () => {
-            MAERS.StyleInjector.inject();
-        });
-    </script>
+    <script type="module">await import('./shared/style-injector.module.js').then(m => m.default.inject());</script>
     <script type="module" src="shared/toast.module.js"></script>
     <link rel="stylesheet" href="custom/album/admin/album-admin.css">
     <link rel="stylesheet" href="static-style/admin-modal.css">

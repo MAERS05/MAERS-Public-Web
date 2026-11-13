@@ -39,10 +39,11 @@ class MockS3Client:
         ctype = (ExtraArgs or {}).get('ContentType', 'application/octet-stream')
         self.buckets.setdefault(bucket, {})[key] = {'data': data, 'content_type': ctype}
 
-    def put_object(self, Bucket, Key, Body, ContentType='application/octet-stream'):
+    def put_object(self, Bucket, Key, Body, ContentType='application/octet-stream', CacheControl=None):
         self._guard_upload('put_object')
         data = Body.read() if hasattr(Body, 'read') else bytes(Body)
-        self.buckets.setdefault(Bucket, {})[Key] = {'data': data, 'content_type': ContentType}
+        self.buckets.setdefault(Bucket, {})[Key] = {'data': data, 'content_type': ContentType,
+                                                    'cache_control': CacheControl}
 
     def _entry(self, Bucket, Key):
         bucket = self.buckets.get(Bucket, {})
@@ -79,7 +80,7 @@ _CMS_SCHEMA = '''
 _GALLERY_SCHEMA = '''
     CREATE TABLE IF NOT EXISTS photos (
         id TEXT PRIMARY KEY, category TEXT, name TEXT, path TEXT, thumb TEXT,
-        preview TEXT, hash TEXT, created_at REAL, sort_order INTEGER, tags TEXT
+        preview TEXT, hash TEXT, created_at REAL, sort_order INTEGER, tags TEXT, bucket_id TEXT NOT NULL DEFAULT ''
     )
 '''
 
@@ -91,12 +92,15 @@ class SandboxTestCase(unittest.TestCase):
     """
 
     def setUp(self):
-        self.temp_root = tempfile.mkdtemp(prefix='maers_sandbox_')
+        # Windows CI 的 TEMP 可能使用 8.3 别名，统一路径后再注入配置。
+        self.temp_root = os.path.realpath(tempfile.mkdtemp(prefix='maers_sandbox_'))
         self.addCleanup(shutil.rmtree, self.temp_root, ignore_errors=True)
 
         self.temp_data = os.path.join(self.temp_root, 'data')
+        self.temp_markdown = os.path.join(self.temp_root, 'markdown')
         self.temp_photos = os.path.join(self.temp_root, 'photos')
         os.makedirs(os.path.join(self.temp_data, 'tags'), exist_ok=True)
+        os.makedirs(self.temp_markdown, exist_ok=True)
         os.makedirs(self.temp_photos, exist_ok=True)
         self.mock_s3 = MockS3Client()
 
@@ -122,6 +126,7 @@ class SandboxTestCase(unittest.TestCase):
         return [
             (config, 'PROJECT_ROOT', self.temp_root),
             (config, 'DATA_DIR', self.temp_data),
+            (config, 'MARKDOWN_ROOT', self.temp_markdown),
             (config, 'MODULES_JSON_FILE', d('admin-portal.json')),
             (config, 'ALBUM_CONFIG_JSON', d('album-config.json')),
             (config, 'INDEX_CARDS_JSON', d('index-cards.json')),
@@ -142,7 +147,6 @@ class SandboxTestCase(unittest.TestCase):
             (media_store, 'get_store', lambda: media_store.MediaStore(self.mock_s3, 'pub-bucket', 'priv-bucket')),
             (space, 'PROJECT_ROOT', self.temp_root),
             (space, 'DATA_DIR', self.temp_data),
-            (space, 'SPACE_JSON_PATH', d('space-collections.json')),
             (music, 'MUSIC_JSON_FILE', d('music-data.json')),
             (crypto_keyring, 'KEYRING_FILE', d('crypto-keyring.json')),
         ]
@@ -152,8 +156,8 @@ class SandboxTestCase(unittest.TestCase):
     def data_path(self, *parts):
         return os.path.join(self.temp_data, *parts)
 
-    def root_path(self, rel):
-        return os.path.join(self.temp_root, rel)
+    def root_path(self, *parts):
+        return os.path.join(self.temp_root, *parts)
 
     def load_json(self, abs_file):
         return helpers.read_json(abs_file)

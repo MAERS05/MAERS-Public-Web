@@ -9,6 +9,7 @@
  * - openFormModal / showRecoveryCodeModal / validateNewPassword → 供加密设置面板复用
  */
 import { localFetch } from '../api-client.module.js';
+import { disableAdminControl, isLocalOnlyUnavailable } from '../admin/local-only.module.js';
 
 import {
     getSessionKey,
@@ -18,42 +19,35 @@ import {
     fingerprintRecord
 } from './crypto.module.js';
 import { ensureUnlocked, canWriteKeyring, invalidateUnlockFlow } from './auth-flow.module.js';
+import { isMasterOnlyKeyring } from './keyring.module.js';
 export { ensureUnlocked, canWriteKeyring, validateNewPassword, recoverWithCodeFlow } from './auth-flow.module.js';
 
 import { escapeHtml, cryptoIconHtml, openProgress, injectLockStyles as _injectLockStyles } from './lock-dialog.module.js';
 export { openProgress } from './lock-dialog.module.js';
 export { escapeHtml, cryptoIconHtml, openFormModal, showRecoveryCodeModal } from './lock-dialog.module.js';
 export { cancelProtection, protectCmsNode } from './admin-session.module.js';
-import { cancelProtection, cancelSourceEncryption } from './admin-session.module.js';
+import { cancelProtection, cancelSourceEncryption, PROTECTION_ACTION_TITLE } from './admin-session.module.js';
 
 import { Toast } from '../../shared/toast.module.js';
 import { cmsMediaReferences } from './private-media.module.js';
 
 /**
  * 统一配置卡片上的加锁/开锁操作按钮
- * 本地管理环境下正常绑定交互；非本地环境置灰并拦截点击，提示仅本地可用
+ * 本地管理环境下绑定交互；非本地环境置灰并禁用。
  * @param {HTMLElement} btn - 按钮 DOM
  * @param {Object} options
  * @param {boolean} [options.isLocked] - 是否已加密
- * @param {string} [options.title] - 本地正常情况下的 title 提示
+ * @param {string} [options.title] - 未单独加密时的按钮提示
  * @param {Function} [options.onClick] - 本地正常情况下的点击处理函数
  */
 export function setupLockActionButton(btn, { isLocked = false, title = '', onClick = null } = {}) {
     if (!btn) return;
     btn.innerHTML = cryptoIconHtml(isLocked ? 'decryption' : 'encryption');
     if (canWriteKeyring()) {
-        btn.classList.remove('maers-admin-btn--disabled');
-        btn.removeAttribute('aria-disabled');
-        if (title) btn.title = title;
+        if (isLocked || title) btn.title = isLocked ? PROTECTION_ACTION_TITLE : title;
         if (onClick) btn.onclick = onClick;
     } else {
-        btn.classList.add('maers-admin-btn--disabled');
-        btn.setAttribute('aria-disabled', 'true');
-        btn.title = '加密功能仅支持在本地桌面端管理';
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            Toast.warning('加密功能仅支持在本地桌面端管理');
-        };
+        disableAdminControl(btn, '加密功能仅限电脑本地后台');
     }
 }
 
@@ -62,12 +56,24 @@ export function setupLockActionButton(btn, { isLocked = false, title = '', onCli
  * @param {Object} record - 原始记录
  * @returns {Promise<Object|null>} 取消则 null
  */
-export async function lockRecord(record) {
+export async function lockRecord(record, { choose = false, group = 'default' } = {}) {
     if (record?._private_id) return cancelProtection(record);
     if (record?._private) { Toast.info('该内容随上级对外加密，后台可正常编辑'); return null; }
-    const key = await ensureUnlocked();
+    if (choose) {
+        const { choosePasswordGroup } = await import('./password-groups.module.js');
+        group = await choosePasswordGroup();
+    }
+    if (!group) return null;
+    let key = await ensureUnlocked(group);
     if (!key) return null;
-    return wrapRecord(record, key);
+    if (group === 'default' && isMasterOnlyKeyring()) {
+        const { choosePasswordGroup } = await import('./password-groups.module.js');
+        group = await choosePasswordGroup();
+        if (!group) return null;
+        key = await ensureUnlocked(group);
+        if (!key) return null;
+    }
+    return wrapRecord(record, key, group);
 }
 
 /**
@@ -78,7 +84,7 @@ export async function lockRecord(record) {
  */
 export async function unlockRecord(encRecord) {
     if (encRecord?._private_id) return cancelProtection(encRecord);
-    const key = await ensureUnlocked();
+    const key = await ensureUnlocked(encRecord._group || 'default');
     if (!key) return null;
 
     const result = await unwrapRecord(encRecord, key);
@@ -98,7 +104,9 @@ export async function showWorkerTokenHashDialog() {
 /** 主动清除会话密钥（用于退出加密会话按钮） */
 export async function logoutSession() {
     invalidateUnlockFlow();
-    await (await import('./admin-session.module.js')).closeAdminSession();
+    const { closeAdminSession, clearAdminEntry } = await import('./admin-session.module.js');
+    clearAdminEntry();
+    await closeAdminSession();
     clearSessionKey();
     window.location.reload?.();
     Toast.success('已清除解锁状态');
@@ -137,7 +145,7 @@ function _ensureCryptoControls() {
     return controls;
 }
 
-/** 加密设置入口（左下角小图标，仅后台首页） */
+/** 后台首页左下角入口：本地管理加密设置，线上查看解锁组并逐组锁回。 */
 export function mountCryptoSettingsButton() {
     if (!document.documentElement.classList.contains('admin-portal-page')) return;
     if (document.getElementById('maers-crypto-settings-btn')) return;
@@ -145,21 +153,24 @@ export function mountCryptoSettingsButton() {
     const canLock = canWriteKeyring();
     const btn = document.createElement('button');
     btn.id = 'maers-crypto-settings-btn';
-    btn.className = 'mlock-settings-btn' + (canLock ? '' : ' mlock-settings-btn--disabled');
-    btn.title = canLock ? '加密设置（主密码 / 恢复码 / 私密图片）' : '加密设置（仅支持本地桌面端管理）';
+    btn.className = 'mlock-settings-btn';
+    btn.title = canLock ? '加密设置（主密码 / 恢复码 / 私密图片）' : '密码组';
     btn.type = 'button';
-    btn.setAttribute('aria-label', '加密设置');
+    btn.setAttribute('aria-label', canLock ? '加密设置' : '密码组');
     btn.innerHTML = cryptoIconHtml('secret-key', 22);
-    btn.onclick = async () => {
-        if (!canLock) {
-            Toast.warning('加密设置仅支持在本地桌面端管理');
-            return;
-        }
-        const { openCryptoSettings } = await import('./crypto-settings.module.js');
-        openCryptoSettings();
-    };
+    if (!canLock) {
+        btn.onclick = async () => {
+            const { openGroupUnlock } = await import('./group-unlock.module.js');
+            await openGroupUnlock();
+        };
+    } else {
+        btn.onclick = async () => {
+            const { openCryptoSettings } = await import('./crypto-settings.module.js');
+            openCryptoSettings();
+        };
+    }
     const controls = _ensureCryptoControls();
-    controls.classList.toggle('mlock-crypto-controls--disabled', !canLock);
+    controls.classList.remove('mlock-crypto-controls--disabled');
     controls.appendChild(btn);
 }
 
@@ -317,6 +328,11 @@ export function renderLockedCard(opts = {}) {
     const el = document.createElement('div');
     el.className = variant === 'list' ? 'list-item locked-item' : className;
     Object.entries(dataset).forEach(([k, v]) => { el.dataset[k] = v; });
+    const localOnly = isLocalOnlyUnavailable();
+    const finish = () => {
+        if (localOnly) disableAdminControl(el, '取消加密或整项删除仅限电脑本地后台');
+        return el;
+    };
 
     if (variant === 'list') {
         el.style.cssText = 'opacity:0.6; cursor:pointer; border-left: 2px solid rgba(100,150,255,0.4);';
@@ -329,7 +345,7 @@ export function renderLockedCard(opts = {}) {
             w.appendChild(deleteEl);
             el.appendChild(w);
         }
-        return el;
+        return finish();
     }
 
     if (variant === 'cms') {
@@ -356,7 +372,7 @@ export function renderLockedCard(opts = {}) {
             });
             el.appendChild(delBtn);
         }
-        return el;
+        return finish();
     }
 
     // 默认卡片变体 (Album / Index / Space)
@@ -389,7 +405,7 @@ export function renderLockedCard(opts = {}) {
         delContainer.appendChild(delBtn);
         el.appendChild(delContainer);
     }
-    return el;
+    return finish();
 }
 
 /**
@@ -397,10 +413,10 @@ export function renderLockedCard(opts = {}) {
  * @param {Object} original - 原始卡片对象
  * @returns {Promise<Object|null>}
  */
-export async function lockIndexCardRecord(original) {
+export async function lockIndexCardRecord(original, options = {}) {
     if (!original) return null;
     if (original._private_id) return cancelProtection(original);
-    const encRecord = await lockRecord(original);
+    const encRecord = await lockRecord(original, options);
     if (!encRecord) return null;
 
     if (original.url && /^[^/:?#]+\.html?$/i.test(original.url)) {
@@ -441,7 +457,7 @@ async function _runAlbumJob(url, body, label, icon) {
 }
 
 /**
- * 相册分类加锁完整流程：导出分类 -> 前端加密 -> 服务端迁移至私有桶 -> 同步 Worker 令牌
+ * 相册分类加锁：导出配置、加密记录，服务端登记组令牌并迁移图片。
  * @param {string} categoryId - 相册分类 ID
  * @returns {Promise<boolean>}
  */
@@ -452,20 +468,23 @@ function runAlbumMigration(key, action) {
     _albumMigrations.set(key, pending);
     return pending;
 }
-export function lockAlbumCategoryFlow(categoryId) {
-    return runAlbumMigration(categoryId, () => _lockAlbumCategory(categoryId));
+export function lockAlbumCategoryFlow(categoryId, options = {}) {
+    return runAlbumMigration(categoryId, () => _lockAlbumCategory(categoryId, options));
 }
-async function _lockAlbumCategory(categoryId) {
+async function _lockAlbumCategory(categoryId, options) {
     const exp = await _postAlbumJson('/api/album/export_category', { id: categoryId });
     const payload = { category: exp.category, photos: exp.photos, tags_file: exp.tags_file };
-    const enc = await lockRecord(payload);
+    const enc = await lockRecord(payload, options);
     if (!enc) return false;
+    if (enc._group) await (await import('./admin-session.module.js')).ensureAdminSession();
 
-    await _runAlbumJob('/api/album/lock_category', { id: categoryId, enc: enc._enc, expected_revision: exp.revision }, '迁入私有存储', 'encryption');
+    await _runAlbumJob('/api/album/lock_category', { id: categoryId, enc: enc._enc, group: enc._group || 'default', expected_revision: exp.revision }, '迁入私有存储', 'encryption');
     Toast.success('相册已加密并迁入私有桶');
 
-    const { syncTokenToWorker } = await import('./crypto-settings.module.js');
-    await syncTokenToWorker({ silent: true });
+    if (!enc._group) {
+        const { syncTokenToWorker } = await import('./crypto-settings.module.js');
+        await syncTokenToWorker({ silent: true });
+    }
     return true;
 }
 
@@ -508,7 +527,7 @@ async function _loadCmsCoverIndex() {
 
 /** 递归打包 CMS 节点子树（包含 .md 正文与封面行） */
 async function _packCmsNode(node, getIndex, lockedNodes = []) {
-    if (node._enc) return { id: node.id, type: 'locked', _enc: node._enc };
+    if (node._enc) return { id: node.id, type: 'locked', _enc: node._enc, ...(node._group ? {_group:node._group} : {}) };
     const cover = node._origCover ?? node.coverImage ?? null;
     const packed = {
         id: node.id,
@@ -536,7 +555,7 @@ async function _packCmsNode(node, getIndex, lockedNodes = []) {
         if (node._pendingRelay) {
             packed.md = '';
         } else {
-            const res = await (node._private ? localFetch : fetch)('data/' + node.content.split('/').map(encodeURIComponent).join('/'), { cache: 'no-cache' });
+            const res = await (node._private ? localFetch : fetch)(node.content.split('/').map(encodeURIComponent).join('/'), { cache: 'no-cache' });
             if (!res.ok) throw new Error(`读取正文失败: ${node.content} (${res.status})`);
             packed.md = await res.text();
         }
@@ -566,7 +585,7 @@ async function _packCmsNode(node, getIndex, lockedNodes = []) {
             .filter(n => n.parentId === node.id)
             .sort((a, b) => (a.index ?? Infinity) - (b.index ?? Infinity))
             .forEach(n => {
-                const item = { id: n.id, type: 'locked', _enc: n._enc };
+                const item = { id: n.id, type: 'locked', _enc: n._enc, ...(n._group ? {_group:n._group} : {}) };
                 const at = Math.min(n.index ?? packed.children.length, packed.children.length);
                 packed.children.splice(at, 0, item);
             });
@@ -596,7 +615,7 @@ function _collectCmsCoverKeys(packed, out = []) {
  * @param {Array} [lockedNodes] - 当前 AppState.lockedNodes
  * @returns {Promise<{enc:string, covers:Array<string>}|null>}
  */
-export async function packCmsNodeForLock(node, lockedNodes = []) {
+export async function packCmsNodeForLock(node, lockedNodes = [], options = {}) {
     let index;
     const getIndex = () => (index ||= _loadCmsCoverIndex());
     const tree = await _packCmsNode(node, getIndex, lockedNodes);
@@ -611,9 +630,9 @@ export async function packCmsNodeForLock(node, lockedNodes = []) {
         for (const child of item.children || []) await visit(child);
     };
     await visit(tree);
-    const enc = await lockRecord(tree);
+    const enc = await lockRecord(tree, options);
     if (!enc) return null;
-    return { enc: enc._enc, covers: [...new Set(_collectCmsCoverPaths(tree))], sources };
+    return { enc: enc._enc, group: enc._group || 'default', covers: [...new Set(_collectCmsCoverPaths(tree))], sources };
 }
 
 /**
@@ -623,7 +642,7 @@ export async function packCmsNodeForLock(node, lockedNodes = []) {
  */
 export async function collectCmsPrivateCoverKeys(locked) {
     if (!locked?._enc) return [];
-    const key = await getSessionKey();
+    const key = await getSessionKey(locked._group || 'default');
     if (!key) return [];
     const tree = await unwrapRecord({ _enc: locked._enc }, key);
     return tree ? [...new Set(_collectCmsCoverKeys(tree))] : [];

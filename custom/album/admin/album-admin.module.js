@@ -1,10 +1,6 @@
-/**
- * MAERS Album Admin (album-admin.module.js)
- * 相册分类管理逻辑 - Unified Batch Logic
- * 依赖: AdminCore
- * @version 3.0.0 - ES6 Module
- */
-import { localFetch } from '../../../data-manage/api-client.module.js';
+/** 相册分类管理：批量编辑、确认写入后的状态更新与分类加解密。 */
+import { isOnlineAdminPage, localFetch } from '../../../data-manage/api-client.module.js';
+import { loadCloudAlbums } from '../../photos/admin/photos-private-drafts.module.js';
 
 import { AdminModal } from '../../../data-manage/admin/admin-modal.module.js';
 import { BatchItemManager, SaveButton, AdminButtonHelper, Feedback } from '../../../data-manage/admin/admin-base.module.js';
@@ -16,375 +12,364 @@ import {
     lockAlbumCategoryFlow,
     unlockAlbumCategoryFlow,
     renderLockedCard,
-    cryptoIconHtml,
     setupLockActionButton
 } from '../../../data-manage/encrypt/admin-lock.module.js';
+import { Utils } from '../../../shared/utils.module.js';
+import { validatePhotoCategorySlug } from '../../../shared/photos-url.module.js';
 import { Toast } from '../../../shared/toast.module.js';
+import { disableAdminControl, isLocalOnlyUnavailable } from '../../../data-manage/admin/local-only.module.js';
 
-// 依赖声明
+// 依赖注入接口保持与相册入口一致。
 let AdminCore;
-
-// 依赖注入
-export function initAlbumAdmin(adminCore) {
-    AdminCore = adminCore;
-}
+export function initAlbumAdmin(adminCore) { AdminCore = adminCore; }
 
 const grid = document.getElementById('category-grid');
-// We ignore the static save-btn in DOM, using AdminCore.SaveButton
 let currentData = [];
 let manager = null;
+let mutationBusy = false;
+let needsReload = false;
+let privateAlbums = new Map();
 
-async function init() {
-    if (!grid) return;
+function disabledReason() {
+    if (isLocalOnlyUnavailable()) return '仅限电脑本地后台操作';
+    if (needsReload) return '分类状态已改变，请刷新页面后继续编辑';
+    return '';
+}
 
-    await loadData();
-
-    // Init Manager
-    if (!BatchItemManager) {
-        console.error('BatchItemManager not found!');
-        return;
-    }
-
-    manager = new BatchItemManager({
-        list: currentData,
-        onUpdate: render
-    });
-
-    // Init Save Button
-    if (SaveButton) {
-        SaveButton.init(
-            document.body,
-            handleSave,
-            async () => {
-                // On Cancel: Reset to initial snapshot
-                if (manager) {
-                    manager.reset();
-                    if (Feedback) Feedback.notifyCancel();
-                }
-            }
-        );
-    }
-
-    render();
-
-    // 注册「解锁全部」按钮
-    mountUnlockAllButton({
-        source: 'album-config.json',
-        getCount: () => countEncryptedDeep(currentData, null, isEncryptedRecord),
-        onUnlockAll: async () => {
-            let n = 0;
-            for (let i = 0; i < currentData.length; i++) {
-                if (!isEncryptedRecord(currentData[i])) continue;
-                const ok = await _unlockByIndex(i);
-                if (!ok) break;
-                n++;
-                i = -1; // 数据已重新加载，从头扫描
-            }
-            return n;
-        }
-    });
+function canEdit() {
+    return Boolean(manager) && !mutationBusy && !disabledReason();
 }
 
 async function loadData() {
+    if (isOnlineAdminPage()) {
+        const { records, drafts } = await loadCloudAlbums();
+        privateAlbums = new Map();
+        currentData = records.map(record => {
+            const entry = drafts.get(record);
+            if (!entry?.payload.category?.id) return record;
+            const category = { ...entry.payload.category };
+            privateAlbums.set(category.id, entry);
+            return category;
+        });
+        manager?.setList(currentData);
+        return;
+    }
+    const response = await localFetch('data/album-config.json', { cache: 'no-cache' });
+    if (!response.ok) throw new Error(`读取分类失败（HTTP ${response.status}）`);
+    const categories = await response.json();
+    if (!Array.isArray(categories) || categories.some(item => !item || typeof item !== 'object' || Array.isArray(item))) {
+        throw new TypeError('相册分类数据格式无效');
+    }
+    // 完整校验后才替换编辑列表和基线，读取失败时保留原有数据。
+    currentData = categories;
+    manager?.setList(currentData);
+    needsReload = false;
+}
+
+async function init() {
     if (!grid) return;
+    await loadData();
+    manager = new BatchItemManager({ list: currentData, onUpdate: render });
+    SaveButton.init(document.body, handleSave, () => {
+        if (mutationBusy || needsReload) return;
+        manager.reset();
+        Feedback.notifyCancel();
+    });
+    render();
+    mountUnlockAllButton({
+        source: 'album-config.json',
+        getCount: () => countEncryptedDeep(currentData, null, isEncryptedRecord),
+        onUnlockAll: unlockAll
+    });
+}
+
+async function unlockAll() {
+    let count = 0;
+    while (!needsReload) {
+        const index = currentData.findIndex(isEncryptedRecord);
+        if (index < 0 || !await unlockByIndex(index)) break;
+        count++;
+    }
+    return count;
+}
+
+/** 只在操作入口捕获错误，成功写入后的界面失败单独处理。 */
+async function mutate(action, label) {
+    if (!canEdit()) return false;
+    mutationBusy = true;
+    const controls = ['global-save-btn', 'global-cancel-btn'].map(id => document.getElementById(id))
+        .filter(Boolean).map(control => [control, control.disabled]);
+    controls.forEach(([control]) => { control.disabled = true; });
     try {
-        const res = await localFetch('data/album-config.json', { cache: 'no-cache' });
-        let initialData = [];
-        if (res.ok) {
-            initialData = await res.json();
-        } else {
-            console.error('Failed to load album config');
-            initialData = [];
-        }
-
-        // Deep copy for editing
-        currentData = JSON.parse(JSON.stringify(initialData));
-
-        // If manager exists, update its list reference
-        if (manager) manager.setList(currentData);
-
-    } catch (e) {
-        console.error("Load failed", e);
-        if (window.MAERS?.Toast) window.MAERS.Toast.error("❌ 数据加载失败");
+        return await action();
+    } catch (error) {
+        console.error(`[MAERS Album] ${label}失败`, error);
+        Feedback.notifyError(`${label}失败：${error.message}`);
+        return false;
+    } finally {
+        mutationBusy = false;
+        controls.forEach(([control, disabled]) => { control.disabled = disabled; });
     }
 }
 
-async function handleSave() {
-    try {
-        const btn = document.getElementById('global-save-btn');
-        if (btn) btn.textContent = 'Saving...';
-
-        // 1. Delete Items marked as _deleted
-        const toDelete = currentData.filter(c => c._deleted && !isEncryptedRecord(c));
-        for (let item of toDelete) {
-            const confirmId = prompt(
-                `⚠️ 危险操作：是否一并删除物理文件夹？\n\n您删除了分类 "${item.title}"。\n若要同时彻底删除服务器上的图片目录 (photos/*/ ${item.id})，请在下方输入 ID 确认：\n\n(否则请直接点击“取消”或关闭窗口)`,
-                ""
-            );
-
-            const deletePhysical = (confirmId === item.id);
-            if (confirmId !== null && confirmId !== "" && confirmId !== item.id) {
-                if (Feedback) Feedback.notifyError("ID不匹配，物理目录已保留。");
-            }
-
-            const res = await localFetch('/api/delete_category', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: item.id,
-                    delete_physical: deletePhysical
-                })
-            });
-            const data = await res.json();
-
-            if (deletePhysical && Feedback) {
-                Feedback.notifySuccess('图片存储文件夹已同步删除');
-            }
-
-            if (data.tag_file_deleted || deletePhysical) {
-                Feedback.notifySuccess("标签文件已同步删除");
-            }
-        }
-
-        // 2. Sync Metadata
-        const remaining = currentData.filter(c => isEncryptedRecord(c) || !c._deleted);
-        for (let item of remaining.filter(c => !isEncryptedRecord(c))) {
-            await localFetch('/api/update_category', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(item)
-            });
-        }
-
-        // 3. Reorder 
-        const idList = remaining.map(c => c.id || c._enc);
-        await localFetch('/api/reorder_category', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(idList)
-        });
-
-        // 4. Reload
-        await loadData();
-        render(); // Trigger view update
-
-        // Hide SaveBar
-        if (SaveButton) SaveButton.hide();
-
-        if (Feedback) Feedback.notifySaveSuccess();
-    } catch (e) {
-        console.error(e);
-        if (Feedback) Feedback.notifySaveFail();
-        else Toast.error("保存失败");
+async function postCategory(endpoint, data, label) {
+    const response = await localFetch(endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+    });
+    if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.error || detail.message || `${label}失败（HTTP ${response.status}）`);
     }
+    return response;
+}
+
+async function resourceFeedback(response) {
+    try {
+        const result = await response.json();
+        if (!result || typeof result !== 'object' || Array.isArray(result)) throw new TypeError('资源状态反馈格式无效');
+        return result;
+    } catch (error) {
+        console.warn('[MAERS Album] 分类操作已保存，资源状态反馈读取失败', error);
+        Feedback.toast('分类操作已保存，目录状态反馈读取失败', 'warning');
+        return {};
+    }
+}
+
+function refreshConfirmed(update, success) {
+    try {
+        update();
+        render();
+    } catch (error) {
+        needsReload = true;
+        console.warn('[MAERS Album] 分类操作已保存，界面刷新失败', error);
+        Feedback.toast('分类操作已保存，请手动刷新页面', 'warning');
+        return;
+    }
+    success();
+}
+
+async function deleteCategory(category, physical) {
+    const response = await postCategory('/api/delete_category', {
+        id: category.id, delete_physical: physical
+    }, `删除分类「${category.title}」`);
+    const result = await resourceFeedback(response);
+    if (physical) Feedback.notifySuccess('图片存储文件夹已同步删除');
+    if (result.tag_file_deleted || physical) Feedback.notifySuccess('标签文件已同步删除');
+}
+
+async function handleSave() {
+    return mutate(async () => {
+        const snapshot = structuredClone(currentData);
+        const deleted = snapshot.filter(item => item._deleted && !isEncryptedRecord(item));
+        const choices = [];
+        for (const item of deleted) {
+            const choice = await AdminModal.choose({
+                title: `删除相册「${item.title}」`,
+                message: '仅移除相册入口：保留图片和标签，之后可以恢复相册。\n\n' +
+                    '一并删除本地图片：删除该相册的原图、缩略图、预览图和标签，无法撤销。云端副本不会在此操作中删除。\n\n' +
+                    '点击右上角 × 可取消本次保存。',
+                primary: { text: '仅移除相册入口，保留图片', value: 'entry' },
+                secondary: { text: '删除相册及本地图片', value: 'physical' }
+            });
+            if (choice !== 'entry' && choice !== 'physical') return false;
+            choices.push([item, choice === 'physical']);
+        }
+        // 批量删除先完成所有选择，关闭任一弹窗都不会提前删除前面的相册。
+        for (const [item, physical] of choices) await deleteCategory(item, physical);
+        const remaining = snapshot.filter(item => isEncryptedRecord(item) || !item._deleted);
+        for (const item of remaining) {
+            if (isEncryptedRecord(item)) continue;
+            await postCategory('/api/update_category', item, `更新分类「${item.title}」`);
+        }
+        await postCategory('/api/reorder_category', remaining.map(item => item.id || item._enc), '分类排序');
+        // 使用已确认写入的快照推进基线，避免额外读取失败被误报成保存失败。
+        currentData = remaining;
+        refreshConfirmed(() => manager.setList(currentData), () => Feedback.notifySaveSuccess());
+        return true;
+    }, '保存分类');
+}
+
+function handleCardClick(event, category, index) {
+    event.stopPropagation();
+    if (event.target.closest('.action-btn')) return;
+    if (manager?.selectedIndices.length && canEdit()) {
+        if (manager.selectedIndices.includes(index)) manager.toggleSelect(index);
+        else manager.moveTo(index);
+        return;
+    }
+    if (!category._deleted) window.location.href = `admin-photos.html?id=${encodeURIComponent(category.id)}`;
+}
+
+function renderActions(category, index, reason) {
+    const actions = AdminButtonHelper.render({
+        index, isDeleted: category._deleted,
+        onSort: event => uiToggleSelect(event, index),
+        onEdit: event => uiEdit(event, index),
+        onDelete: event => uiToggleDelete(event, index), containerClass: 'admin-actions'
+    });
+    const lockButton = document.createElement('span');
+    lockButton.className = 'maers-admin-btn';
+    setupLockActionButton(lockButton, {
+        isLocked: Boolean(category._private_id || privateAlbums.has(category.id)),
+        title: '对外加密此相册',
+        onClick: event => { event.stopPropagation(); uiLock(index); }
+    });
+    actions.appendChild(lockButton);
+    if (reason) actions.querySelectorAll('.maers-admin-btn').forEach(button => {
+        if (privateAlbums.has(category.id) && button.querySelector('.maers-admin-edit-icon')) return;
+        disableAdminControl(button, reason);
+    });
+    return actions;
+}
+
+function renderCategory(category, index, reason) {
+    const card = document.createElement('div');
+    card.className = `category-card ${category.style_class || ''} ${manager?.getItemClass(index) || ''}`;
+    const selected = manager?.selectedIndices.indexOf(index) ?? -1;
+    if (selected >= 0) card.setAttribute('data-order-num', selected + 1);
+    card.onclick = event => handleCardClick(event, category, index);
+    card.appendChild(renderActions(category, index, reason));
+    const icon = document.createElement('div');
+    icon.className = 'card-icon';
+    icon.innerHTML = category.icon || '';
+    card.appendChild(icon);
+    const text = document.createElement('div');
+    text.className = 'text-group';
+    for (const [className, content] of [['card-title', category.title], ['card-subtitle', category.subtitle]]) {
+        const element = document.createElement('div');
+        element.className = className;
+        element.textContent = content || '';
+        text.appendChild(element);
+    }
+    card.appendChild(text);
+    return card;
 }
 
 function render() {
     if (!grid) return;
+    const reason = disabledReason();
     grid.innerHTML = '';
-    currentData.forEach((cat, index) => {
-        // 加密记录：渲染锁定占位卡片
-        if (isEncryptedRecord(cat)) {
-            grid.appendChild(_renderLockedCategoryCard(index));
-            return;
-        }
-
-        const card = document.createElement('div');
-        // Get classes from manager
-        const extraClasses = manager ? manager.getItemClass(index) : '';
-        card.className = `category-card ${cat.style_class || ''} ${extraClasses}`;
-
-        // 添加序号属性
-        if (manager && manager.selectedIndices.includes(index)) {
-            const orderNum = manager.selectedIndices.indexOf(index) + 1;
-            card.setAttribute('data-order-num', orderNum);
-        }
-
-        card.onclick = (e) => {
-            e.stopPropagation();
-            if (e.target.closest('.action-btn')) return;
-
-            if (manager && manager.selectedIndices.length > 0) {
-                if (manager.selectedIndices.includes(index)) {
-                    manager.toggleSelect(index);
-                } else {
-                    manager.moveTo(index);
-                }
-                return;
-            }
-
-            if (cat._deleted) return;
-            window.location.href = `admin-photos.html?id=${cat.id}`;
-        };
-
-        // Build card content using DOM API
-        const bg = document.createElement('div');
-        bg.className = 'card-bg-glow';
-        card.appendChild(bg);
-
-        // Admin Buttons (Unified Style)
-        if (AdminButtonHelper) {
-            const adminEl = AdminButtonHelper.render({
-                index: index,
-                isDeleted: cat._deleted,
-                onSort: (e) => uiToggleSelect(e, index),
-                onEdit: (e) => uiEdit(e, index, cat.title, cat.subtitle, cat.icon),
-                onDelete: (e) => uiToggleDelete(e, index),
-                containerClass: 'admin-actions'
-            });
-
-            // 加锁按钮
-            const lockBtn = document.createElement('span');
-            lockBtn.className = 'maers-admin-btn';
-            setupLockActionButton(lockBtn, {
-                isLocked: Boolean(cat._private_id),
-                title: cat._private_id ? '取消此相册的对外加密' : '对外加密此相册',
-                onClick: (e) => { e.stopPropagation(); uiLock(index); }
-            });
-            adminEl.appendChild(lockBtn);
-
-            card.appendChild(adminEl);
-        }
-
-        // Icon
-        const iconDiv = document.createElement('div');
-        iconDiv.className = 'card-icon';
-        iconDiv.innerHTML = cat.icon;
-        card.appendChild(iconDiv);
-
-        // Text Group
-        const textGroup = document.createElement('div');
-        textGroup.className = 'text-group';
-
-        const titleDiv = document.createElement('div');
-        titleDiv.className = 'card-title';
-        titleDiv.textContent = cat.title;
-
-        const subDiv = document.createElement('div');
-        subDiv.className = 'card-subtitle';
-        subDiv.textContent = cat.subtitle;
-
-        textGroup.appendChild(titleDiv);
-        textGroup.appendChild(subDiv);
-        card.appendChild(textGroup);
+    currentData.forEach((category, index) => {
+        const card = isEncryptedRecord(category) ? renderLockedCard({
+            className: 'category-card locked-card', label: '私密相册', onUnlock: () => uiUnlock(index)
+        }) : renderCategory(category, index, reason);
+        if (reason && isEncryptedRecord(category)) disableAdminControl(card, reason);
         grid.appendChild(card);
     });
-
-    const addBtn = document.createElement('div');
-    addBtn.className = 'category-card func-card';
-    addBtn.onclick = addNewCategory;
-    addBtn.innerHTML = `<div class="func-icon">＋</div><div class="func-text">ADD NEW CATEGORY</div>`;
-    grid.appendChild(addBtn);
+    const add = document.createElement('div');
+    add.className = 'category-card func-card';
+    if (reason) disableAdminControl(add, reason);
+    else add.onclick = addNewCategory;
+    add.innerHTML = '<div class="func-icon">＋</div><div class="func-text">ADD NEW CATEGORY</div>';
+    grid.appendChild(add);
     refreshUnlockAllButton();
 }
 
-// UI Bridges
-export function uiToggleSelect(e, index) {
-    e.stopPropagation();
-    if (manager) manager.toggleSelect(index);
+export function uiToggleSelect(event, index) {
+    event.stopPropagation();
+    if (canEdit()) manager.toggleSelect(index);
 }
 
-export function uiToggleDelete(e, index) {
-    e.stopPropagation();
-    if (manager) manager.toggleDelete(index);
+export function uiToggleDelete(event, index) {
+    event.stopPropagation();
+    if (canEdit()) manager.toggleDelete(index);
 }
 
-let _lockBusy = false;
+/** 加解密改变服务端密文；刷新失败时阻止继续编辑旧视图。 */
+async function reloadAfterProtection() {
+    try {
+        await loadData();
+    } catch (error) {
+        needsReload = true;
+        console.warn('[MAERS Album] 相册加解密已完成，列表刷新失败', error);
+        Feedback.toast('相册加解密已完成，请刷新页面后继续编辑', 'warning');
+    }
+    refreshConfirmed(() => { if (!needsReload) SaveButton.hide(); }, () => {});
+}
 
-/**
- * 加锁：委托 admin-lock 导出分类、前端加密并迁移至私有桶
- */
 export async function uiLock(index) {
-    if (_lockBusy) return;
-    const original = currentData[index];
-    if (!original || isEncryptedRecord(original) || !original.id) return;
-    if (original._private_id) {
-        const { cancelProtection } = await import('../../../data-manage/encrypt/admin-lock.module.js');
-        if (await cancelProtection(original)) { await loadData(); render(); }
-        return;
-    }
-
-    if (!confirm(`加锁相册「${original.title}」将：\n` +
-        `1. 把全部图片迁入私有桶，并从公开桶与仓库删除\n` +
-        `2. 立即生效，无需点击保存（页面上未保存的修改将丢弃）\n` +
-        `继续？`)) return;
-
-    _lockBusy = true;
-    try {
-        if (await lockAlbumCategoryFlow(original.id)) {
-            await loadData();
-            render();
-            if (SaveButton) SaveButton.hide();
+    return mutate(async () => {
+        const category = currentData[index];
+        if (!category?.id || isEncryptedRecord(category)) return false;
+        if (category._private_id) {
+            const { cancelProtection } = await import('../../../data-manage/encrypt/admin-lock.module.js');
+            if (!await cancelProtection(category)) return false;
+        } else {
+            const { choosePasswordGroup } = await import('../../../data-manage/encrypt/password-groups.module.js');
+            const group = await choosePasswordGroup({
+                title: `加密相册「${category.title}」`,
+                sub: '全部图片将迁入私有桶，并从公开桶与仓库删除。加密立即生效，未保存的修改会丢弃。'
+            });
+            if (!group || !await lockAlbumCategoryFlow(category.id, { group })) return false;
         }
-    } catch (e) {
-        console.error(e);
-        Toast.error('加锁失败: ' + e.message);
-    } finally {
-        _lockBusy = false;
-    }
+        await reloadAfterProtection();
+        return true;
+    }, '相册加锁');
 }
 
-async function _unlockByIndex(index) {
-    if (_lockBusy) return false;
-    const enc = currentData[index];
-    if (!isEncryptedRecord(enc)) return false;
-
-    _lockBusy = true;
-    try {
-        if (await unlockAlbumCategoryFlow(enc)) {
-            await loadData();
-            render();
-            if (SaveButton) SaveButton.hide();
-            return true;
-        }
-        return false;
-    } catch (e) {
-        console.error(e);
-        Toast.error('解锁失败: ' + e.message);
-        return false;
-    } finally {
-        _lockBusy = false;
-    }
+async function unlockByIndex(index) {
+    return mutate(async () => {
+        const category = currentData[index];
+        if (!isEncryptedRecord(category) || !await unlockAlbumCategoryFlow(category)) return false;
+        await reloadAfterProtection();
+        return true;
+    }, '相册解锁');
 }
 
-/**
- * 解锁：解密后由服务端迁回公开桶与仓库（解锁即恢复公开）
- */
 export async function uiUnlock(index) {
-    if (!confirm('解锁将把该相册的全部图片迁回公开桶与仓库，恢复为公开状态。继续？')) return;
-    await _unlockByIndex(index);
+    if (!canEdit()) return false;
+    if (!confirm('解锁将把该相册的全部图片迁回公开桶与仓库，恢复为公开状态。继续？')) return false;
+    return unlockByIndex(index);
 }
 
-export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
-    e.stopPropagation();
-    if (manager.isDeleted(index)) return;
+function iconInput(icon = '') {
+    const value = String(icon ?? '');
+    const match = value.match(/src=['"]([^'"]+)['"]/);
+    return match ? match[1] : value;
+}
 
+function iconMarkup(value = '') {
+    const icon = String(value ?? '').trim();
+    return (icon.includes('/') || icon.includes('.')) && !icon.startsWith('<')
+        ? `<img src="${Utils.escapeAttr(icon)}" style="width: 1em; height: 1em;">` : icon;
+}
+
+export function uiEdit(event, index) {
+    event.stopPropagation();
     const item = currentData[index];
-
+    const entry = privateAlbums.get(item?.id);
+    if (!item || (!entry && !canEdit()) || manager.isDeleted(index)) return;
     AdminModal.open({
-        title: 'Edit Category',
-        isNew: false,
-        data: {
-            title: oldTitle,
-            subtitle: oldSub,
-            icon: oldIcon.includes('src=') ? _extractSrc(oldIcon) : oldIcon
-        },
+        title: 'Edit Category', isNew: false,
+        data: { title: item.title, subtitle: item.subtitle, icon: iconInput(item.icon), slug: item.slug || '' },
         fields: [
             { name: 'title', label: 'Title', type: 'text', required: true },
             { name: 'subtitle', label: 'Subtitle', type: 'text', required: true },
-            { name: 'icon', label: 'Icon (SVG path or Emoji)', type: 'text', required: true }
+            { name: 'icon', label: 'Icon (SVG path or Emoji)', type: 'text', required: true },
+            { name: 'slug', label: '链接代号', type: 'text', placeholder: item.id }
         ],
-        onSave: async (formData) => {
-            item.title = formData.title;
-            item.subtitle = formData.subtitle;
-
-            // Icon logic
-            if ((formData.icon.includes('/') || formData.icon.includes('.')) && !formData.icon.trim().startsWith('<')) {
-                item.icon = `<img src="${formData.icon}" style="width: 1em; height: 1em;">`;
-            } else {
-                item.icon = formData.icon;
+        onSave: async form => {
+            const changes = { title: form.title, subtitle: form.subtitle, icon: iconMarkup(form.icon), slug: form.slug.trim() };
+            try {
+                validatePhotoCategorySlug({ ...item, ...changes }, currentData);
+            } catch (error) {
+                Toast.error(error.message);
+                return false;
             }
-
+            if (entry) {
+                try {
+                    await entry.edit(payload => Object.assign(payload.category, changes));
+                    Object.assign(item, changes);
+                    render();
+                    Toast.success('私密相册修改已暂存');
+                    return true;
+                } catch (error) {
+                    Toast.error(error.message);
+                    return false;
+                }
+            }
+            if (!canEdit()) return false;
+            Object.assign(item, changes);
             render();
             manager.updateSaveState();
             return true;
@@ -392,105 +377,55 @@ export function uiEdit(e, index, oldTitle, oldSub, oldIcon) {
     });
 }
 
-function _extractSrc(html) {
-    const match = html.match(/src=['"]([^'"]+)['"]/);
-    return match ? match[1] : html;
+function notifyCreated(result) {
+    for (const [created, existed, label] of [
+        ['dirs_created', 'dirs_existed', '图片存储文件夹'],
+        ['tag_file_created', 'tag_file_existed', '标签文件']
+    ]) {
+        if (result[created]) Feedback.notifySuccess(`${label}创建成功`);
+        else if (result[existed]) Feedback.toast(`${label}已存在`, 'info');
+    }
+    Feedback.notifySuccess('分类创建成功');
+}
+
+async function createCategory(form) {
+    return mutate(async () => {
+        const category = { title: form.title, subtitle: form.subtitle, icon: iconMarkup(form.icon),
+            id: form.id.trim(), slug: form.slug.trim() };
+        if (currentData.some(item => item.id === category.id)) throw new Error('分类 ID 已存在');
+        validatePhotoCategorySlug(category, currentData);
+        const baseline = JSON.parse(manager.initialSnapshot);
+        const response = await postCategory('/api/add_category', category, '创建分类');
+        currentData.push(category);
+        const result = await resourceFeedback(response);
+        // 新分类已写入，其他分类仍保留尚未保存的重命名、排序及删除标记。
+        refreshConfirmed(() => manager.markSaved([...baseline, category]), () => notifyCreated(result));
+        return true;
+    }, '创建分类');
 }
 
 export async function addNewCategory() {
-    const newCategory = {
-        title: '',
-        subtitle: '',
-        icon: '',
-        id: ''
-    };
-
+    if (!canEdit()) return;
     AdminModal.open({
-        title: 'Add New Category',
-        isNew: true,
-        data: newCategory,
+        title: 'Add New Category', isNew: true, data: { title: '', subtitle: '', icon: '', id: '', slug: '' },
         fields: [
             { name: 'title', label: 'Title (Chinese)', type: 'text', required: true },
             { name: 'subtitle', label: 'Subtitle (English)', type: 'text', required: true },
             { name: 'icon', label: 'Icon (SVG path or Emoji)', type: 'text', required: true },
-            { name: 'id', label: 'Category ID (lowercase, immutable)', type: 'text', required: true, placeholder: 'category-name' }
+            { name: 'id', label: 'Category ID (lowercase, immutable)', type: 'text', required: true, placeholder: 'category-name' },
+            { name: 'slug', label: '链接代号（留空使用分类 ID）', type: 'text', placeholder: 'nature' }
         ],
-        onSave: async (formData) => {
-            let finalIcon = formData.icon;
-            if (finalIcon && (finalIcon.includes('/') || finalIcon.includes('.')) && !finalIcon.trim().startsWith('<')) {
-                finalIcon = `<img src="${finalIcon}" style="width: 1em; height: 1em;">`;
-            }
-
-            try {
-                const res = await localFetch('/api/add_category', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        title: formData.title,
-                        subtitle: formData.subtitle,
-                        icon: finalIcon,
-                        id: formData.id
-                    })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    await loadData();
-                    render();
-
-                    if (SaveButton) SaveButton.hide();
-
-                    if (Feedback) {
-                        if (data.dirs_created) Feedback.notifySuccess('图片存储文件夹创建成功');
-                        else if (data.dirs_existed) Feedback.toast('图片存储文件夹已存在', 'info');
-
-                        Feedback.notifySuccess('分类创建成功');
-
-                        if (data.tag_file_created) Feedback.notifySuccess('标签文件创建成功');
-                        else if (data.tag_file_existed) Feedback.toast('标签文件已存在', 'info');
-                    }
-                    return true;
-                } else {
-                    if (Feedback) Feedback.notifyAddFail();
-                    return false;
-                }
-            } catch (e) {
-                if (Feedback) Feedback.notifyError("Error: " + e.message);
-                return false;
-            }
-        }
+        onSave: createCategory
     });
 }
 
-// ── 加密占位卡片辅助函数 ──
+export const AlbumAdmin = { init, uiToggleSelect, uiToggleDelete, uiLock, uiUnlock, uiEdit, addNewCategory };
 
-/**
- * 渲染加密相册分类的锁定占位卡片
- * @param {number} index
- * @returns {HTMLElement}
- */
-function _renderLockedCategoryCard(index) {
-    return renderLockedCard({
-        className: 'category-card locked-card',
-        label: '私密相册',
-        onUnlock: () => uiUnlock(index)
+function initialize() {
+    return init().catch(error => {
+        console.error('[MAERS Album] 分类初始化失败', error);
+        Toast.error(`分类加载失败：${error.message}`);
     });
 }
-
-// 导出 Admin 对象（向后兼容）
-export const AlbumAdmin = {
-    init,
-    uiToggleSelect,
-    uiToggleDelete,
-    uiLock,
-    uiUnlock,
-    uiEdit,
-    addNewCategory
-};
-
-// Initialize
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize);
+else initialize();

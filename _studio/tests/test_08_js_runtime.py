@@ -1,294 +1,347 @@
 # -*- coding: utf-8 -*-
-"""套件 08：基于 Node.js 原生 ESM 与 WebCrypto 的前端语法校验、E2EE、脱敏、中继同步与 Markdown 管线实测"""
+"""前端运行回归：原生 ESM 语法、卡片保存、图库、主题及 Markdown 阅读器。"""
 
 import json
 
 from .helpers import frontend_js_files
 from .node_runtime import (
-    MOCK_DOM, MOCK_LOCAL_STORAGE, MOCK_SESSION_STORAGE, NodeTestCase, mock_window,
+    MOCK_DOM, MOCK_LOCAL_STORAGE, MOCK_SESSION_STORAGE, MOCK_THEME_RUNTIME,
+    NodeTestCase, mock_window,
 )
 
 
 class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
-    """基于 Node.js 原生 ESM 与 WebCrypto 对全站 JS 语法、E2EE 密钥环、CMS 脱敏与同步队列进行真实运行时验证"""
+    """验证页面初始化、数据保存与阅读交互；加密和中继由独立套件覆盖。"""
 
-    def test_30_photo_cloud_git_only_prompts_local_processing_and_keeps_queue(self):
-        """图片和混合草稿仅提示电脑本地 Git，不发请求、不清理队列，原有文字提交仍可使用。"""
+    def test_empty_literature_flow_keeps_animation_safe(self):
+        """空白模板及重新生成卡片期间，不访问不存在的书籍卡片。"""
         body = """
-        const { GitCommitManager } = await import('./data-manage/sync/git-commit.module.js');
-        const { githubSync } = await import('./data-manage/sync/github-sync.module.js');
-        const manager = new GitCommitManager();
-        manager.githubConfig = {token:'fake',repo:'owner/repo',branch:'main'};
-        let commits = 0, requests = 0;
-        githubSync.commitFiles = async () => {commits++; return {success:true,commitSha:'abc1234'}};
-        globalThis.fetch = async () => {requests++; throw Error('图片草稿不能触发云端写入或清理')};
-        const photo = {module:'photos',action:'upload',data:{category:'travel',path:'photos/images/travel/a.jpg'}};
-        const note = {key:'note',data:{module:'notes',action:'update',data:{id:'n',data:{title:'Entry',content:'body'}}}};
-        const queue = [{key:'photo',data:photo},note];
-        const saved = JSON.stringify(queue);
-        for (const items of [queue,[{key:'photo',data:photo}],[photo]]) {
-            const result = await manager.commitDraftsViaGitHub({items,relayConfig:{endpoint:'https://relay.example',secret:'fake'},
-                currentModuleName:'notes',currentModuleTree:[{id:'n',type:'note',title:'Entry',content:'notes/Entry.md'}]});
-            assert.equal(result.success,false);
-            assert.match(result.msg,/图片请在电脑本地 Git/);
-            assert.match(result.msg,/WebP\\/AVIF/);
+        const frames = [];
+        globalThis.requestAnimationFrame = callback => { frames.push(callback); return 1; };
+        const {startLoop} = await import('./custom/literature/viewer/flow/literature-flow-render.module.js');
+        const engine = {isGridMode:false, books:[], realBooks:[], slotCount:8,
+            state:{scrollOffset:0,autoScrollSpeed:0.6,isPaused:false}, config:{spacing:180}};
+        startLoop(engine);
+        frames.shift()(performance.now());
+        assert.equal(frames.length,1);
+        engine.realBooks = [{id:'first-book'}];
+        frames.shift()(performance.now());
+        assert.equal(frames.length,1);
+        engine.books = [{}];
+        engine.realBooks = [];
+        frames.shift()(performance.now());
+        assert.equal(frames.length,1);
+        """
+        self.run_node_esm(body,preamble=(MOCK_DOM,MOCK_LOCAL_STORAGE,mock_window('/literature.html')))
+
+    def test_local_entry_recovers_running_operation_before_management(self):
+        """重开页面先恢复任务进度，不在写锁释放前调用管理验证。"""
+        body = """
+        const text={set textContent(value){messages.push(value);}};
+        const messages=[],calls=[];
+        let removed=0;
+        document.createElement=()=>({...__mockEl(),remove:()=>{removed++;},
+            querySelector:selector=>selector==='.mlock-progress-text'?text:__mockEl()});
+        const timer=globalThis.setTimeout;
+        globalThis.setTimeout=callback=>timer(callback,0);
+        const states=[{state:'ready',active:1,operation:{message:'恢复公开图片',done:2,total:5}},
+            {state:'ready',active:1,operation:{message:'恢复公开图片',done:4,total:5}},
+            {state:'ready',active:0}];
+        globalThis.fetch=async url=>{
+            calls.push(String(url));
+            if(String(url).endsWith('/api/session'))return Response.json({token:'test'});
+            assert.equal(url,'/api/studio/status');
+            return Response.json(states.shift());
+        };
+        const {waitForStudioIdle}=await import('./data-manage/operation-progress.module.js');
+        await waitForStudioIdle();
+        assert.equal(states.length,0);
+        assert.ok(messages.includes('恢复公开图片 2/5'));
+        assert.ok(messages.includes('恢复公开图片 4/5'));
+        assert.equal(removed,1);
+        assert.ok(!calls.some(url=>url.includes('/api/crypto/')));
+        """
+        self.run_node_esm(body,preamble=(MOCK_DOM,mock_window('/admin-portal.html')))
+
+    def test_public_cdn_media_uses_downloaded_cache_when_offline(self):
+        """R2 三级图片离线时按完整 CDN 地址读缓存，私密网关请求不进入此回退。"""
+        body = """
+        const fs = await import('node:fs');
+        const vm = await import('node:vm');
+        let handler, fetched, lookup, credentials, cacheMode;
+        let useSnapshots = false, exactAvailable = true;
+        const cached = new Response('cached-image');
+        const exact = new Response('current-version');
+        const original = new Response('downloaded-original');
+        const canonical = 'https://www.example.com/notes.html';
+        const context = {
+            URL, Response, location: {origin:'https://www.example.com'},
+            self: {addEventListener:(name,callback)=>{if(name==='fetch')handler=callback;}},
+            fetch: async (url,options) => {
+                fetched=String(url); credentials=options.credentials; cacheMode=options.cache;
+                throw Error('offline');
+            },
+            caches: {match: async (key, options) => {
+                lookup=String(key);
+                if (!useSnapshots) return cached;
+                assert.equal(options.ignoreSearch, undefined);
+                if (exactAvailable && key===fetched && options.cacheName!=='maers-cache-offline') return exact;
+                if (key===canonical && options.cacheName==='maers-cache-offline') return original;
+            }}
+        };
+        vm.runInNewContext(fs.readFileSync('maers-version-controller.js','utf8'),context);
+        for (const size of ['images','thumbnails','previews']) {
+            const url=`https://images.example.com/photos/${size}/travel/photo.webp`;
+            let result;
+            handler({request:new Request(url,{mode:'no-cors',credentials:'include'}),respondWith:value=>{result=value;}});
+            assert.equal(await result,cached);
+            assert.equal(fetched,url);
+            assert.equal(lookup,url);
+            assert.equal(credentials,'omit','公开图片不能继承 img 请求的 include 凭据');
         }
-        manager.githubConfig.token = '';
-        assert.match((await manager.commitDraftsViaGitHub({items:queue})).msg,/图片请在电脑本地 Git/);
-        assert.equal(commits,0); assert.equal(requests,0); assert.equal(JSON.stringify(queue),saved);
-        manager.githubConfig.token = 'fake';
-        assert.equal((await manager.commitDraftsViaGitHub({items:[note]})).success,true);
-        assert.equal(commits,1); assert.equal(requests,0);
-        """
-        self.run_node_esm(body, preamble=(MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-photos.html', hostname='maersy.com')))
-
-    def test_25_pending_cover_survives_refresh_and_can_be_removed(self):
-        """待 Git 的封面上传在当前页及全新会话回放生效，取消封面也不能恢复旧图。"""
-        body = """
-        const { SyncManager } = await import('./data-manage/sync/sync-manager.module.js');
-        const config = {mode:'relay',relay:{endpoint:'https://relay.example',secret:'test'}};
-        const queue = [];
-        globalThis.fetch = async (url, options = {}) => {
-            if (url.endsWith('/push')) queue.push(JSON.parse(options.body));
-            return {ok:true,json:async()=>({id:'queued',items:queue.map(data=>({data}))})};
-        };
-        const freshState = () => {
-            const node = {id:'book',type:'note',title:'书',coverImage:'old.png'};
-            return {root:[node],allNodes:[node]};
-        };
-        const manager = new SyncManager(); manager.config = config;
-        const state = freshState();
-        const cover = 'photos/images/literaturecovers/mobile.jpg';
-        await manager.handleRelayAction('literature','update',{id:'book',data:{coverImage:cover}},state);
-        assert.equal(state.root[0].coverImage, cover);
-        const refreshed = new SyncManager(); refreshed.config = config;
-        assert.equal(refreshed.localPendingSessionItems.length, 0);
-        const afterReload = freshState();
-        await refreshed.applyPendingToState('literature',afterReload);
-        assert.equal(afterReload.root[0].coverImage, cover);
-        await manager.handleRelayAction('literature','update',{id:'book',data:{coverImage:null}},state);
-        assert.equal(state.root[0].coverImage, null);
-        await refreshed.applyPendingToState('literature',afterReload);
-        assert.equal(afterReload.root[0].coverImage, null);
-        """
-        self.run_node_esm(body, preamble=(
-            MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-cms.html', hostname='maersy.com', is_admin=True),
-        ))
-
-    def test_24_mobile_gallery_restores_uploads_after_reload(self):
-        """全新页面从中继恢复相册上传，隔离分类及私有记录，重复加载不覆盖已发布衍生图。"""
-        body = """
-        const { syncManager } = await import('./data-manage/sync/sync-manager.module.js');
-        const { State, initController, reloadData, fixPath } = await import('./custom/photos/admin/photos-controller.module.js');
-        syncManager.config = {mode:'relay', relay:{endpoint:'https://relay.example', secret:'test'}};
-        window.MAERS = {Config:{MEDIA_PUBLIC_BASE:'https://cdn.example'}};
-        State.category = 'travel';
-        let published = [{id:'published', path:'photos/images/travel/old.jpg', thumb:'old.webp', preview:'old.avif'}];
-        initController({getGalleryData:async()=>published});
-        const upload = (category, name, scope = 'public') => ({module:'photos', action:'upload',
-            data:{category, name, path:`photos/images/${category}/${name}`, scope}, timestamp:10});
-        let queue = [upload('travel','a.jpg'), upload('travel','b.jpg'), upload('other','c.jpg'),
-            upload('travel','secret.jpg','private')];
-        globalThis.fetch = async url => {
-            assert.equal(url, 'https://relay.example/api/pull');
-            return {ok:true, json:async()=>({items:queue.map((data,i)=>({key:String(i),data}))})};
-        };
-        assert.equal(syncManager.localPendingSessionItems.length, 0, '模拟刷新后的全新页面');
-        const fresh = await reloadData();
-        assert.deepEqual(fresh.map(row=>row.name || row.id), ['b.jpg','a.jpg','published']);
-        assert.equal(fresh[0].thumb, 'photos/images/travel/b.jpg', '未合并前直接使用原图');
-        assert.equal(fixPath(fresh[0].preview), 'https://cdn.example/photos/images/travel/b.jpg');
-        assert.equal(fresh[0]._pendingRelay, true);
-        assert.equal(State.hasChanges, false);
-        assert.equal(published.length, 1, '回放不能污染静态数据缓存');
-        const stableId = fresh[0].id;
-        syncManager.localPendingSessionItems = [queue[0]];
-        await reloadData();
-        assert.equal(State.loadedData.length, 3, '同一时间戳的多个上传仍须恢复且去重');
-        assert.equal(State.loadedData[0].id, stableId);
-        published = [...published, {id:'merged',path:'https://cdn.example/photos/images/travel/a.jpg',
-            thumb:'real.webp',preview:'real.avif',tags:['tag']}];
-        await reloadData();
-        assert.equal(State.loadedData.length, 3);
-        assert.equal(State.loadedData.find(row=>row.id === 'merged').preview, 'real.avif');
-        queue = []; syncManager.localPendingSessionItems = [];
-        await reloadData();
-        assert.equal(State.loadedData.length, 2, '合并并确认后以已发布数据为准');
-        window.IS_ADMIN = false; State.isAdmin = false;
-        let visitorPulls = 0;
-        globalThis.fetch = async()=>{visitorPulls++; return {ok:true,json:async()=>({items:[]})}};
-        assert.equal((await reloadData()).length, 2);
-        assert.equal(visitorPulls, 0, '访客不应拉取管理队列');
-        """
-        self.run_node_esm(body, preamble=(
-            MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-photos.html', hostname='maersy.com', is_admin=True),
-        ))
-
-    def test_23_cover_index_real_paths_private_urls_refresh_and_retry(self):
-        """封面索引支持 CDN URL，保留私密凭证；未登记时使用原图，刷新与失败重试有效。"""
-        body = """
-        const { DataProvider } = await import('./data-manage/data-provider.module.js');
-        let requests = 0, unavailable = true;
-        let rows = [{ path:'photos/images/gamecovers/a.png', thumb:'photos/thumbnails/gamecovers/hash.webp',
-            preview:'photos/previews/gamecovers/hash.avif' },
-            {path:'photos/images/gamecovers/literal .png',thumb:'space.webp'},
-            {path:'photos/images/gamecovers/literal%20.png',thumb:'percent.webp'}];
-        globalThis.fetch = async () => {
-            requests++;
-            if (unavailable) throw new Error('offline');
-            return {ok:true,json:async()=>({gamecovers: rows})};
-        };
-        const node = {coverImage:'photos/images/gamecovers/a.png'};
-        assert.equal(await DataProvider.loadCoverIndex(), false);
-        assert.equal(DataProvider.getCoverUrl(node), node.coverImage);
-        unavailable = false;
-        await Promise.all([DataProvider.loadCoverIndex(), DataProvider.loadCoverIndex()]);
-        assert.equal(requests, 2, '并发消费者共用一次索引请求');
-        assert.equal(DataProvider.getCoverUrl(node), rows[0].preview);
-        assert.equal(DataProvider.getCoverUrl({coverImage:'https://cdn.example/'+node.coverImage+'?v=1'}, 'thumb'), rows[0].thumb);
-        assert.equal(DataProvider.getCoverUrl({coverImage:'https://cdn.example/photos/images/gamecovers/literal%20.png'}), 'space.webp');
-        assert.equal(DataProvider.getCoverUrl({coverImage:'https://cdn.example/photos/images/gamecovers/literal%2520.png'}), 'percent.webp');
-        assert.equal(DataProvider.getCoverUrl({coverImage:'photos/images/gamecovers/literal%20.png'}), 'percent.webp');
-        const privateNode = {...node, coverThumb:'https://private.example/thumb?t=secret', coverPreview:'https://private.example/preview?t=secret'};
-        assert.equal(DataProvider.getCoverUrl(privateNode, 'thumb'), privateNode.coverThumb);
-        assert.equal(DataProvider.getCoverUrl(privateNode), privateNode.coverPreview);
-        assert.equal(DataProvider.getCoverUrl({...node,coverPreview:privateNode.coverPreview},'thumb'), privateNode.coverPreview);
-        const external = {coverImage:'https://external.example/unregistered.png'};
-        assert.equal(DataProvider.getCoverUrl(external), external.coverImage);
-        assert.equal(DataProvider.getCoverUrl({}), null);
-        assert.deepEqual(node, {coverImage:'photos/images/gamecovers/a.png'}, '展示不能把衍生路径写入正文数据');
-        rows = [{...rows[0], preview:'photos/previews/gamecovers/refreshed.avif'}];
-        await DataProvider.loadCoverIndex({refresh:true});
-        assert.equal(requests, 3);
-        assert.equal(DataProvider.getCoverUrl(node), rows[0].preview);
-        """
-        self.run_node_esm(body, preamble=(mock_window('/games.html'),))
-
-    def test_22_worker_upload_uuids_survive_same_second_and_random_number(self):
-        """固定时钟和旧随机源，并发上传同名及混合格式图片，公私桶文件均不能重名。"""
-        body = """
-        const { File } = await import('node:buffer');
-        globalThis.File = File;
-        const { default: worker } = await import('./data-manage/sync/cloudflare-worker-sync.js');
-        const NativeDate = Date;
-        globalThis.Date = class extends NativeDate {
-            constructor(...args) { super(...(args.length ? args : [1793188800000])); }
-            static now() { return 1793188800000; }
-        };
-        Math.random = () => 0;
-        const publicObjects = new Map(), privateObjects = new Map();
-        const bucket = objects => ({ async put(key, bytes, metadata) {
-            objects.set(key, { bytes: new Uint8Array(bytes), metadata });
-        } });
-        const env = { SECRET_KEY: 'test', PUBLIC_PHOTOS_BUCKET: bucket(publicObjects),
-            PRIVATE_PHOTOS_BUCKET: bucket(privateObjects), PUBLIC_CUSTOM_DOMAIN: 'https://cdn.example' };
-        const upload = async (index, scope = 'public') => {
-            const extension = index % 2 ? 'jpg' : 'png';
-            const form = new FormData();
-            form.set('file', new File([`image-${index}`], `same.${extension}`, { type: `image/${extension}` }));
-            form.set('category', 'travel'); form.set('scope', scope);
-            const response = await worker.fetch(new Request('https://worker.example/api/upload', {
-                method: 'POST', headers: { 'x-sync-key': 'test' }, body: form }), env, {});
-            assert.equal(response.status, 200);
-            const result = await response.json();
-            assert.match(result.name, new RegExp(`^[0-9]{8}_[0-9]{6}_[a-f0-9]{32}\\\\.${extension}$`));
-            const stored = (scope === 'public' ? publicObjects : privateObjects).get(result.relPath);
-            assert.equal(new TextDecoder().decode(stored.bytes), `image-${index}`);
-            assert.equal(stored.metadata.httpMetadata.contentType, `image/${extension}`);
+        let local;
+        handler({request:new Request('https://www.example.com/data/photos-data.json',{credentials:'include'}),
+            respondWith:value=>{local=value;}});
+        await local;
+        assert.equal(credentials,'include','同源请求保留原有凭据');
+        useSnapshots = true;
+        const readOfflineNote = () => {
+            let result;
+            handler({request:new Request(canonical+'?openNoteId=note',{cache:'no-cache'}),
+                respondWith:value=>{result=value;}});
             return result;
         };
-        const results = await Promise.all(Array.from({ length: 40 }, (_, index) => upload(index)));
-        assert.equal(new Set(results.map(result => result.relPath)).size, 40);
-        assert.equal(new Set(results.map(result => result.name.split('.')[0])).size, 40);
-        assert.equal(publicObjects.size, 40);
-        for (const result of results) {
-            assert.equal(result.path, `https://cdn.example/${result.relPath}`);
-        }
-        const privateResult = await upload(41, 'private');
-        assert.equal(privateResult.isPrivate, true);
-        assert.ok(privateResult.path.startsWith('/api/private-file?key='));
-        assert.equal(privateObjects.size, 1);
+        assert.equal(await readOfflineNote(),exact);
+        assert.equal(cacheMode,'no-cache','显式刷新要求网络重新验证');
+        assert.ok(new URL(fetched).searchParams.get('maers_ver'));
+        exactAvailable = false;
+        assert.equal(await readOfflineNote(),original,'旧包按无查询参数的真实文件回退');
+        let intercepted=false;
+        handler({request:new Request('https://private.example.com/private/photos/images/travel/photo.webp?t=secret'),
+            respondWith:()=>{intercepted=true;}});
+        assert.equal(intercepted,false);
+        handler({request:new Request('https://www.example.com/data/photos-data.json',
+            {headers:{'X-MAERS-Token':'test-session'}}),respondWith:()=>{intercepted=true;}});
+        assert.equal(intercepted,false,'本机管理视图不可回退到公开离线快照');
         """
         self.run_node_esm(body)
 
-    def test_18_inline_media_manifest_and_private_reader_urls(self):
-        """正文插图清单加密保存，解密阅读使用私有地址；缺图时阻止加锁。"""
+    def test_card_persistence_saves_before_deleting_and_keeps_pending_edits(self):
+        """列表失败保留页面和编辑；新增落盘后才上屏，已有删除标记留待批量确认。"""
         body = """
-        const { randomBytes, setSessionKeyRaw, getSessionKey, unwrapRecord } = await import('./data-manage/encrypt/crypto.module.js');
-        const { packCmsNodeForLock, collectCmsPrivateCoverKeys } = await import('./data-manage/encrypt/admin-lock.module.js');
-        const { unpackRevealedNode } = await import('./data-manage/encrypt/private-media.module.js');
-        setSessionKeyRaw(randomBytes(32));
-        const row = { id:'img', path:'photos/images/_notes/a.png', thumb:'photos/thumbnails/_notes/a.webp', preview:'photos/previews/_notes/a.avif' };
-        globalThis.fetch = async () => ({ok:true,json:async()=>({_notes:[row]})});
-        const md = '![inline](../'+row.thumb+') <img src="https://media.example.com/'+row.path+'">';
-        const packed = await packCmsNodeForLock({id:'n',type:'note',title:'私密',content:md});
-        assert.deepEqual(packed.covers,[row.path]);
-        const tree = await unwrapRecord({_enc:packed.enc},await getSessionKey());
-        assert.deepEqual(tree.mediaRows.map(r=>r.path),[row.path]);
-        assert.equal(tree.md,md);
-        const revealed = unpackRevealedNode(tree,k=>'https://private.example/'+k+'?t=token');
-        assert.ok(revealed.content.includes('https://private.example/'+row.thumb+'?t=token'));
-        assert.ok(!revealed.content.includes('media.example.com'));
-        assert.ok(!unpackRevealedNode(tree).content.includes('media.example.com'));
-        assert.deepEqual((await collectCmsPrivateCoverKeys({_enc:packed.enc})).sort(),[row.path,row.thumb,row.preview].sort());
-        await assert.rejects(packCmsNodeForLock({id:'missing',type:'note',content:'![x](photos/images/_notes/missing.png)'}),/正文图片/);
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, MOCK_DOM, mock_window('/admin-cms.html')))
-
-    def test_19_relay_refresh_reuses_backend_receipt_after_ack_failure(self):
-        """确认失败后重建页面管理器，携带同一回执身份，避免重放已入库的新增。"""
-        body = """
-        const {SyncManager}=await import('./data-manage/sync/sync-manager.module.js');
-        let ackOk=false, applied=0;
-        const receipts=new Set();
-        let queue=[{key:'sync_1',data:{module:'notes',action:'add',data:{id:'n',title:'草稿'},timestamp:1}}];
+        const {Toast}=await import('./shared/toast.module.js');
+        const notices=[];Toast._show=(message,type)=>notices.push([message,type]);
+        const {saveCardChanges}=await import('./data-manage/admin/card-persistence.module.js');
+        const {Admin}=await import('./custom/admin-portal/admin/admin-portal.module.js');
+        const {BatchItemManager}=await import('./data-manage/admin/admin-manager.module.js');
+        const calls=[];let failSave=true,finish,started,snapshot;
+        globalThis.prompt=()=> 'old.html';
         globalThis.fetch=async(url,options={})=>{
-            const ok=data=>({ok:true,json:async()=>data});
-            if(url.endsWith('/api/crypto/admin-status'))return ok({has_encrypted:false});
-            if(url.endsWith('/api/session'))return ok({token:'session'});
-            if(url.endsWith('/pull'))return ok({items:queue});
-            if(url.endsWith('/ack')){if(ackOk)queue=[];return {ok:ackOk};}
-            const body=JSON.parse(options.body);
-            assert.deepEqual(body._relay,{source:'https://relay.example',key:'sync_1'});
-            const identity=JSON.stringify(body._relay);
-            if(!receipts.has(identity)){receipts.add(identity);applied++;}
-            return ok({status:'success'});
+            if(url.endsWith('/api/session'))return Response.json({token:'test'});
+            if(url.endsWith('/api/studio/status'))return Response.json({state:'ready',active:0});
+            if(url.endsWith('/api/crypto/local-session'))return Response.json({configured:false,keys:{}});
+            calls.push(url);
+            if(url.endsWith('/api/ensure_page'))return Response.json({status:'exists'});
+            if(url.endsWith('/api/save_modules'))snapshot=JSON.parse(options.body);
+            if(started){started();started=null;return new Promise(resolve=>{finish=resolve;});}
+            return new Response('{}',{status:url.endsWith('/api/delete_page')||failSave?500:200});
         };
-        const fresh=()=>{const m=new SyncManager();m.saveConfig({mode:'relay',relay:{endpoint:'https://relay.example/',secret:'test'}});m.Controller={loadData:async()=>{},refreshView(){}};return m;};
-        assert.equal(await fresh().pullAndMerge(),false);
-        ackOk=true;
-        assert.equal(await fresh().pullAndMerge(),true);
-        assert.equal(applied,1);
-        assert.equal(queue.length,0);
+        const kept={title:'keep',url:'keep.html'},deleted={title:'old',url:'old.html',_deleted:true};
+        await assert.rejects(saveCardChanges('/api/save_modules',[kept,deleted],'模块'));
+        assert.equal(calls.length,1);assert.ok(calls[0].endsWith('/api/save_modules'));
+        failSave=false;calls.length=0;
+        assert.deepEqual(await saveCardChanges('/api/save_modules',[kept,deleted],'模块'),[kept]);
+        assert.ok(calls[0].endsWith('/api/save_modules'));assert.ok(calls[1].endsWith('/api/delete_page'));
+        assert.ok(notices.some(([message])=>message.includes('文件删除失败')));
+        assert.ok(!notices.some(([message])=>message==='HTML文件已同步删除'));
+        Admin.modules=[kept,deleted];
+        Admin.manager=new BatchItemManager({list:Admin.modules,autoSaveBar:false});
+        const added={title:'new',url:'new.html',icon:'x'};
+        const ready=new Promise(resolve=>{started=resolve;});
+        const saving=Admin._saveNewModule(added);
+        await ready;
+        assert.equal(calls.at(-1),'/api/save_modules');
+        assert.deepEqual(Admin.modules,[kept,deleted]);
+        const concurrent={title:'other',url:'other.html'};Admin.modules.push(concurrent);
+        finish(new Response('{}',{status:500}));
+        assert.equal(await saving,false);assert.deepEqual(Admin.modules,[kept,deleted,concurrent]);
+
+        calls.length=0;notices.length=0;
+        Admin.render=()=>{throw Error('刷新失败');};
+        assert.equal(await Admin._saveNewModule(added),true);
+        assert.deepEqual(calls,['/api/ensure_page','/api/save_modules']);
+        assert.deepEqual(snapshot,[kept,{title:'old',url:'old.html'},concurrent,added]);
+        assert.equal(Admin.modules[1]._deleted,true);
+        assert.equal(Admin.modules.filter(card=>card.url===added.url).length,1);
+        assert.equal(Admin.manager.initialSnapshot,JSON.stringify(snapshot));
+        assert.notEqual(Admin.manager.getSnapshot(),Admin.manager.initialSnapshot);
+        assert.ok(notices.some(([message])=>message==='列表已保存，请手动刷新页面'));
+        assert.ok(!notices.some(([,type])=>type==='error'));
         """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-cms.html')))
+        self.run_node_esm(body,preamble=(MOCK_SESSION_STORAGE,MOCK_LOCAL_STORAGE,MOCK_DOM,mock_window('/admin-portal.html')))
+
+    def test_index_card_rendering_and_save_confirmed_snapshot(self):
+        """首页按文本渲染卡片字段，保存成功后才更新卡片和批量管理基线。"""
+        body = """
+        document.readyState='loading'; document.addEventListener=()=>{};
+        document.documentElement=__mockEl();
+        let accept=false, rendered=0, bodySaved;
+        globalThis.fetch=async(url,options)=>{
+            if(url.endsWith('/api/session'))return Response.json({token:'test'});
+            if(url.endsWith('/api/studio/status'))return Response.json({state:'ready',active:0});
+            if(url.endsWith('/api/crypto/local-session'))return Response.json({configured:false,has_encrypted:false});
+            assert.equal(url,'/api/save_index_cards');
+            bodySaved=JSON.parse(options.body);
+            return Response.json({}, {status:accept?200:500});
+        };
+        const {Toast}=await import('./shared/toast.module.js');Toast._show=()=>{};
+        const {IndexAdmin}=await import('./custom/index/admin/index-admin.module.js');
+        const {BatchItemManager}=await import('./data-manage/admin/admin-manager.module.js');
+        const old={id:'old',title:'<old>',url:'#',description:'a & b',bgText:'<OLD>',icon:'ui/icon.svg'};
+        IndexAdmin.items=[old];
+        IndexAdmin.manager=new BatchItemManager({list:IndexAdmin.items,autoSaveBar:false});
+        IndexAdmin._renderAdminButtons=()=>__mockEl();
+        const card=IndexAdmin._renderNormalCard(old,0,false);
+        assert.match(card.innerHTML,/alt="&lt;old&gt;"/);
+        assert.match(card.innerHTML,/a &amp; b/);
+        assert.match(card.innerHTML,/&lt;OLD&gt;/);
+        IndexAdmin.render=()=>{rendered++;};
+        const item={title:'New Card',url:'https://example.org/',icon:'📝'};
+        assert.equal(await IndexAdmin._saveNewCard(item),false);
+        assert.deepEqual(IndexAdmin.items,[old]);assert.equal(rendered,0);
+        accept=true;
+        assert.equal(await IndexAdmin._saveNewCard(item),true);
+        assert.deepEqual(IndexAdmin.items,[old,{...item,id:'nav-new-card'}]);
+        assert.deepEqual(bodySaved,IndexAdmin.items);
+        assert.equal(IndexAdmin.manager.initialSnapshot,JSON.stringify(bodySaved));
+        assert.equal(rendered,1);
+        """
+        self.run_node_esm(body,preamble=(MOCK_SESSION_STORAGE,MOCK_LOCAL_STORAGE,MOCK_DOM,mock_window('/admin-index.html', is_admin=True)))
+
+
+    def test_modal_rejects_stale_metadata_and_duplicate_submit(self):
+        """抓取只更新当前网址且不覆盖手填字段，保存中重复提交只调用一次回调。"""
+        body = """
+        const {Toast}=await import('./shared/toast.module.js');
+        const notices=[];Toast._show=(message,type)=>notices.push([message,type]);
+        const {AdminModal}=await import('./data-manage/admin/admin-modal.module.js');
+        const node=value=>({value,style:{},disabled:false,classList:{add(){},remove(){}}});
+        const url=node(''),name=node('New Link'),icon=node(''),description=node(''),preview=node('');
+        const fetchButton=node(''),submit=node(''),cancel=node(''),closeButton=node('');
+        const form={values:{tags:'a， b,c'}};
+        const controls={'form':form,'.btn-primary':submit,'.btn-cancel':cancel,'.btn-close-modal':closeButton,
+            '.btn-fetch-meta':fetchButton,'.icon-input':icon,'.icon-preview':preview,
+            'input[name="url"]':url,'input[name="name"]':name,'textarea[name="content"]':description};
+        let closed=0;const modal={isConnected:true,querySelector:selector=>controls[selector]||null,
+            remove(){closed++;this.isConnected=false;}};
+        document.createElement=()=>modal;document.body.appendChild=()=>{modal.isConnected=true;};
+        globalThis.FormData=class {constructor(element){this.element=element;}
+            [Symbol.iterator](){return Object.entries(this.element.values)[Symbol.iterator]();}};
+        const observers=[];
+        const nextRequest=()=>new Promise(resolve=>observers.push(resolve));
+        globalThis.fetch=async(path,options={})=>{
+            if(path.endsWith('/api/session'))return Response.json({token:'test'});
+            if(path.endsWith('/api/studio/status'))return Response.json({state:'ready',active:0});
+            if(path.endsWith('/api/crypto/local-session'))return Response.json({configured:false,keys:{}});
+            return new Promise(resolve=>observers.shift()({resolve,url:JSON.parse(options.body).url}));
+        };
+        AdminModal.open({title:'Edit',data:{name:'New Link'},onSave:async()=>true});
+        url.value='https://a.example';const readyA=nextRequest(),first=fetchButton.onclick(),a=await readyA;
+        url.value='https://b.example';const readyB=nextRequest(),second=fetchButton.onclick(),b=await readyB;
+        name.value='手填标题';icon.value='manual.svg';description.value='手填描述';
+        b.resolve(Response.json({title:'B',icon_url:'b.svg',description:'B'}));await second;
+        a.resolve(Response.json({title:'A',icon_url:'a.svg',description:'A'}));await first;
+        assert.equal(name.value,'手填标题');assert.equal(icon.value,'manual.svg');assert.equal(description.value,'手填描述');
+        assert.equal(notices.length,1);
+        url.value='https://c.example';const readyC=nextRequest(),third=fetchButton.onclick(),c=await readyC;
+        cancel.onclick();c.resolve(Response.json({title:'C',icon_url:'c.svg'}));await third;
+        assert.equal(icon.value,'manual.svg');assert.equal(notices.length,1);
+        let saves=0,finish,values;closed=0;
+        AdminModal.open({title:'Save',fields:[{name:'tags',type:'tags'}],onSave:data=>{
+            saves++;values=data;return new Promise(resolve=>{finish=resolve;});}});
+        const event={preventDefault(){}};
+        const saving=form.onsubmit(event);await form.onsubmit(event);
+        assert.equal(saves,1);assert.deepEqual(values.tags,['a','b','c']);
+        finish(false);await saving;assert.equal(closed,0);assert.equal(submit.disabled,false);
+        const retry=form.onsubmit(event);finish(true);await retry;assert.equal(saves,2);assert.equal(closed,1);
+        """
+        self.run_node_esm(body,preamble=(MOCK_SESSION_STORAGE,MOCK_LOCAL_STORAGE,MOCK_DOM,mock_window('/admin-space.html')))
+
+
+    def test_music_navigation_preserves_mapping_boundaries_and_wrap(self):
+        """双向切歌保留分 P 映射、合集边界、延时切层与循环队尾规则。"""
+        body = """
+        document.addEventListener = () => {};
+        const {initControl, playNext, playPrev} = await import('./custom/music/viewer/music-control.module.js');
+        const album = (bvid, pages) => ({bvid, title:bvid, total:pages.length, page_mapping:pages});
+        const a=album('A',[3,7]), b=album('B',[4,1]), c=album('C',[5]), d=album('D',[6,9]);
+        a.custom_parts=['首段','末段'];
+        const calls=[],tips=[],nav=[],timers=[];
+        const player={playTrack:(...args)=>calls.push(args),showTip:tip=>tips.push(tip)};
+        const ui={currentLevel:2,currentCatIndex:0,currentColIndex:0,
+            libraryData:[{name:'甲',collections:[{name:'一',albums:[a,b]},{name:'二',albums:[c]}]},
+                {name:'乙',collections:[{name:'三',albums:[d]}]}, {name:'空',collections:[]}],
+            renderAlbums:(...args)=>nav.push(['render',...args]),
+            enterLevel1:index=>nav.push(['category',index]),
+            enterLevel2:(...args)=>nav.push(['collection',...args])};
+        const elements=[{},{}];
+        document.getElementById=()=>({classList:{contains:()=>true},children:elements});
+        globalThis.setTimeout=(fn,delay)=>{timers.push([fn,delay]);};
+        initControl(player,ui);
+        const check=(source,direction,target,tip,expectedNav=[])=>{
+            calls.length=tips.length=nav.length=timers.length=0;
+            const [catIdx,colIdx,albIdx,trackIdx]=source;
+            const current=ui.libraryData[catIdx].collections[colIdx].albums[albIdx];
+            player.currentPlaying={bvid:current.bvid,total:current.total,catIdx,colIdx,albIdx,trackIdx};
+            (direction>0?playNext:playPrev)();
+            const [bvid,page,total,cat,col,alb,part,element=null]=target;
+            assert.deepEqual(calls,[[bvid,page,total,cat,col,alb,element,part]]);
+            assert.deepEqual(tips,[tip]);
+            for(const [fn,delay] of timers){assert.equal(delay,300);fn();}
+            assert.deepEqual(nav,expectedNav);
+        };
+        check([0,0,0,0],1,['A',7,2,0,0,0,1,elements[1]],'⏭ 末段');
+        check([0,0,0,1],-1,['A',3,2,0,0,0,0,elements[0]],'⏮ 首段');
+        check([0,0,0,1],1,['B',4,2,0,0,1,0],'下一视频: B',[['render',0,0]]);
+        check([0,0,1,0],-1,['A',7,2,0,0,0,1],'上一视频: A',[['render',0,0]]);
+        check([0,0,1,1],1,['C',5,1,0,1,0,0],'进入合集: 二',[['collection',0,1]]);
+        check([0,1,0,0],-1,['B',1,2,0,0,1,1],'上一合集: 一',[['collection',0,0]]);
+        check([0,1,0,0],1,['D',6,2,1,0,0,0],'进入分类: 乙',[['category',1],['collection',1,0]]);
+        check([1,0,0,0],-1,['C',5,1,0,1,0,0],'上一分类: 甲',[['category',0],['collection',0,1]]);
+        check([1,0,0,1],1,['A',3,2,0,0,0,0],'循环播放: 回到开头',[['category',0],['collection',0,0]]);
+        check([0,0,0,0],-1,['D',9,2,1,0,0,1],'循环播放: 跳至队尾',[['category',1],['collection',1,0]]);
+        player.currentPlaying=null;playNext();assert.equal(tips.at(-1),'未播放歌曲');
+        """
+        self.run_node_esm(body,preamble=(MOCK_DOM,mock_window('/music.html')))
+
+    def test_shared_filters_keep_nested_keyword_and_tag_semantics(self):
+        """筛选仍遍历不匹配的父节点，保持关键词或关系及标签与、或、排除关系。"""
+        body = """
+        const {Search}=await import('./shared/utils.module.js');
+        const tree=[{id:'parent',name:'Parent',tags:['x'],children:[
+            {id:'child',title:'Child Beta',tags:['x','y']}]},
+            {id:'other',name:'Beta',tags:['y']},{id:'empty',name:'Beta',tags:[]},
+            {id:'missing',name:'Beta'}];
+        const ids=(tags,query,mode)=>Search.filterNodes(tree,new Set(tags),query,mode).map(n=>n.id);
+        assert.deepEqual(ids(['x','y'],'','AND'),['child']);
+        assert.deepEqual(ids(['x','y'],'','OR'),['parent','child','other']);
+        assert.deepEqual(ids(['x'],'beta','DEL'),['other','empty']);
+        assert.deepEqual(ids(['y'],'PARENT，CHILD','AND'),['child']);
+        assert.deepEqual(ids([],'beta','AND'),['child','other','empty','missing']);
+        assert.deepEqual(ids([],'','AND'),['parent','child','other','empty','missing']);
+        """
+        self.run_node_esm(body)
+
 
     def test_20_theme_binds_switch_created_after_initialization(self):
         """后台先初始化主题、后注入按钮时，点击仍须应用主题并保存状态。"""
-        body = r"""
-        const fs = await import('node:fs');
-        const vm = await import('node:vm');
-        const classes = new Set(), frames = [], listeners = new Map();
-        const values = new Map([['theme','dark-mode'], ['autoThemeConfig',JSON.stringify({version:2,mode:'manual'})]]);
-        let checkbox = null;
-        const context = vm.createContext({ console, setTimeout, clearTimeout,
-            requestAnimationFrame: callback => frames.push(callback),
-            localStorage: {getItem:key=>values.get(key)??null, setItem:(key,value)=>values.set(key,value)},
-            document: {querySelector:()=>checkbox,getElementById:()=>null,
-                addEventListener:(name,callback)=>listeners.set(name,callback),
-                documentElement:{offsetWidth:100,style:{removeProperty(){}},classList:{
-                    contains:name=>classes.has(name),add:name=>classes.add(name),
-                    remove:(...names)=>names.forEach(name=>classes.delete(name)),
-                    toggle:(name,on)=>on?classes.add(name):classes.delete(name)}}},
-            window:{matchMedia:()=>({matches:false,addEventListener(){}})}
-        });
-        const module = new vm.SourceTextModule(fs.readFileSync('shared/theme/theme-core.module.js','utf8'),{context});
-        await module.link(()=>{throw Error('unexpected import');});
-        await module.evaluate();
-        module.namespace.initThemeCore();
-        checkbox={checked:true,matches:selector=>selector==='.theme-switch-checkbox'};
+        body = """
+        const fixture=await loadThemeFixture({version:2,mode:'manual'});
+        const {core,classes,values,listeners,flush}=fixture;
+        core.initThemeCore();
+        const checkbox={checked:true,matches:selector=>selector==='.theme-switch-checkbox'};
+        fixture.checkbox=checkbox;
         const click=()=>{checkbox.checked=!checkbox.checked;listeners.get('change')?.({target:checkbox});};
-        const flush=()=>{while(frames.length)frames.shift()();};
         click();flush();
         assert.equal(classes.has('light-mode'),true,'按钮后注入也必须切换整页主题');
         assert.equal(values.get('theme'),'light-mode');
@@ -299,7 +352,9 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         assert.equal(classes.has('light-mode'),false,'连续点击的目标状态不能丢失');
         assert.equal(checkbox.checked,true);
         """
-        self.run_node_esm(body, node_args=('--experimental-vm-modules', '--no-warnings'))
+        self.run_node_esm(body, preamble=(MOCK_THEME_RUNTIME,),
+                          node_args=('--experimental-vm-modules', '--no-warnings'))
+
 
     def test_21_navigation_request_shared_and_retryable(self):
         """导航消费者复用并发请求、互不修改卡片，失败后可重试。"""
@@ -344,256 +399,6 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         """
         self.run_node_esm(body, node_args=('--experimental-vm-modules', '--no-warnings'))
 
-    def test_02_webcrypto_aes_gcm_and_keyring_lifecycle(self):
-        """AES-256-GCM 加解密、双层密钥环派生、改密不改 DEK、恢复码重置与错误口令拒绝"""
-        body = """
-        const {
-            ENC_FIELD, importDataKey, wrapRecord, unwrapRecord, isEncryptedString, isEncryptedRecord,
-            setSessionKeyRaw, getSessionKey, getSessionKeyRaw, clearSessionKey,
-            getAccessToken, getAccessTokenHash
-        } = await import('./data-manage/encrypt/crypto.module.js');
-        const {
-            isValidKeyring, createKeyring, unlockWithPassword, unlockWithRecovery,
-            rewrapPassword, regenerateRecovery
-        } = await import('./data-manage/encrypt/keyring.module.js');
-
-        // 1. 创建双层密钥环并校验结构
-        const { keyring, recoveryCode, dekRaw } = await createKeyring('MasterPass#2026', 'https://worker.example.com/');
-        assert.equal(isValidKeyring(keyring), true);
-        const publicRing = { v: keyring.v, dek_id: keyring.dek_id, pw: keyring.pw, media_base: keyring.media_base };
-        assert.equal(isValidKeyring(publicRing), true);
-        assert.deepEqual(await unlockWithPassword(publicRing, 'MasterPass#2026'), dekRaw);
-        assert.equal(keyring.dek_id.length, 16);
-
-        // 2. 主密码与（小写、空格分隔的）恢复码均解出同一 DEK，错误口令返回 null
-        assert.deepEqual(await unlockWithPassword(keyring, 'MasterPass#2026'), dekRaw);
-        assert.deepEqual(await unlockWithRecovery(keyring, recoveryCode.toLowerCase().replace(/-/g, ' ')), dekRaw);
-        assert.equal(await unlockWithPassword(keyring, 'WrongPassword!'), null);
-        assert.equal(await unlockWithRecovery(keyring, 'AAAA-BBBB-CCCC-DDDD-EEEE-FFFF-GGGG-HHHH'), null);
-
-        // 3. 会话密钥存取与访问令牌派生（同一 DEK 派生结果稳定）
-        setSessionKeyRaw(dekRaw);
-        const sessionKey = await getSessionKey();
-        assert.ok(sessionKey);
-        assert.deepEqual(getSessionKeyRaw(), dekRaw);
-        const token = await getAccessToken();
-        assert.equal(token.length, 64);
-        assert.equal((await getAccessTokenHash()).length, 64);
-        assert.equal(await getAccessToken(), token);
-
-        // 4. 记录级加密往返；两次加密同一明文必须产生不同密文（随机 IV）
-        const sample = { id: 'n_1', title: '绝密设计稿', tags: ['E2EE', 'AES-GCM'], nested: { count: 42 } };
-        const wrapped = await wrapRecord(sample, sessionKey);
-        assert.equal(isEncryptedRecord(wrapped), true);
-        assert.equal(isEncryptedString(wrapped[ENC_FIELD]), true);
-        assert.ok(!wrapped[ENC_FIELD].includes('绝密'));
-        assert.notEqual((await wrapRecord(sample, sessionKey))[ENC_FIELD], wrapped[ENC_FIELD]);
-        assert.deepEqual(await unwrapRecord(wrapped, sessionKey), sample);
-
-        // 5. 改密后 dek_id 不变、旧密码失效、旧密文仍可解
-        const rotated = await rewrapPassword(keyring, dekRaw, 'NewMasterPass#9999');
-        assert.equal(rotated.dek_id, keyring.dek_id);
-        assert.equal(await unlockWithPassword(rotated, 'MasterPass#2026'), null);
-        const byNewPw = await unlockWithPassword(rotated, 'NewMasterPass#9999');
-        assert.deepEqual(byNewPw, dekRaw);
-        assert.deepEqual(await unwrapRecord(wrapped, await importDataKey(byNewPw)), sample);
-
-        // 6. 重新生成恢复码后旧码立即失效
-        const { keyring: regen, recoveryCode: newRc } = await regenerateRecovery(rotated, dekRaw);
-        assert.equal(await unlockWithRecovery(regen, recoveryCode), null);
-        assert.deepEqual(await unlockWithRecovery(regen, newRc), dekRaw);
-
-        clearSessionKey();
-        assert.equal(await getSessionKey(), null);
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE,))
-
-    def test_03_cms_node_pack_unpack_and_lock_tree_state(self):
-        """packCmsNodeForLock 打包 -> unpackRevealedNode 还原 -> extractLockedNodes / applyLockActionLocally 状态机"""
-        fetch_mock = """
-        globalThis.fetch = async (url) => {
-            if (url === 'data/photos-data.json') {
-                return { ok: true, json: async () => ({ _notes: [{
-                    id: 'p_cov1', name: 'c1.avif',
-                    path: 'photos/images/_notes/c1.avif',
-                    thumb: 'photos/thumbnails/_notes/c1.webp',
-                    preview: 'photos/previews/_notes/c1.avif'
-                }] }) };
-            }
-            if (url === 'data/notes/child.md') {
-                return { ok: true, text: async () => '# 子笔记正文\\n内容引用末尾.md' };
-            }
-            return { ok: false, status: 404 };
-        };
-        """
-        body = """
-        const { randomBytes, setSessionKeyRaw, getSessionKey, unwrapRecord } = await import('./data-manage/encrypt/crypto.module.js');
-        const { packCmsNodeForLock, collectCmsPrivateCoverKeys } = await import('./data-manage/encrypt/admin-lock.module.js');
-        const { unpackRevealedNode, extractLockedNodes, applyLockActionLocally } = await import('./data-manage/encrypt/private-media.module.js');
-
-        setSessionKeyRaw(randomBytes(32));
-        const key = await getSessionKey();
-
-        // 1. 打包含封面、子笔记及已加密兄弟节点的文件夹
-        const folderNode = {
-            id: 'f_sec', type: 'folder', title: '私密目录', tags: ['归档'],
-            coverImage: 'https://media.example.com/photos/images/_notes/c1.avif',
-            children: [{ id: 'n_sub', type: 'note', title: '子笔记', tags: ['A'], content: 'notes/child.md', coverImage: null }]
-        };
-        const existingLocked = [{ id: 'n_already_locked', parentId: 'f_sec', index: 0, _enc: 'enc:iv0.ct0' }];
-        const packed = await packCmsNodeForLock(folderNode, existingLocked);
-        assert.ok(packed && packed.enc.startsWith('enc:'));
-        assert.ok(!packed.enc.includes('私密目录'), '密文中不得出现明文标题');
-        assert.deepEqual(packed.covers, ['photos/images/_notes/c1.avif']);
-
-        // 2. 提取三尺寸私有桶 Key
-        assert.deepEqual(await collectCmsPrivateCoverKeys({ id: 'f_sec', _enc: packed.enc }), [
-            'photos/images/_notes/c1.avif',
-            'photos/thumbnails/_notes/c1.webp',
-            'photos/previews/_notes/c1.avif'
-        ]);
-
-        // 3. 解包并转换为私有桶签名 URL
-        const tree = await unwrapRecord({ _enc: packed.enc }, key);
-        const revealed = unpackRevealedNode(tree, (k) => `https://worker.dev/private/${k}?t=tok123`);
-        assert.equal(revealed.coverImage, 'https://worker.dev/private/photos/images/_notes/c1.avif?t=tok123');
-        assert.equal(revealed.coverThumb, 'https://worker.dev/private/photos/thumbnails/_notes/c1.webp?t=tok123');
-        assert.equal(revealed.children.length, 2);
-        assert.equal(revealed.children[0].id, 'n_already_locked');
-        assert.equal(revealed.children[0]._enc, 'enc:iv0.ct0');
-        // 以 .md 结尾的正文应追加换行，防止被误判为路径
-        assert.equal(revealed.children[1].content, '# 子笔记正文\\n内容引用末尾.md\\n');
-
-        // 4. 内存锁定状态机
-        const state = {
-            root: [{ id: 'n_pub', type: 'note', title: '公开' }, { id: 'n_lock1', type: 'locked', _enc: 'enc:iv1.ct1' }],
-            lockedNodes: [], allNodes: []
-        };
-        const flatten = (list) => list.forEach(n => { state.allNodes.push(n); if (n.children) flatten(n.children); });
-        extractLockedNodes(state.root, state.lockedNodes);
-        assert.equal(state.root.length, 1);
-        assert.deepEqual(state.lockedNodes.map(n => [n.id, n.index]), [['n_lock1', 1]]);
-
-        applyLockActionLocally(state, flatten, 'lock', { id: 'n_pub', enc: 'enc:iv_pub.ct_pub' });
-        assert.equal(state.root.length, 0);
-        assert.equal(state.lockedNodes.length, 2);
-
-        applyLockActionLocally(state, flatten, 'unlock', {
-            id: 'n_pub', tree: { id: 'n_pub', type: 'note', title: '公开还原', md: '还原正文' }
-        });
-        assert.equal(state.root.length, 1);
-        assert.equal(state.root[0].title, '公开还原');
-        assert.equal(state.root[0]._draftContent, '还原正文');
-        assert.equal(state.root[0]._pendingRelay, true);
-
-        applyLockActionLocally(state, flatten, 'delete', { id: 'n_lock1' });
-        assert.equal(state.lockedNodes.length, 0);
-        """
-        self.run_node_esm(body, preamble=(
-            MOCK_SESSION_STORAGE, MOCK_DOM, mock_window('/admin-cms.html', is_admin=True), fetch_mock,
-        ))
-
-    def test_04_secret_unlock_reveal_in_place_and_page_guard(self):
-        """lockIndexCardRecord 生成 _guard；revealInPlace 访客态递归还原、管理态严格跳过"""
-        body = """
-        const { randomBytes, setSessionKeyRaw, getSessionKey, wrapRecord } = await import('./data-manage/encrypt/crypto.module.js');
-        const { lockIndexCardRecord } = await import('./data-manage/encrypt/admin-lock.module.js');
-        const { revealInPlace, pageGuardHash } = await import('./data-manage/encrypt/secret-unlock.module.js');
-
-        setSessionKeyRaw(randomBytes(32));
-        const key = await getSessionKey();
-
-        // 1. 首页卡片加锁生成页面守卫哈希
-        const lockedCard = await lockIndexCardRecord({ id: 'card_lit', title: '文学', url: 'literature.html' });
-        assert.ok(lockedCard._enc);
-        assert.equal(lockedCard._guard, await pageGuardHash('literature.html'));
-
-        // 2. 管理态不得原地解密（防止明文被误保存回仓库）
-        globalThis.window.IS_ADMIN = true;
-        const adminList = [{ ...lockedCard }];
-        assert.equal(await revealInPlace(adminList), 0);
-        assert.ok(adminList[0]._enc);
-
-        // 3. 访客态递归还原父子密文
-        globalThis.window.IS_ADMIN = false;
-        const encChild = await wrapRecord({ id: 'c_1', title: '子项' }, key);
-        const visitorList = [await wrapRecord({ id: 'p_1', title: '父项', children: [encChild] }, key)];
-        assert.equal(await revealInPlace(visitorList, { getChildren: (r) => r.children }), 2);
-        assert.equal(visitorList[0].title, '父项');
-        assert.equal(visitorList[0].children[0].title, '子项');
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, mock_window('/index.html', is_admin=False)))
-
-    def test_05_sync_manager_relay_queue_and_state_replay(self):
-        """SyncManager 草稿入队、云端/本地队列去重合并、按时间戳回放及图库批量直传"""
-        fetch_mock = """
-        const pushedPayloads = [];
-        globalThis.fetch = async (url, opts = {}) => {
-            const ok = (data) => ({ ok: true, json: async () => data });
-            if (url.endsWith('/push')) {
-                pushedPayloads.push(JSON.parse(opts.body));
-                return ok({ success: true, key: 'k_' + pushedPayloads.length });
-            }
-            if (url.endsWith('/pull')) {
-                return ok({ success: true, items: [
-                    ...pushedPayloads.map((d, i) => ({ key: 'k_' + i, data: d })),
-                    { key: 'k_remote_lock', data: {
-                        module: 'notes', action: 'lock',
-                        data: { id: 'n_remote_1', enc: 'enc:iv_r.ct_r' }, timestamp: Date.now() + 50
-                    } }
-                ] });
-            }
-            if (url.includes('/upload')) {
-                return ok({ success: true, name: 'r2_1.jpg',
-                            url: 'https://media.example.com/photos/images/travel/r2_1.jpg',
-                            key: 'photos/images/travel/r2_1.jpg' });
-            }
-            return ok({ success: true });
-        };
-        """
-        body = """
-        const { SyncManager } = await import('./data-manage/sync/sync-manager.module.js');
-        const sm = new SyncManager();
-        sm.saveConfig({ mode: 'relay', relay: { endpoint: 'https://relay.example.com', secret: 'sec_123' } });
-        assert.equal(sm.getEffectiveMode(), 'relay');
-
-        // 1. 新增与更新草稿入队
-        const state1 = { root: [], allNodes: [] };
-        const addRes = await sm.handleRelayAction('notes', 'add',
-            { id: 'n_mobile_1', parentId: 'root', type: 'note', title: '手机速记' }, state1);
-        assert.equal(addRes.success, true);
-        assert.equal(state1.root.length, 1);
-        assert.equal(state1.root[0]._pendingRelay, true);
-
-        await sm.handleRelayAction('notes', 'update',
-            { id: 'n_mobile_1', data: { title: '手机速记-已改', content: '新正文' } }, state1);
-        assert.equal(state1.root[0].title, '手机速记-已改');
-        assert.equal(state1.root[0]._draftContent, '新正文');
-
-        // 2. 刷新后合并本地与云端队列，自定义动作回调
-        const fresh = { root: [], allNodes: [] };
-        const customActions = [];
-        await sm.applyPendingToState('notes', fresh, (item) => {
-            if (item.action === 'lock') customActions.push(item.data.id);
-        });
-        assert.equal(fresh.root.length, 1, '本地与云端重复条目应去重');
-        assert.equal(fresh.root[0].title, '手机速记-已改');
-        assert.equal(fresh.root[0]._draftContent, '新正文');
-        assert.deepEqual(customActions, ['n_remote_1']);
-
-        // 3. 图库批量直传
-        const loaded = [];
-        const file = new Blob(['IMG_BYTES'], { type: 'image/jpeg' });
-        file.name = 'shot.jpg';
-        const batch = await sm.uploadPhotosBatch([file], 'travel', loaded);
-        assert.equal(batch.success, true);
-        assert.equal(loaded.length, 1);
-        assert.equal(loaded[0]._pendingRelay, true);
-        assert.ok(pushedPayloads.some(p => p.module === 'photos' && p.action === 'upload'));
-        """
-        self.run_node_esm(body, preamble=(
-            MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-cms.html', hostname='example.com'), fetch_mock,
-        ))
 
     def test_06_markdown_preprocess_wikilinks_and_alerts(self):
         """图片相对路径归一化、[[双链]] 转换与代码块免疫保护"""
@@ -604,6 +409,11 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
             '附图1：![架构图](../../photos/images/_notes/arch.avif)',
             '附图2：![预览图](/photos/previews/_notes/prev.webp)',
             '参看 [[核心架构设计]] 与 [[底层加密协议|加密规范文档]]。',
+            '```mindmap-both',
+            '- 中心主题',
+            '  - 左分支',
+            '  - 右分支',
+            '```',
             '```markdown',
             '![代码块内不替换](../../photos/images/_notes/ignore.png)',
             '[[代码块内双链不替换]]',
@@ -614,104 +424,12 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         assert.ok(out.includes('![预览图](photos/previews/_notes/prev.webp)'), '未将 /photos/ 归一化');
         assert.ok(out.includes('<a href="核心架构设计.md" class="cms-wikilink">核心架构设计</a>'), '基础双链转换错误');
         assert.ok(out.includes('<a href="底层加密协议.md" class="cms-wikilink">加密规范文档</a>'), '带别名双链转换错误');
+        assert.ok(out.includes('```mindmap\\n%% direction: both\\n- 中心主题'), '双向思维导图标记未归一化');
         assert.ok(out.includes('![代码块内不替换](../../photos/images/_notes/ignore.png)'), '代码块内图片路径不应被修改');
         assert.ok(out.includes('[[代码块内双链不替换]]'), '代码块内双链语法不应被修改');
         """
         self.run_node_esm(body)
 
-
-    def test_07_sync_failures_and_ordered_retry(self):
-        """失败入队不改本地状态；失败回放停止后续操作；确认重试不重复入库"""
-        body = """
-        const { SyncManager } = await import('./data-manage/sync/sync-manager.module.js');
-        const sm = new SyncManager();
-        sm.saveConfig({ mode: 'relay', relay: { endpoint: 'https://relay.example.com', secret: 'test' } });
-        sm.Controller = { loadData: async () => {}, refreshView() {} };
-        let acceptPush = false, pushes = 0, ackOk = false, rejectUpdate = true, applied = [];
-        let queue = ['add', 'update', 'delete'].map((action, i) => ({ key: String(i), data: {
-            module: 'notes', action, data: { id: 'n1' }, timestamp: i
-        } }));
-        globalThis.fetch = async (url, opts = {}) => {
-            const ok = data => ({ ok: true, json: async () => data });
-            if (url.endsWith('/api/crypto/admin-status')) return ok({has_encrypted:false});
-            if (url.endsWith('/api/session')) return ok({ token: 'test-session' });
-            if (url.endsWith('/push')) {
-                pushes++; await Promise.resolve();
-                return acceptPush ? ok({ id: 'p1' }) : { ok: false, status: 503, text: async () => 'offline' };
-            }
-            if (url.endsWith('/pull')) return ok({ items: queue });
-            if (url.endsWith('/ack')) {
-                if (ackOk) { const keys = JSON.parse(opts.body).keys; queue = queue.filter(item => !keys.includes(item.key)); }
-                return { ok: ackOk };
-            }
-            const action = new URL(url, 'https://local.example').searchParams.get('action');
-            applied.push(action);
-            return ok({ success: !(rejectUpdate && action === 'update'), msg: 'retry' });
-        };
-        const state = { root: [], allNodes: [] };
-        const data = { id: 'n1', type: 'note', title: '草稿' };
-        assert.equal((await sm.handleRelayAction('notes', 'add', data, state)).success, false);
-        assert.equal(state.root.length, 0);
-        assert.equal(sm.localPendingSessionItems.length, 0);
-        acceptPush = true;
-        await Promise.all([sm.handleRelayAction('notes', 'add', data, state), sm.handleRelayAction('notes', 'add', data, state)]);
-        assert.equal(pushes, 2, '并发同一草稿只发一次');
-        assert.equal(state.root.length, 1);
-        assert.equal(await sm.pullAndMerge(), false);
-        assert.deepEqual(applied, ['add', 'update']);
-        assert.equal(sm.pendingItemsCount, 3, '确认失败不能减少云端待同步数');
-        rejectUpdate = false; ackOk = true;
-        assert.equal(await sm.pullAndMerge(), true);
-        assert.deepEqual(applied, ['add', 'update', 'update', 'delete'], '已经入库的 add 不得重放');
-        assert.equal(sm.pendingItemsCount, 0);
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-cms.html')))
-
-    def test_33_toolbar_label_shows_pending_merge_count(self):
-        """本地模式有云端草稿时顶栏须显示“待合并”，且与待 Git 数同时可见。"""
-        body = """
-        const { SyncManager } = await import('./data-manage/sync/sync-manager.module.js');
-        const sm = new SyncManager();
-        assert.equal(sm.getButtonLabel(), '本地模式');
-        sm.pendingItemsCount = 2;
-        assert.equal(sm.getButtonLabel(), '待合并(2)');
-        sm.pendingGitCount = 3;
-        assert.equal(sm.getButtonLabel(), '待合并(2) · 待Git(3)');
-        sm.pendingItemsCount = 0;
-        assert.equal(sm.getButtonLabel(), '待Git(3)');
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-cms.html')))
-
-    def test_08_photo_registration_retry_and_private_routing(self):
-        """登记失败不显示上传成功；重试复用文件；私有文件不会落入公开上传接口"""
-        body = """
-        const { SyncManager } = await import('./data-manage/sync/sync-manager.module.js');
-        const sm = new SyncManager();
-        sm.saveConfig({ mode: 'local', relay: { endpoint: 'https://relay.example.com', secret: 'test' } });
-        let uploads = 0, acceptPush = false, privateScope = null;
-        globalThis.fetch = async (url, opts = {}) => {
-            if (url.endsWith('/api/crypto/admin-status')) return {ok:true,json:async()=>({has_encrypted:false})};
-            if (url.endsWith('/api/session')) return { ok: true, json: async () => ({ token: 'test-session' }) };
-            if (url.endsWith('/pull')) return { ok: true, json: async () => ({ items: [] }) };
-            if (url.endsWith('/push')) return acceptPush
-                ? { ok: true, json: async () => ({ id: 'k1' }) }
-                : { ok: false, status: 503, text: async () => 'retry' };
-            uploads++;
-            if (url.startsWith('https://relay.example.com')) privateScope = opts.body.get('scope');
-            else assert.ok(url.includes('category=travel'));
-            return { ok: true, json: async () => ({ path: 'photos/images/travel/a.jpg', url: 'private/a', key: 'private/a', name: 'a.jpg' }) };
-        };
-        const file = new Blob(['abc']); file.name = 'a.jpg';
-        const loaded = [];
-        const failed = await sm.uploadPhotosBatch([file], 'travel', loaded);
-        assert.equal(failed.success, false); assert.equal(loaded.length, 0);
-        acceptPush = true;
-        assert.equal((await sm.uploadPhotosBatch([file], 'travel', loaded)).success, true);
-        assert.equal(uploads, 1); assert.equal(loaded.length, 1);
-        await sm.uploadFile(file, 'secret', 'private');
-        assert.equal(privateScope, 'private');
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-cms.html')))
 
     def test_09_file_watcher_discards_stale_results(self):
         """切换文档、输入编辑和关闭阅读器后，迟到的外部文件刷新不能覆盖内容"""
@@ -721,13 +439,13 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         window.addEventListener = (name, fn) => events.set(name, fn);
         window.removeEventListener = (name, fn) => { if (events.get(name) === fn) events.delete(name); };
         document.addEventListener = () => {}; document.removeEventListener = () => {};
-        let node = { _mdPath: 'notes/a.md', _rawMd: 'a' }, dirty = false, changes = 0, resolve;
+        let node = { _mdPath: 'markdown/notes/a.md', _rawMd: 'a' }, dirty = false, changes = 0, resolve;
         globalThis.fetch = () => new Promise(done => { resolve = done; });
         const watcher = createReaderFileWatcher({ getNode: () => node, isDirty: () => dirty,
             isLocal: () => true, onChange: () => changes++ });
         watcher.start();
         const first = events.get('focus')();
-        node = { _mdPath: 'notes/b.md', _rawMd: 'b' };
+        node = { _mdPath: 'markdown/notes/b.md', _rawMd: 'b' };
         watcher.start(); resolve({ ok: true, text: async () => 'old A' }); await first;
         assert.equal(node._rawMd, 'b'); assert.equal(changes, 0);
         const second = events.get('focus')(); dirty = true;
@@ -739,47 +457,129 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         """
         self.run_node_esm(body, preamble=(MOCK_DOM, mock_window('/admin-cms.html')))
 
-    def test_10_lock_pack_preserves_nested_ciphertext_and_inline_markdown(self):
-        """嵌套密文与内联正文不丢失，封面索引读取失败会阻止迁移"""
-        body = """
-        const { setSessionKeyRaw, getSessionKey, unwrapRecord } = await import('./data-manage/encrypt/crypto.module.js');
-        const { packCmsNodeForLock } = await import('./data-manage/encrypt/admin-lock.module.js');
-        setSessionKeyRaw(crypto.getRandomValues(new Uint8Array(32)));
-        const node = { id: 'folder', type: 'folder', children: [
-            { id: 'locked', _enc: 'enc:keep-ciphertext' },
-            { id: 'inline', type: 'note', content: '# Inline', title: '内联' }
-        ] };
-        globalThis.fetch = async () => { throw Error('offline'); };
-        const packed = await packCmsNodeForLock(node);
-        const result = await unwrapRecord({ _enc: packed.enc }, await getSessionKey());
-        assert.equal(result.children[0]._enc, 'enc:keep-ciphertext');
-        assert.equal(result.children[1].md, '# Inline');
-        await assert.rejects(packCmsNodeForLock({ id: 'cover', type: 'note', content: '# test',
-            coverImage: 'photos/images/_notes/secret.avif' }), /封面索引/);
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, MOCK_LOCAL_STORAGE, MOCK_DOM, mock_window('/admin-cms.html')))
 
     def test_11_backlink_resolution_and_scroll_anchors(self):
         """链接按路径精确定位、同名歧义不误跳、加密子树不参与索引，滚动锚点忽略代码块标题"""
         body = """
-        const { resolveBacklink, accessibleNotes } = await import('./custom/cms/viewer/cms-backlinks.module.js');
+        const { resolveBacklink, accessibleNotes, findLinkedNote, backlinkUrl } = await import('./custom/cms/viewer/cms-backlinks.module.js');
         const { scanScrollAnchors, interpolateScroll } = await import('./custom/cms/viewer/cms-scroll-sync.module.js');
-        const a = { id: 'a', type: 'note', title: '同名', content: 'notes/a/同名.md' };
-        const b = { id: 'b', type: 'note', title: '同名', content: 'notes/b/同名.md' };
+        const a = { id: 'a', type: 'note', title: '同名', content: 'markdown/notes/a/同名.md' };
+        const b = { id: 'b', type: 'note', title: '同名', content: 'markdown/notes/b/同名.md' };
         const catalogue = [a, b].map(node => ({ module: 'notes', node }));
-        const source = { module: 'notes', node: { content: 'notes/index.md' } };
+        const source = { module: 'notes', node: { content: 'markdown/notes/index.md' } };
         assert.equal(resolveBacklink('同名.md', source, catalogue), null);
         assert.equal(resolveBacklink('b/同名.md#heading', source, catalogue).node.id, 'b');
         assert.equal(resolveBacklink('https://external.example/a.md', source, catalogue), null);
+        const query = value => new URLSearchParams(value);
+        assert.equal(findLinkedNote([a, b], query('openNote=同名')), null);
+        assert.equal(findLinkedNote([a, b], query('openNoteId=b&openNote=旧标题')), b);
+        assert.equal(findLinkedNote([a, b], query('openNoteId=deleted&openNote=同名')), null);
+        assert.equal(findLinkedNote([a], query('openNote=《同名》')), a);
+        assert.equal(findLinkedNote([a], query('')), null);
+        assert.equal(findLinkedNote([{ id: 'folder', type: 'folder', title: '同名' }], query('openNoteId=folder')), null);
+        assert.equal(resolveBacklink(backlinkUrl(catalogue[1]), source, catalogue).node, b);
+        assert.equal(resolveBacklink('?openNoteId=b', source, catalogue).node, b);
+        assert.equal(resolveBacklink(backlinkUrl(catalogue[1], true), source, catalogue).node, b);
+        b.title = '新标题';
+        assert.equal(findLinkedNote([a, b], query('openNoteId=b&openNote=旧标题')), b);
+        assert.equal(new URL(backlinkUrl(catalogue[1]), 'https://maers.invalid').searchParams.has('openNote'), false);
         assert.deepEqual(accessibleNotes([{ _enc: 'secret', children: [a] }, b]).map(n => n.id), ['b']);
         const anchors = scanScrollAnchors(['# heading', '```js', '# code', '```', '## next'].join('\\n'));
         assert.deepEqual(anchors.map(a => a.kind), ['heading', 'fence', 'heading']);
+        const table = scanScrollAnchors(['## 服务', '', '| 名称 | 用途 |', '| :--- | ---: |',
+            '| B2 | 图片 |', '| R2 | 正文 |', '', '下一段', '', '## 后续'].join('\\n'));
+        assert.deepEqual(table.map(a => a.kind), ['heading', 'table', 'heading']);
+        assert.deepEqual(table[1].rows, [2, 4, 5]);
+        assert.equal(table[1].end, 6);
+        const quoted = scanScrollAnchors('> | A | B |\\n> | --- | --- |\\n> | 1 | 2 |');
+        assert.deepEqual(quoted[0].rows, [0, 2]);
+        assert.deepEqual(scanScrollAnchors('```md\\n| A | B |\\n| --- | --- |\\n```').map(a => a.kind), ['fence']);
         assert.equal(interpolateScroll([{ source: 0, preview: 0 }, { source: 100, preview: 200 }], 50, 'source', 'preview'), 100);
         """
         self.run_node_esm(body)
 
+    def test_cms_shared_startup_waits_for_data_and_keeps_failed_saves(self):
+        """公共启动等待数据与专属视图；访客不接入后台，失败保存不隐藏保存条。"""
+        body = """
+        const fs = await import('node:fs');
+        const vm = await import('node:vm');
+        const { findLinkedNote } = await import('./custom/cms/viewer/cms-backlinks.module.js');
+        for (const admin of [false, true]) {
+            let start, release, save, cancel, visible = false, saved = false, tagsSaved = false, tagManager = null;
+            const calls = [], notices = [];
+            const note = { id: 'stable', type: 'note', title: '新标题' };
+            const manager = { initialSnapshot: 'clean', getSnapshot: () => 'dirty' };
+            const State = { IS_ADMIN: admin };
+            const Controller = { CONFIG: { IS_ADMIN: admin }, AppState: { allNodes: [note] } };
+            const View = { refreshView() {} };
+            const Tags = { getManager: () => tagManager,
+                toggleTagDrawer() { tagManager = manager; },
+                tagPerformSave: async () => tagsSaved, tagPerformCancel: async () => calls.push('cancel-tags') };
+            const Admin = { getManager: () => manager, performSave: async () => saved,
+                performCancel: async () => calls.push('cancel-nodes') };
+            const deps = { Controller, State, View, Tags, Admin, Drag: {}, Lightbox: {}, Search: {},
+                Events: {}, Render: {}, Recent: {}, findLinkedNote,
+                Reader: { open: async node => { assert.equal(node, note); calls.push('open'); } },
+                bootstrap: async () => { await new Promise(resolve => { release = resolve; }); calls.push('data'); return true; },
+                SaveButton: { init: (host, onSave, onCancel) => { save = onSave; cancel = onCancel; },
+                    show() { visible = true; }, hide() { visible = false; } },
+                Feedback: { notifySaveSuccess: () => notices.push('saved'), notifyCancel() {} },
+                Toast: { error: message => { throw Error(message); } } };
+            for (const name of ['initLayout', 'initTheme', 'initDrag', 'initState', 'initSearch',
+                'initEvents', 'initTags', 'initRender', 'initReader', 'setupViewEventListeners', 'initRecent']) {
+                deps[name] = () => {};
+            }
+            deps.initView = modules => assert.equal(modules.Admin, admin ? Admin : null);
+            const context = vm.createContext({ console, URLSearchParams,
+                window: { location: { search: '?openNoteId=stable&openNote=旧标题' } },
+                document: { readyState: 'loading', body: {}, addEventListener: (name, callback) => { start = callback; } } });
+            const fixture = new vm.SyntheticModule(Object.keys(deps), function () {
+                for (const [name, value] of Object.entries(deps)) this.setExport(name, value);
+            }, { context });
+            const module = new vm.SourceTextModule(fs.readFileSync('custom/cms/viewer/cms-page.module.js', 'utf8'), { context });
+            await module.link(() => fixture); await module.evaluate();
+            module.namespace.initCmsPage({ onReady: async () => { await Promise.resolve(); calls.push('view'); } });
+            const pending = start();
+            assert.deepEqual(calls, []);
+            release(); await pending;
+            assert.deepEqual(calls, ['data', 'view', 'open']);
+            assert.equal(Boolean(save), admin);
+            if (!admin) continue;
+            manager.onChange(); assert.equal(visible, true);
+            assert.equal(await save(), false); assert.equal(visible, true); assert.deepEqual(notices, []);
+            saved = true;
+            assert.equal(await save(), false); assert.equal(visible, true); assert.deepEqual(notices, []);
+            tagsSaved = true;
+            await save(); assert.equal(visible, false); assert.deepEqual(notices, ['saved']);
+            Tags.toggleTagDrawer(); tagManager.onChange(); assert.equal(visible, true);
+            await cancel(); assert.equal(visible, false);
+            assert.deepEqual(calls.slice(-2), ['cancel-nodes', 'cancel-tags']);
+        }
+        """
+        self.run_node_esm(body, node_args=('--experimental-vm-modules',))
+
+    def test_cms_module_metadata_is_shared_without_global_mount(self):
+        """模块名称、图标和数据文件来自同一配置，新增页面仍按自身名称读取。"""
+        body = """
+        globalThis.window = {};
+        const { ModuleConfig } = await import('./shared/module-config.module.js');
+        const fs = await import('node:fs');
+        for (const name of ['notes', 'record', 'literature', 'games', 'videos', 'music', 'album']) {
+            const config = ModuleConfig.get(name), title = ModuleConfig.getTitle(name);
+            assert.ok(fs.existsSync(config.icon)); assert.ok(fs.existsSync(config.dataFile));
+            assert.ok(title.includes(config.icon)); assert.ok(title.includes(config.title));
+        }
+        assert.equal(ModuleConfig.get('custom').dataFile, 'data/custom-tree.json');
+        assert.ok(ModuleConfig.getTitle('videos').includes('music-mode-btn'));
+        assert.ok(!ModuleConfig.getTitle('videos', true).includes('music-mode-btn'));
+        assert.equal(ModuleConfig.get('constructor').dataFile, 'data/constructor-tree.json');
+        assert.ok(ModuleConfig.getTitle('<script>').includes('&lt;SCRIPT&gt;'));
+        assert.equal(window.MAERS, undefined);
+        """
+        self.run_node_esm(body)
+
     def test_12_chart_resize_preserves_roam_and_collapse(self):
-        """ECharts 图表切换视口尺寸时保留平移、缩放和折叠状态；导图渲染在浏览器中验证。"""
+        """ECharts 原生缩放后切换尺寸，保持实际绘制位置、缩放和折叠状态。"""
         body = r"""
         const { createRequire } = await import('node:module');
         const require = createRequire(new URL('file://' + process.cwd().replaceAll('\\', '/') + '/runtime.cjs'));
@@ -788,21 +588,39 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         const chart = echarts.init(null, null, { renderer: 'svg', ssr: true, width: 800, height: 400 });
         try {
             chart.setOption({ animation: false, series: [{ type: 'tree', roam: true,
+                left: '16%', right: '8%', top: '12%', bottom: '16%',
                 data: [{ name: '根节点', children: [{ name: '分支', children: [{ name: '内容' }] }] }],
                 initialTreeDepth: -1 }] });
             chart.dispatchAction({ type: 'treeExpandAndCollapse', seriesIndex: 0, dataIndex: 2 });
-            chart.dispatchAction({ type: 'treeRoam', seriesIndex: 0, dx: 70, dy: 35 });
-            chart.dispatchAction({ type: 'treeRoam', seriesIndex: 0, zoom: 1.2, originX: 400, originY: 200 });
             const series = chart.getModel().getSeriesByIndex(0);
-            const relative = () => {
-                const coord = series.coordinateSystem, box = coord.getBoundingRect(), center = coord.getCenter();
-                return [(center[0] - box.x) / box.width, (center[1] - box.y) / box.height, coord.getZoom()];
+            // Exercise the native gesture handler: it updates the drawing group
+            // as well as the model. Do not force a resize before taking a snapshot.
+            const roam = (event, payload) => chart.getViewOfSeriesModel(series)._controller.trigger(event, payload);
+            const rootPosition = () => {
+                const data = series.getData(), root = data.tree.root.children[0];
+                const matrix = data.getItemGraphicEl(root.dataIndex).getComputedTransform();
+                return [matrix[4], matrix[5]];
             };
-            const before = relative();
+            const viewport = () => {
+                const point = rootPosition();
+                return [point[0] - chart.getWidth() / 2, point[1] - chart.getHeight() / 2,
+                    series.coordinateSystem.getZoom()];
+            };
+            roam('zoom', { scale: 1.2, originX: 400, originY: 200 });
+            const point = rootPosition();
+            roam('pan', { dx: chart.getWidth() / 2 - point[0], dy: chart.getHeight() / 2 - point[1] });
             const expanded = series.getData().tree.root.children[0].children[0].isExpand;
-            for (const [width, height] of [[520, 320], [1280, 720], [800, 400]]) resizeDiagramChart(chart, width, height);
-            relative().forEach((value, i) => assert.ok(Math.abs(value - before[i]) < 1e-6));
-            assert.equal(series.getData().tree.root.children[0].children[0].isExpand, expanded);
+            for (const [width, height] of [[520, 320], [2400, 625], [800, 400], [2400, 625], [800, 400]]) {
+                const before = viewport();
+                resizeDiagramChart(chart, width, height);
+                viewport().forEach((value, i) => assert.ok(Math.abs(value - before[i]) < 1e-6,
+                    `切换到 ${width}×${height} 须保持实际视口`));
+                assert.equal(series.getData().tree.root.children[0].children[0].isExpand, expanded);
+                if (width === 2400) {
+                    roam('zoom', { scale: 0.3, originX: width * 0.6, originY: height * 0.3 });
+                    roam('pan', { dx: 70, dy: 35 });
+                }
+            }
         } finally { chart.dispose(); }
         """
         self.run_node_esm(body)
@@ -819,8 +637,9 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         // 仅测试编译单元开放状态注入；生产模块保持原有门面。
         const hooks = `
             export { _renderMarkdownBody as renderFixture };
-            export function useFixture(node) {
+            export function useFixture(node, source) {
                 readerState.node = node; readerState.editingId = node.id; readerState.dirty = true;
+                readerState.sourceEditor = source;
             }
         `;
         const module = new vm.SourceTextModule(fs.readFileSync(file, 'utf8') + hooks, { identifier });
@@ -851,7 +670,7 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         let calls = 0, finish;
         const controller = { AppState: { allNodes: [node] }, refreshView() {},
             callApi: async () => { calls++; return { success: false }; } };
-        editor.initReader(controller); editor.useFixture(node);
+        editor.initReader(controller); editor.useFixture(node, textarea);
         assert.equal((await editor.save()).success, false);
         assert.equal(node._originalContent, '旧正文');
         assert.equal(textarea.value, '第一次编辑');
@@ -862,7 +681,11 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         assert.equal(node._originalContent, '第一次编辑');
         assert.equal(node._draftContent, '请求期间的第二次编辑');
         assert.equal(textarea.value, '请求期间的第二次编辑');
-        controller.callApi = async () => { calls++; return { success: true }; };
+        controller.callApi = async () => {
+            calls++;
+            controller.AppState.allNodes = [{ ...node, _draftContent: undefined }];
+            return { success: true };
+        };
         await Promise.all([editor.save(), editor.save()]);
         assert.equal(calls, 3, '并发保存相同内容不重复提交');
         assert.equal(node._originalContent, '请求期间的第二次编辑');
@@ -872,107 +695,310 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
                           node_args=('--experimental-vm-modules', '--no-warnings'))
 
 
+    def test_reader_preview_reuses_instances_by_source_and_theme(self):
+        """重复图表各自复用实例；改动源码、主题或已销毁的实例不复用。"""
+        body = r"""
+        const fs = await import('node:fs');
+        const vm = await import('node:vm');
+        const update = vm.runInNewContext(fs.readFileSync(
+            '_studio/tooling/vendor/vditor/patches/method-preview-content.js', 'utf8'));
+        let light = false, items = [], next = [];
+        const attributes = new Map();
+        const container = {
+            ownerDocument: { documentElement: { classList: { contains: () => light } } },
+            getAttribute: key => attributes.get(key) ?? null,
+            setAttribute: (key, value) => attributes.set(key, value),
+            querySelectorAll(selector) {
+                if (selector.startsWith('[data-processed')) return items.filter(item => item.processed);
+                const classes = selector.split(',').map(value => value.trim().slice(1));
+                return items.filter(item => classes.includes(`language-${item.type}`));
+            },
+            set innerHTML(value) { items = [...next]; }
+        };
+        const diagram = (type, source, processed = false) => ({
+            type, source, processed, state: { zoom: 2, collapsed: true },
+            classList: { contains: name => name === `language-${type}` },
+            textContent: source,
+            getAttribute: key => key === 'data-diagram-sig' ? `${type}:${source}` : null,
+            closest: () => ({ classList: { add() {} } }),
+            replaceWith(other) { items[items.indexOf(this)] = other; }
+        });
+        const first = diagram('echarts', 'same', true), second = diagram('echarts', 'same', true);
+        const mermaid = diagram('mermaid', 'graph TD; A-->B', true);
+        const flowchart = diagram('flowchart', 'st=>start: 开始', true);
+        const graphviz = diagram('graphviz', 'digraph {a -> b}', true);
+        const disposed = diagram('echarts', 'disposed', true);
+        disposed.__diagramChart = { isDisposed: () => true };
+        items = [first, second, mermaid, disposed, flowchart, graphviz];
+        next = [diagram('echarts', 'same'), diagram('echarts', 'same'),
+            diagram('mermaid', mermaid.source), diagram('echarts', 'changed'), diagram('echarts', 'disposed'),
+            diagram('flowchart', flowchart.source), diagram('graphviz', graphviz.source)];
+        update(container, 'next');
+        assert.equal(items[0], first); assert.equal(items[1], second);
+        assert.equal(items[2], mermaid); assert.equal(items[3], next[3]); assert.equal(items[4], next[4]);
+        assert.equal(items[5], flowchart); assert.equal(items[6], graphviz);
+        assert.equal(items[0].state.zoom, 2);
+        light = true;
+        next = [diagram('echarts', 'same'), diagram('mermaid', mermaid.source)];
+        update(container, 'light');
+        assert.equal(items[0], next[0]); assert.equal(items[1], next[1]);
+        """
+        self.run_node_esm(body)
+
+    def test_graphviz_preview_releases_workers_and_ignores_detached_results(self):
+        """Graphviz 成功、失败及关闭正文均释放线程和地址，旧结果不能回写。"""
+        body = r"""
+        const fs = await import('node:fs');
+        const vm = await import('node:vm');
+        let starts = 0, stops = 0, revokes = 0, writes = 0, elements = [];
+        const pending = [];
+        const factory = vm.runInNewContext(fs.readFileSync(
+            '_studio/tooling/vendor/vditor/patches/method-572.js', 'utf8'), {
+            console, Blob: class {},
+            Worker: class { constructor() { starts++; } terminate() { stops++; } },
+            Viz: class { renderSVGElement() { return new Promise((resolve, reject) => pending.push({ resolve, reject })); } },
+            document: { getElementById: () => ({ src: '/dist/viz.js' }) },
+            window: { URL: { createObjectURL: () => 'blob:graphviz', revokeObjectURL() { revokes++; } } }
+        });
+        const dependencies = id => ({
+            793: { g: { CDN: '' } }, 998: { G: async () => {} },
+            781: { graphvizRenderAdapter: { getElements: () => elements, getCode: () => 'digraph {a -> b}' } }
+        })[id];
+        dependencies.d = (target, getters) => {
+            for (const [key, get] of Object.entries(getters)) Object.defineProperty(target, key, { get });
+        };
+        const exports = {}; factory(null, exports, dependencies);
+        const element = () => {
+            const attributes = new Map();
+            return { isConnected: true, parentElement: { classList: { contains: () => false } },
+                setAttribute: (key, value) => attributes.set(key, value),
+                getAttribute: key => attributes.get(key) ?? null,
+                set innerHTML(value) { writes++; } };
+        };
+        const drain = async () => { for (let i = 0; i < 8; i++) await Promise.resolve(); };
+        const complete = element(); elements = [complete]; exports.v({}); await drain();
+        assert.equal(complete.getAttribute('data-processed'), 'pending');
+        exports.v({}); await drain(); assert.equal(starts, 1, '渲染期间不重复启动工作线程');
+        pending.shift().resolve({ outerHTML: '<svg/>' }); await drain();
+        assert.equal(complete.getAttribute('data-processed'), 'true');
+        assert.equal(complete.getAttribute('data-diagram-sig'), 'graphviz:digraph {a -> b}');
+        assert.equal(stops, 1); assert.equal(revokes, 1); assert.equal(writes, 1);
+        const removed = element(); elements = [removed]; exports.v({}); await drain();
+        removed.isConnected = false; removed.__disposeDiagramDOM();
+        pending.shift().resolve({ outerHTML: '<svg/>' }); await drain();
+        assert.equal(stops, 2); assert.equal(revokes, 2); assert.equal(writes, 1);
+        elements = [element()]; exports.v({}); await drain();
+        pending.shift().reject(Error('parse failure')); await drain();
+        assert.equal(stops, 3); assert.equal(revokes, 3);
+        """
+        self.run_node_esm(body)
+
+    def test_reader_layout_batches_work_and_reuses_measurement_nodes(self):
+        """连续尺寸通知合并执行，长源码按锚点分段且重排不重建，销毁后取消待办。"""
+        body = r"""
+        const timers = new Map(), frames = new Map();
+        let sequence = 0, created = 0, replacements = 0, resizeCallback;
+        globalThis.setTimeout = callback => { const id = ++sequence; timers.set(id, callback); return id; };
+        globalThis.clearTimeout = id => timers.delete(id);
+        globalThis.requestAnimationFrame = callback => { const id = ++sequence; frames.set(id, callback); return id; };
+        globalThis.cancelAnimationFrame = id => frames.delete(id);
+        const flush = () => {
+            for (const queue of [timers, frames]) for (const [id, callback] of [...queue]) {
+                if (queue.delete(id)) callback();
+            }
+        };
+        class Element {
+            constructor() {
+                this.style = {}; this.children = []; this.listeners = new Map();
+                this.scrollTop = 0; this.scrollHeight = 50000; this.clientHeight = 400; this.clientWidth = 500;
+                this.classList = { contains: () => false, add() {} };
+            }
+            setAttribute() {}
+            appendChild(node) { this.children.push(node); return node; }
+            replaceChildren(fragment) { this.children = fragment.children; replacements++; }
+            remove() {}
+            addEventListener(name, callback) { this.listeners.set(name, callback); }
+            removeEventListener(name, callback) { if (this.listeners.get(name) === callback) this.listeners.delete(name); }
+            getBoundingClientRect() { return { top: 0, height: 1 }; }
+            closest() { return null; }
+            setSelectionRange() {}
+            focus() {}
+        }
+        globalThis.document = {
+            body: new Element(),
+            createElement() { created++; return new Element(); },
+            createDocumentFragment: () => new Element()
+        };
+        globalThis.window = new Element();
+        globalThis.getComputedStyle = () => ({ fontFamily: 'monospace', fontSize: '14px', lineHeight: '20px' });
+        globalThis.ResizeObserver = class {
+            constructor(callback) { resizeCallback = callback; }
+            observe() {} disconnect() {}
+        };
+        const { createReaderScrollSync } = await import('./custom/cms/viewer/cms-scroll-sync.module.js');
+        const preview = new Element(), content = new Element(), source = new Element(), drawer = new Element();
+        source.ownerDocument = document;
+        source.scrollElement = source; source.host = source;
+        source.lineTop = line => line * 20;
+        source.value = '# 开始\n' + '正文\n'.repeat(1798) + '## 结尾';
+        content.querySelectorAll = selector => selector.startsWith('h1') ? [new Element(), new Element()] : [];
+        const sync = createReaderScrollSync({ preview, content, source, drawer });
+        sync.drawerChanged(0, true);
+        for (let i = 0; i < 20; i++) { source.clientWidth++; resizeCallback(); }
+        assert.equal(created, 0, '抽屉过渡期间不创建源码测量节点');
+        drawer.listeners.get('transitionend')({ target: drawer, propertyName: 'width' });
+        assert.equal(created, 0, '直接读取编辑器行位置，不创建全文镜像节点');
+        assert.equal(replacements, 0);
+        const allocation = created;
+        for (let i = 0; i < 20; i++) { source.clientWidth++; resizeCallback(); }
+        assert.equal(timers.size, 1, '连续通知只保留一次待测量任务');
+        flush();
+        assert.equal(created, allocation, '宽度变化复用已存在的测量节点');
+        assert.equal(replacements, 0);
+        sync.drawerChanged(0, false); sync.destroy();
+        assert.equal(timers.size, 0); assert.equal(frames.size, 0);
+        assert.equal(drawer.listeners.size, 0); assert.equal(source.listeners.size, 0);
+
+        // 大表格后同一个标题应对齐；折行改变行高后，双向定位仍使用新坐标。
+        source.value = ['## 4', '', '| A | B |', '| --- | --- |', ...Array(5).fill('| 数据 | 内容 |'),
+            '', '表格后的说明', '', '## 5', '', ...Array(100).fill('后续正文')].join('\n');
+        let lineHeight = 20;
+        source.lineTop = line => line * lineHeight;
+        source.getBoundingClientRect = () => ({top: 100, height: 400});
+        const at = (top, height = 40) => Object.assign(new Element(), {
+            getBoundingClientRect: () => ({top: top - preview.scrollTop, height})
+        });
+        const rows = [100, 300, 500, 750, 950, 1140].map(top => at(top));
+        const tableElement = at(100, 1100), headings = [at(40), at(1260)];
+        tableElement.querySelectorAll = () => rows;
+        content.querySelectorAll = selector => selector.startsWith('h1') ? headings : selector === 'table' ? [tableElement] : [];
+        const aligned = createReaderScrollSync({preview, content, source, drawer});
+        source.scrollTop = source.lineTop(9);
+        source.listeners.get('scroll')({currentTarget: source}); flush();
+        assert.equal(headings[1].getBoundingClientRect().top, 100 + source.lineTop(12) - source.scrollTop,
+            '表格之后的标题不能在两边相差一整个表格');
+        lineHeight = 40;
+        source.scrollTop = source.lineTop(5);
+        source.listeners.get('sourcelayout')(); flush();
+        assert.equal(rows[2].getBoundingClientRect().top, 100, '编辑器折行后必须丢弃旧行高缓存');
+        preview.scrollTop = 850;
+        preview.listeners.get('scroll')({currentTarget: preview}); flush();
+        assert.equal(source.scrollTop, source.lineTop(7), '正文滚动也应按表格行反向定位');
+        aligned.destroy();
+        assert.equal(source.listeners.size, 0);
+
+        const { mountDiagramFullscreenButton } = await import('./custom/cms/viewer/cms-diagrams.module.js');
+        const card = new Element();
+        let resizes = 0, width = 500;
+        card.isConnected = true; card.tagName = 'DIV'; card.style = {};
+        card.querySelector = () => null;
+        card.getAttribute = () => 'true';
+        card.__diagramChart = { isDisposed: () => false, getWidth: () => width, getHeight: () => 400,
+            getModel: () => ({ eachSeries() {} }), resize(options) { width = options.width; resizes++; } };
+        document.createElement = () => ({ ...new Element(), querySelector: () => ({ src: '' }),
+            addEventListener() {}, setAttribute() {} });
+        getComputedStyle = () => ({ paddingLeft: '0', paddingRight: '0', paddingTop: '0', paddingBottom: '0' });
+        mountDiagramFullscreenButton(card);
+        for (let i = 0; i < 20; i++) { card.clientWidth++; resizeCallback(); }
+        assert.equal(resizes, 0, '连续尺寸变化期间不逐帧重绘');
+        assert.equal(timers.size, 1);
+        flush(); assert.equal(resizes, 1);
+        resizeCallback(); card.__disposeDiagramDOM(); flush();
+        assert.equal(resizes, 1, '销毁后不能执行迟到的重排');
+        """
+        self.run_node_esm(body)
+
     def test_14_initial_page_revealed_once_after_guard(self):
-        """页面守卫在首个异步步骤前阻止揭示，DOM 就绪后不会先显示再隐藏；异常仍能结束等待"""
+        """公开、受保护和离线场景分别初始化守卫，各自只揭示首屏一次。"""
         body = r"""
         const fs = await import('node:fs');
         const vm = await import('node:vm');
         const flash = fs.readFileSync('shared/flash-guard.js', 'utf8');
         const secret = fs.readFileSync('data-manage/encrypt/secret-unlock.module.js', 'utf8');
-        for (const scenario of ['public', 'blocked', 'offline']) {
-            const listeners = new Map(), elements = new Map(), classes = new Set();
-            let visibilityWrites = 0, reveals = 0, finishFetch, notifyFetch;
-            const fetchStarted = new Promise(resolve => { notifyFetch = resolve; });
-            const style = new Proxy({ removeProperty() {} }, { set(target, key, value) {
-                if (key === 'visibility') visibilityWrites++;
-                target[key] = value; return true;
-            } });
-            const root = { style, classList: {
-                add: name => classes.add(name),
-                remove: name => { if (name === 'js-loading' && classes.has(name)) reveals++; classes.delete(name); },
-                toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
-                contains: name => classes.has(name)
-            } };
-            const document = { documentElement: root, readyState: 'loading',
-                head: { appendChild(el) { if (el.id) elements.set(el.id, el); } },
-                body: { appendChild(el) { if (el.id) elements.set(el.id, el); } },
-                getElementById: id => elements.get(id), querySelector: () => null,
-                createElement: () => ({ style: {}, remove() {} }),
-                addEventListener(name, fn) { const list = listeners.get(name) || []; list.push(fn); listeners.set(name, list); },
-                dispatchEvent(event) { for (const fn of listeners.get(event.type) || []) fn(event); }
-            };
-            const context = vm.createContext({ document, console, Event, URLSearchParams, AbortController,
-                setTimeout, clearTimeout, Date, navigator: {},
-                localStorage: { getItem: () => null },
-                window: { location: { pathname: '/notes.html', search: '' },
-                    matchMedia: () => ({ matches: false }), addEventListener() {} },
-                fetch: () => new Promise((resolve, reject) => { finishFetch = scenario === 'offline' ? reject : resolve; notifyFetch(); })
-            });
-            vm.runInContext(flash, context);
-            const module = new vm.SourceTextModule(secret, { context });
-            await module.link(() => new vm.SyntheticModule(
-                ['getSessionKey', 'isEncryptedRecord', 'unwrapRecord', 'sha256Hex'], function() {
-                    this.setExport('getSessionKey', async () => null);
-                    this.setExport('isEncryptedRecord', () => false);
-                    this.setExport('unwrapRecord', async () => null);
-                    this.setExport('sha256Hex', async () => 'page-hash');
-                }, { context }));
-            await module.evaluate();
-            const guard = module.namespace.guardCurrentPage();
-            assert.equal(module.namespace.guardCurrentPage(), guard, '重复初始化应共用同一次守卫检查');
-            document.dispatchEvent(new Event('DOMContentLoaded'));
-            assert.equal(classes.has('js-loading'), true, '守卫未完成前不能提前揭示首屏');
-            assert.equal(reveals, 0);
-            await fetchStarted;
-            if (scenario === 'offline') finishFetch(new Error('offline'));
-            else finishFetch({ ok: true, json: async () => scenario === 'blocked' ? [{ _guard: 'page-hash' }] : [] });
-            await guard;
-            assert.equal(classes.has('js-loading'), false);
-            assert.equal(reveals, 1);
-            assert.equal(visibilityWrites, 0, '不再异步隐藏整页 html');
-            assert.equal(elements.has('maers-404'), scenario === 'blocked', '受保护页面仍需显示 404');
-            assert.ok(!elements.get('global-theme-guard-style').textContent.includes('position: fixed'));
-        }
+        const listeners = new Map(), elements = new Map(), classes = new Set();
+        let visibilityWrites = 0, reveals = 0, finishFetch, notifyFetch;
+        const fetchStarted = new Promise(resolve => { notifyFetch = resolve; });
+        const style = new Proxy({ removeProperty() {} }, { set(target, key, value) {
+            if (key === 'visibility') visibilityWrites++;
+            target[key] = value; return true;
+        } });
+        const root = { style, classList: {
+            add: name => classes.add(name),
+            remove: name => { if (name === 'js-loading' && classes.has(name)) reveals++; classes.delete(name); },
+            toggle(name, on) { if (on) classes.add(name); else classes.delete(name); },
+            contains: name => classes.has(name)
+        } };
+        const document = { documentElement: root, readyState: 'loading',
+            head: { appendChild(el) { if (el.id) elements.set(el.id, el); } },
+            body: { appendChild(el) { if (el.id) elements.set(el.id, el); } },
+            getElementById: id => elements.get(id), querySelector: () => null,
+            createElement: () => ({ style: {}, remove() {} }),
+            addEventListener(name, fn) { const list = listeners.get(name) || []; list.push(fn); listeners.set(name, list); },
+            dispatchEvent(event) { for (const fn of listeners.get(event.type) || []) fn(event); }
+        };
+        const context = vm.createContext({ document, console, Event, URL, URLSearchParams, AbortController,
+            setTimeout, clearTimeout, Date, navigator: {},
+            localStorage: { getItem: () => null },
+            window: { location: { href: 'https://example.com/notes.html', pathname: '/notes.html', search: '', hash: '' },
+                history: { state: null, replaceState() {} },
+                matchMedia: () => ({ matches: false }), addEventListener() {} },
+            fetch: () => new Promise((resolve, reject) => { finishFetch = scenario === 'offline' ? reject : resolve; notifyFetch(); })
+        });
+        vm.runInContext(flash, context);
+        const module = new vm.SourceTextModule(secret, { context });
+        await module.link(() => new vm.SyntheticModule(
+            ['getSessionKey', 'getSessionKeysRaw', 'isEncryptedRecord', 'unwrapRecord', 'sha256Hex'], function() {
+                this.setExport('getSessionKey', async () => null);
+                this.setExport('getSessionKeysRaw', () => ({}));
+                this.setExport('isEncryptedRecord', () => false);
+                this.setExport('unwrapRecord', async () => null);
+                this.setExport('sha256Hex', async () => 'page-hash');
+            }, { context }));
+        await module.evaluate();
+        const guard = module.namespace.guardCurrentPage();
+        assert.equal(module.namespace.guardCurrentPage(), guard, '重复初始化应共用同一次守卫检查');
+        document.dispatchEvent(new Event('DOMContentLoaded'));
+        assert.equal(classes.has('js-loading'), true, '守卫未完成前不能提前揭示首屏');
+        assert.equal(reveals, 0);
+        await fetchStarted;
+        if (scenario === 'offline') finishFetch(new Error('offline'));
+        else finishFetch({ ok: true, json: async () => scenario === 'blocked' ? [{ _guard: 'page-hash' }] : [] });
+        await guard;
+        assert.equal(classes.has('js-loading'), false);
+        assert.equal(reveals, 1);
+        assert.equal(visibilityWrites, 0, '不再异步隐藏整页 html');
+        assert.equal(elements.has('maers-404'), scenario === 'blocked', '受保护页面仍需显示 404');
+        assert.ok(!elements.get('global-theme-guard-style').textContent.includes('position: fixed'));
         """
-        self.run_node_esm(body, node_args=('--experimental-vm-modules', '--no-warnings'))
+        for scenario in ('public', 'blocked', 'offline'):
+            with self.subTest(scenario=scenario):
+                self.run_node_esm(body, preamble=('const scenario = ' + json.dumps(scenario) + ';',),
+                                  node_args=('--experimental-vm-modules', '--no-warnings'))
 
     def test_15_initial_theme_is_synchronous_without_transition(self):
-        """旧配置首屏与运行期保持同一主题；初始化无动画，用户主动切换仍可过渡"""
-        body = r"""
-        const fs = await import('node:fs');
-        const vm = await import('node:vm');
-        for (const configuration of [{ mode: 'manual' }, { enabled: false }, { version: 2, mode: 'manual' }]) {
-            const classes = new Set(['light-mode']), frames = [];
-            const storage = new Map([['theme', 'light-mode'], ['autoThemeConfig', JSON.stringify(configuration)]]);
-            let transitions = 0;
-            const context = vm.createContext({ console, setTimeout, clearTimeout,
-                requestAnimationFrame: fn => frames.push(fn),
-                localStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
-                document: { addEventListener() {}, querySelector: () => null, getElementById: () => null,
-                    documentElement: { offsetWidth: 100, style: { removeProperty() {} }, classList: {
-                        contains: name => classes.has(name), add: name => classes.add(name),
-                        remove: (...names) => names.forEach(name => classes.delete(name)),
-                        toggle(name, on) { if (on) classes.add(name); else classes.delete(name); }
-                    } },
-                    startViewTransition(fn) { transitions++; fn(); return { finished: Promise.resolve(), skipTransition() {} }; }
-                },
-                window: { matchMedia: () => ({ matches: false, addEventListener() {} }) }
-            });
-            const module = new vm.SourceTextModule(fs.readFileSync('shared/theme/theme-core.module.js', 'utf8'), { context });
-            await module.link(() => { throw new Error('主题核心不应有额外依赖'); });
-            await module.evaluate();
-            module.namespace.initThemeCore();
-            assert.equal(frames.length, 0);
-            assert.equal(classes.has('light-mode'), true, '已有手动浅色配置不能被重置为系统模式');
-            assert.equal(transitions, 0);
-            module.namespace.applyTheme('dark-mode');
-            assert.equal(frames.length, 1);
-            frames.shift()();
-            assert.equal(classes.has('light-mode'), false);
-            assert.equal(transitions, 1, '只为用户主动切换保留过渡');
-        }
+        """旧配置首屏与运行期保持同一主题；初始化无动画，用户主动切换仍可过渡。"""
+        body = """
+        const fixture=await loadThemeFixture(configuration,'light-mode');
+        const {core,classes,frames}=fixture;
+        core.initThemeCore();
+        assert.equal(frames.length,0);
+        assert.equal(classes.has('light-mode'),true,'已有手动浅色配置不能被重置为系统模式');
+        assert.equal(fixture.metas.get('theme-color')?.content,'#ffffff','浅色模式下地址栏应同步为浅色');
+        assert.equal(fixture.metas.get('color-scheme')?.content,'light');
+        assert.equal(fixture.transitions,0);
+        core.applyTheme('dark-mode');
+        assert.equal(frames.length,1);
+        frames.shift()();
+        assert.equal(classes.has('light-mode'),false);
+        assert.equal(fixture.metas.get('theme-color')?.content,'#0a0a0c','深色模式下地址栏应同步为深色');
+        assert.equal(fixture.metas.get('color-scheme')?.content,'dark');
+        assert.equal(fixture.transitions,1,'只为用户主动切换保留过渡');
         """
-        self.run_node_esm(body, node_args=('--experimental-vm-modules', '--no-warnings'))
+        for configuration in ({'mode': 'manual'}, {'enabled': False}, {'version': 2, 'mode': 'manual'}):
+            with self.subTest(configuration=configuration):
+                self.run_node_esm(body, preamble=(MOCK_THEME_RUNTIME,
+                    'const configuration = ' + json.dumps(configuration) + ';'),
+                    node_args=('--experimental-vm-modules', '--no-warnings'))
 
 
     def test_16_local_session_token_and_refresh(self):
@@ -1023,7 +1049,7 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         self.run_node_esm(body, preamble=(mock_window('/index.html'),))
 
     def test_24_failed_body_load_cannot_be_saved_and_title_only_omits_content(self):
-        """正文 503 后禁止正文保存；只改标题不得携带占位正文。"""
+        """正文读取失败不能覆盖原文；手机保存草稿后重新打开仍显示草稿。"""
         body = r"""
         const fs = await import('node:fs');
         const vm = await import('node:vm');
@@ -1041,150 +1067,86 @@ class Test08_FrontendJsRuntimeAndE2EECrypto(NodeTestCase):
         await module.evaluate();
         const editor = module.namespace;
         editor.skipUi();
-        const layer = {dataset:{},style:{},classList:{add(){},remove(){}},addEventListener(){},querySelectorAll:()=>[]};
+        const listeners = new Map();
+        const layer = {dataset:{},style:{},classList:{add(){},remove(){}},
+            addEventListener:(name,handler)=>listeners.set(name,handler),querySelectorAll:()=>[]};
         const title = {value:'renamed'};
         document.getElementById = id => id === 'immersive-reader' ? layer : id === 'edit-title-input' ? title : null;
         document.querySelector = () => null;
         document.addEventListener = () => {}; document.removeEventListener = () => {};
         window.addEventListener = () => {}; window.removeEventListener = () => {};
-        const node = {id:'n',type:'note',title:'original',content:'notes/important.md'};
+        const node = {id:'n',type:'note',title:'original',content:'markdown/notes/important.md'};
         const sent = [];
-        editor.initReader({AppState:{allNodes:[node]},refreshView(){},callApi:async (action,body)=>{
+        const controller = {AppState:{allNodes:[node]},refreshView(){},callApi:async (action,body)=>{
             sent.push(body); return {success:true};
-        }});
+        }};
+        editor.initReader(controller);
         globalThis.fetch = async () => ({ok:false,status:503});
         await editor.open(node);
-        assert.equal(node.content,'notes/important.md');
+        assert.equal(node.content,'markdown/notes/important.md');
         assert.equal(node._rawMd,undefined);
         assert.equal((await editor.save()).success,false);
         assert.equal(sent.length,0);
         assert.equal((await editor.save(undefined,{titleOnly:true})).success,true);
         assert.deepEqual(sent[0].data,{title:'renamed'});
+
+        // 手机草稿保存后关掉阅读器再打开，不能重新读取尚未发布的旧正文。
+        window.location.hostname = 'phone.example.com';
+        window.MAERS = { Config: { CONTENT_PUBLIC_BASE: 'https://content.example.com' } };
+        const { applyCmsNodeAction } = await import('./data-manage/sync/relay-actions.module.js');
+        const { sha256Hex } = await import('./data-manage/encrypt/crypto.module.js');
+        let reads = 0;
+        globalThis.fetch = async () => { reads++; return new Response('已发布的旧正文'); };
+        controller.callApi = async (action,body) => {
+            applyCmsNodeAction('notes', [node], action, body);
+            return {success:true};
+        };
+        await editor.open(node);
+        assert.equal(node._rawMd, '已发布的旧正文');
+        for (const text of ['手机修改后的正文', '']) {
+            assert.equal((await editor.save(text)).success, true);
+            editor.close();
+            delete node._sourceRevision;
+            await editor.open(node);
+            assert.equal(node._rawMd, text, '重新打开必须读取刚保存的草稿，包括清空正文');
+            assert.equal(node._draftContent, text);
+            assert.equal(node._sourceRevision, await sha256Hex(text), '草稿回读必须同时恢复版本标记');
+            assert.equal(reads, 1, '草稿仍在时不读取正式桶的旧正文');
+        }
+        editor.close();
+
+        const target = {id:'target',type:'note',title:'改名后的文章',content:'markdown/notes/root-renamed.md',_draftContent:'目标正文'};
+        controller.CONFIG = {CURRENT_MODULE:'notes'};
+        controller.AppState.allNodes.push(target);
+        const click = async (href,{target='',ctrlKey=false,download=false}={}) => {
+            let prevented=false;
+            const link={getAttribute:key=>key==='href'?href:key==='target'?target:null,
+                hasAttribute:key=>key==='download'&&download};
+            await listeners.get('click')({target:{closest:()=>link},button:0,ctrlKey,
+                preventDefault(){prevented=true;},stopImmediatePropagation(){}});
+            return prevented;
+        };
+        for (const admin of [true,false]) {
+            window.IS_ADMIN=admin;
+            for (const href of ['/notes.html?openNoteId=target&openNote=旧标题','/notes?openNoteId=target',
+                '/admin-cms.html?module=notes&openNoteId=target','?openNoteId=target','root-renamed.md']) {
+                delete target._rawMd;
+                assert.equal(await click(href),true);
+                assert.equal(target._rawMd,'目标正文','同模块 ID 链接直接切换阅读器');
+            }
+        }
+        for (const href of ['/games.html?openNoteId=target','https://external.example/notes.html?openNoteId=target']) {
+            assert.equal(await click(href),false,'跨模块和外站保持正常页面导航');
+        }
+        for (const options of [{target:'_blank'},{ctrlKey:true},{download:true}]) {
+            assert.equal(await click('/notes.html?openNoteId=target',options),false);
+        }
+        assert.equal(reads,1,'同模块切换不重新请求模块页或已发布正文');
+        editor.close();
         """
         self.run_node_esm(body, preamble=(MOCK_DOM, mock_window('/admin-cms.html', is_admin=True)),
                           node_args=('--experimental-vm-modules', '--no-warnings'))
 
-    def test_25_nested_rotation_changes_data_key_and_preserves_all_plaintext(self):
-        """轮换包含嵌套密文；旧 DEK 无法读取新密文，损坏记录阻断整批迁移。"""
-        body = """
-        const C = await import('./data-manage/encrypt/crypto.module.js');
-        const {rotateSnapshots} = await import('./data-manage/encrypt/key-rotation.module.js');
-        const oldKey = await C.importDataKey(C.randomBytes(32)), newKey = await C.importDataKey(C.randomBytes(32));
-        const child = await C.wrapRecord({title:'private child',md:'body'},oldKey);
-        const parent = await C.wrapRecord({title:'private folder',children:[child]},oldKey);
-        const input = [{path:'notes-tree.json',revision:'unchanged',data:{root:[{id:'n',...parent}],public:'keep'}}];
-        const output = await rotateSnapshots(input,oldKey,newKey);
-        assert.equal(output[0].data.public,'keep');
-        assert.equal(input[0].data.root[0]._enc,parent._enc);
-        assert.equal(await C.unwrapRecord(output[0].data.root[0],oldKey),null);
-        const plain = await C.unwrapRecord(output[0].data.root[0],newKey);
-        assert.equal(plain.title,'private folder');
-        assert.deepEqual(await C.unwrapRecord(plain.children[0],newKey),{title:'private child',md:'body'});
-        await assert.rejects(rotateSnapshots([{data:{_enc:'enc:broken'}}],oldKey,newKey));
-        """
-        self.run_node_esm(body, preamble=(MOCK_DOM,))
-
-    def test_26_private_titles_do_not_enter_persistent_history(self):
-        """访客解密节点传播私密标记，历史只记录公开文章。"""
-        body = """
-        const C = await import('./data-manage/encrypt/crypto.module.js');
-        const {revealInPlace} = await import('./data-manage/encrypt/secret-unlock.module.js');
-        const {addToHistory} = await import('./custom/cms/viewer/cms-recent.module.js');
-        C.setSessionKeyRaw(C.randomBytes(32));
-        const key = await C.getSessionKey();
-        const records = [await C.wrapRecord({id:'private',type:'note',title:'PRIVATE TITLE'},key)];
-        await revealInPlace(records);
-        assert.equal(records[0]._private,true);
-        addToHistory(records[0]);
-        addToHistory({id:'public',type:'note',title:'PUBLIC TITLE'});
-        C.clearSessionKey();
-        const history = localStorage.getItem('maers_cms_recent_files_default');
-        assert.ok(history.includes('PUBLIC TITLE'));
-        assert.ok(!history.includes('PRIVATE TITLE'));
-        """
-        self.run_node_esm(body, preamble=(MOCK_SESSION_STORAGE, MOCK_LOCAL_STORAGE, MOCK_DOM,
-                                        mock_window('/notes.html', hostname='example.com', is_admin=False)))
-
-    def test_27_media_entry_can_switch_to_other_host_or_same_site(self):
-        """切换图片入口不修改文件键；私密带令牌 URL 不会被公开入口改写。"""
-        body = """
-        const {publicMediaUrl} = await import('./data-manage/data-provider.module.js');
-        window.MAERS = {Config:{MEDIA_PUBLIC_BASE:'https://other.example/assets'}};
-        const key = 'photos/images/travel/图片 #1.png';
-        assert.equal(publicMediaUrl(key),'https://other.example/assets/photos/images/travel/%E5%9B%BE%E7%89%87%20%231.png');
-        const privateUrl = 'https://private.example/private/a?t=secret';
-        assert.equal(publicMediaUrl(privateUrl),privateUrl);
-        window.MAERS.Config.MEDIA_PUBLIC_BASE = '';
-        assert.equal(publicMediaUrl(key),'photos/images/travel/%E5%9B%BE%E7%89%87%20%231.png');
-        const C = await import('./data-manage/encrypt/crypto.module.js');
-        C.setSessionKeyRaw(C.randomBytes(32));
-        const row = {path:key,thumb:'thumb.webp',preview:'preview.avif'};
-        globalThis.fetch = async () => ({ok:true,json:async()=>({travel:[row]})});
-        const {DataProvider} = await import('./data-manage/data-provider.module.js');
-        await DataProvider.loadCoverIndex();
-        const cover = 'https://other.example/assets/' + key.split('/').map(encodeURIComponent).join('/');
-        assert.equal(DataProvider.getCoverUrl({coverImage:cover},'thumb'),row.thumb);
-        const {packCmsNodeForLock} = await import('./data-manage/encrypt/admin-lock.module.js');
-        const packed = await packCmsNodeForLock({id:'n',type:'note',title:'test',content:'body',coverImage:cover});
-        assert.deepEqual(packed.covers,[key]);
-        """
-        self.run_node_esm(body,preamble=(MOCK_SESSION_STORAGE,MOCK_DOM,mock_window('/admin-cms.html',is_admin=True)))
-
-    def test_28_worker_token_revocation_has_no_stale_memory_cache(self):
-        """令牌写入私有存储后，每次鉴权读取新值，旧令牌立即被当前代码拒绝。"""
-        body = """
-        const {default:worker} = await import('./data-manage/sync/cloudflare-worker-sync.js');
-        const objects = new Map();
-        const bucket = {async put(key,body){objects.set(key,String(body));},async get(key){
-            return objects.has(key) ? {body:objects.get(key),httpEtag:'test',writeHttpMetadata(){}} : null;
-        }};
-        const hash = async value => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value))))
-            .map(v=>v.toString(16).padStart(2,'0')).join('');
-        const env = {SECRET_KEY:'admin',PRIVATE_PHOTOS_BUCKET:bucket};
-        objects.set('photos/images/secret/a.png','image');
-        const update = token => worker.fetch(new Request('https://worker.example/api/private-token',{
-            method:'POST',headers:{'x-sync-key':'admin'},body:JSON.stringify({hash:token})}),env,{});
-        assert.equal((await update(await hash('old'))).status,200);
-        const request = token => worker.fetch(new Request('https://worker.example/private/photos/images/secret/a.png?t='+token),env,{});
-        assert.equal((await request('old')).status,200);
-        assert.equal((await update(await hash('new'))).status,200);
-        assert.equal((await request('old')).status,403);
-        const response = await request('new');
-        assert.equal(response.status,200);
-        assert.equal(response.headers.get('Cache-Control'),'no-store');
-        """
-        self.run_node_esm(body)
-
-    def test_29_worker_media_can_use_independent_https_gateway(self):
-        """手机上传和私密读取可通过通用网关，环境无需绑定 R2。"""
-        body = """
-        const {File} = await import('node:buffer'); globalThis.File = File;
-        const {default:worker} = await import('./data-manage/sync/cloudflare-worker-sync.js');
-        const calls = [];
-        globalThis.fetch = async (url, options) => {
-            calls.push({url,options});
-            assert.equal(options.headers.Authorization,'Bearer gateway-key');
-            return new Response(options.method === 'PUT' ? null : 'image',{status:200,headers:{'Content-Type':'image/png'}});
-        };
-        const env = {SECRET_KEY:'admin',MEDIA_GATEWAY_URL:'https://storage.example',
-            MEDIA_GATEWAY_TOKEN:'gateway-key',MEDIA_PUBLIC_BASE:'https://cdn.example'};
-        const form = new FormData(); form.set('file',new File(['IMAGE'],'a.png',{type:'image/png'}));
-        form.set('category','travel');form.set('scope','public');
-        const response = await worker.fetch(new Request('https://relay.example/api/upload',{
-            method:'POST',headers:{'x-sync-key':'admin'},body:form}),env,{});
-        assert.equal(response.status,200);
-        const result = await response.json();
-        assert.ok(result.path.startsWith('https://cdn.example/photos/images/travel/'));
-        assert.ok(calls[0].url.startsWith('https://storage.example/objects/public/photos/images/travel/'));
-        const token = 'private-token';
-        env.PRIVATE_TOKEN_HASH = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(token))))
-            .map(v=>v.toString(16).padStart(2,'0')).join('');
-        const image = await worker.fetch(new Request('https://relay.example/private/photos/images/secret/a.png?t='+token),env,{});
-        assert.equal(image.status,200);
-        assert.equal(calls.at(-1).url,'https://storage.example/objects/private/photos/images/secret/a.png');
-        assert.equal(image.headers.get('Cache-Control'),'no-store');
-        """
-        self.run_node_esm(body)
 
     def test_17_local_session_isolation_and_bootstrap_failure(self):
         """读取和外部云请求不携带本地令牌；会话获取失败不发起写入且可以恢复。"""

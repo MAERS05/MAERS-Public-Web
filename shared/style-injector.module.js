@@ -38,14 +38,15 @@ async function injectModuleStyle(targetIdentifier = null) {
     // 2. 自动检测逻辑 (Visitor 页面自适应)
     if (!targetModule) {
         const currentUrl = new URL(window.location.href);
-        const currentPath = currentUrl.pathname.split('/').pop();
+        const currentPath = /^\/photos\/[^/]+\/?$/.test(currentUrl.pathname) ? 'photos' :
+            (currentUrl.pathname.split('/').pop() || 'index').replace(/\.html$/, '');
         const currentModuleParam = currentUrl.searchParams.get('module');
 
         targetModule = modules.find(m => {
             if (currentModuleParam && m.url.includes(`module=${currentModuleParam}`)) {
                 return true;
             }
-            const configUrlBase = m.url.split('?')[0].split('/').pop();
+            const configUrlBase = m.url.split('?')[0].split('/').pop().replace(/\.html$/, '');
             return configUrlBase === currentPath;
         });
     }
@@ -64,22 +65,11 @@ async function injectModuleStyle(targetIdentifier = null) {
     }
 }
 
-// 挂载到全局命名空间（向后兼容）
-if (typeof window !== 'undefined') {
-    window.MAERS = window.MAERS || {};
-    window.MAERS.StyleInjector = {
-        inject: injectModuleStyle,
-        getModules: getModulesConfig
-    };
-}
-
 // 导出
 export {
-    getModulesConfig,
     injectModuleStyle
 };
 
 export default {
-    inject: injectModuleStyle,
-    getModules: getModulesConfig
+    inject: injectModuleStyle
 };

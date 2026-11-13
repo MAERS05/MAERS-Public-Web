@@ -1,11 +1,64 @@
 /**
  * Cloudflare Relay Driver (cloudflare-relay.module.js)
  * 职责：与 Cloudflare Worker + KV 中继网关进行极速 HTTP 通信
- * 实现手机端 0.1 秒草稿入队、电脑端拉取与确认清空
+ * 手机端暂存文字和图片，电脑端拉取与确认清空。
  * @version 1.0.0
  */
 
+import { uploadFetch } from '../upload-progress.module.js';
+import { photoDateLabel } from '../../shared/photo-date.module.js';
+
+const IMAGE_EXTENSIONS = /\.(?:jpe?g|png|webp|avif|gif|bmp|hei[cf])$/i;
+const IMAGE_MIME = /^image\/(?:jpeg|png|webp|avif|gif|bmp|x-ms-bmp|hei[cf](?:-sequence)?)$/i;
+const IMAGE_FORMAT_ERROR = '不支持该图片格式，请选择 JPG、PNG、WebP、AVIF、GIF、BMP 或 HEIC/HEIF';
+const KV_VALUE_MAX_BYTES = 25 * 1024 * 1024;
+const IMAGE_SIZE_ERROR = '图片草稿超过 KV 单文件 25 MiB 上限，请压缩图片或在电脑本地后台上传';
+const DRAFT_SIZE_ERROR = '云端草稿超过 KV 单条 25 MiB 上限，请在电脑本地后台保存';
+
+async function relayError(response, fallback) {
+    try { return (await response.json())?.error || fallback; }
+    catch { return fallback; }
+}
+
+async function uploadDraftImage(endpoint, secret, body, onProgress, group, token) {
+    const base = endpoint.trim().replace(/\/+$/, '');
+    const query = group ? '?g=' + encodeURIComponent(group) : '';
+    const response = await uploadFetch(base + '/api/drafts/upload' + query, {
+        method: 'POST', headers: { 'x-sync-key': secret.trim(), ...(token ? { 'x-private-media-token': token } : {}) }, body
+    }, onProgress);
+    if (response.status === 404) throw Error('请先更新云端同步 Worker，再上传图片草稿');
+    if (!response.ok) {
+        const fallback = response.status === 413 ? IMAGE_SIZE_ERROR :
+            response.status === 415 ? IMAGE_FORMAT_ERROR : `图片草稿上传失败（HTTP ${response.status}）`;
+        throw Error(await relayError(response, fallback));
+    }
+    return response.json();
+}
+
+export function cloudImageError(file) {
+    if (!file?.size) return '请选择有效图片';
+    if (file.size > KV_VALUE_MAX_BYTES) return IMAGE_SIZE_ERROR;
+    if (!IMAGE_EXTENSIONS.test(file.name || '') && !IMAGE_MIME.test(file.type || '')) return IMAGE_FORMAT_ERROR;
+    return '';
+}
+
 export class CloudflareRelayDriver {
+    async uploadPrivatePhoto({ endpoint, secret, file, group, token, onProgress, bucketId }) {
+        const invalid = cloudImageError(file);
+        if (invalid) throw Error(invalid);
+        const body = new FormData();
+        body.append('file', file);
+        body.append('dateLabel', await photoDateLabel(file));
+        if (bucketId) body.append('bucketId', bucketId);
+        const result = await uploadDraftImage(endpoint, secret, body, onProgress, group, token);
+        if (!result.success || !result.id || !result.relPath || !result.path ||
+            (bucketId && bucketId !== 'default' && result.bucketId !== bucketId)) {
+            throw Error(result.error || '私密图片上传失败');
+        }
+        return { id: result.id, name: result.name, path: result.relPath, thumb: result.relPath, preview: result.relPath,
+            draftPreview: result.path, ...(result.bucketId ? { bucketId: result.bucketId } : {}) };
+    }
+
     /**
      * 构建标准请求头
      * @param {string} secretKey - 访问密码
@@ -51,7 +104,7 @@ export class CloudflareRelayDriver {
     }
 
     /**
-     * 手机端：将记录操作极速存入云端暂存队列 (POST /api/push)
+     * 手机端：将记录操作存入云端草稿队列。
      * @param {string} endpoint 
      * @param {string} secretKey 
      * @param {Object} itemPayload - 包含模块名、动作、数据及时间戳
@@ -63,18 +116,23 @@ export class CloudflareRelayDriver {
 
         const cleanUrl = endpoint.trim().replace(/\/+$/, '');
         try {
-            const res = await fetch(`${cleanUrl}/api/push`, {
+            const body = JSON.stringify(itemPayload);
+            if (body.length > KV_VALUE_MAX_BYTES || (body.length * 3 > KV_VALUE_MAX_BYTES &&
+                new TextEncoder().encode(body).byteLength > KV_VALUE_MAX_BYTES)) {
+                return { success: false, msg: DRAFT_SIZE_ERROR };
+            }
+            const res = await fetch(`${cleanUrl}/api/drafts/push`, {
                 method: 'POST',
                 headers: this._getHeaders(secretKey),
-                body: JSON.stringify(itemPayload)
+                body
             });
 
             if (res.ok) {
                 const data = await res.json();
-                return { success: true, id: data.id };
+                return { success: data.success !== false, id: data.id, msg: data.msg };
             } else {
-                const err = await res.text();
-                return { success: false, msg: `暂存失败 (${res.status}): ${err}` };
+                if (res.status === 404) return { success: false, msg: '请先更新云端同步 Worker' };
+                return { success: false, msg: await relayError(res, res.status === 413 ? DRAFT_SIZE_ERROR : `暂存失败 (${res.status})`) };
             }
         } catch (e) {
             return { success: false, msg: `网络错误: ${e.message}` };
@@ -94,16 +152,32 @@ export class CloudflareRelayDriver {
 
         const cleanUrl = endpoint.trim().replace(/\/+$/, '');
         try {
-            const res = await fetch(`${cleanUrl}/api/pull`, {
-                headers: this._getHeaders(secretKey)
-            });
-
-            if (res.ok) {
-                const json = await res.json();
-                return { success: true, items: json.items || [] };
-            } else {
-                return { success: false, items: [], msg: `拉取失败 (${res.status})` };
-            }
+            const items = [];
+            const media = [];
+            const cursors = new Set();
+            let cursor = '';
+            let offset = 0;
+            do {
+                const query = new URLSearchParams({ cursor });
+                if (offset) query.set('offset', offset);
+                const pageKey = query.toString();
+                if (cursors.has(pageKey)) throw new Error('云端草稿分页游标重复');
+                cursors.add(pageKey);
+                const res = await fetch(`${cleanUrl}/api/pull?${pageKey}`, {
+                    headers: this._getHeaders(secretKey)
+                });
+                if (!res.ok) return { success: false, items: [], msg: await relayError(res, `拉取失败 (${res.status})`) };
+                const page = await res.json();
+                if (!Array.isArray(page?.items)) throw new Error('云端草稿列表无效');
+                items.push(...page.items);
+                if (Array.isArray(page.media)) media.push(...page.media);
+                cursor = page.cursor ?? '';
+                offset = page.offset ?? 0;
+                if (typeof cursor !== 'string' || !Number.isSafeInteger(offset) || offset < 0) {
+                    throw new Error('云端草稿分页游标无效');
+                }
+            } while (cursor || offset);
+            return { success: true, items, media };
         } catch (e) {
             return { success: false, items: [], msg: `请求失败: ${e.message}` };
         }
@@ -115,69 +189,60 @@ export class CloudflareRelayDriver {
      * @param {string} secretKey 
      * @param {Array<string>} keys 
      */
-    async ack(endpoint, secretKey, keys = []) {
+    async ack(endpoint, secretKey, keys = [], media = []) {
         if (!endpoint || !secretKey || !keys.length) return { success: true };
 
         const cleanUrl = endpoint.trim().replace(/\/+$/, '');
         try {
-            const res = await fetch(`${cleanUrl}/api/ack`, {
-                method: 'POST',
-                headers: this._getHeaders(secretKey),
-                body: JSON.stringify({ keys })
-            });
-            return { success: res.ok };
+            for (let start = 0; start < keys.length + media.length; start += 50) {
+                const batchMedia = media.slice(start, start + 50);
+                const batchKeys = keys.slice(Math.max(0, start - media.length), Math.max(0, start + 50 - media.length));
+                const res = await fetch(`${cleanUrl}/api/ack`, {
+                    method: 'POST', headers: this._getHeaders(secretKey),
+                    body: JSON.stringify({ keys: batchKeys, media: batchMedia })
+                });
+                if (!res.ok) return { success: false, msg: await relayError(res, `HTTP ${res.status}`) };
+            }
+            return { success: true };
         } catch (e) {
             console.error('[CloudflareRelay] Ack failed:', e);
-            return { success: false };
+            return { success: false, msg: e.message };
         }
     }
 
     /**
-     * 手机端：将图片直接上传至 Cloudflare R2 存储桶 (POST /api/upload)
+     * 手机端：将图片原图暂存至 KV。
      * @param {string} endpoint 
      * @param {string} secretKey 
      * @param {File|Blob} file 
      * @param {string} category 
      * @returns {Promise<{success: boolean, path?: string, relPath?: string, name?: string, msg?: string}>}
      */
-    async uploadFile(endpoint, secretKey, file, category = '_notes', scope = 'public') {
+    async uploadFile(endpoint, secretKey, file, category = '_notes', registration = null, onProgress = null, bucketId) {
+        const invalid = cloudImageError(file);
+        if (invalid) return { success: false, msg: invalid };
         if (!endpoint || !secretKey) {
             return { success: false, msg: '未配置中继网关地址或密码' };
         }
 
-        const cleanUrl = endpoint.trim().replace(/\/+$/, '');
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('dateLabel', await photoDateLabel(file, registration?.timestamp));
         formData.append('category', category);
-        formData.append('scope', scope);
-
-        // 将密钥同时附加到 URL query string（移动端浏览器可能剥离自定义 Header）
-        const uploadUrl = `${cleanUrl}/api/upload?token=${encodeURIComponent((secretKey || '').trim())}`;
+        if (bucketId) formData.append('bucketId', bucketId);
+        if (registration) formData.append('registration', JSON.stringify(registration));
 
         try {
-            const res = await fetch(uploadUrl, {
-                method: 'POST',
-                // 保留 Header 作为主要鉴权，URL token 作为后备（防移动端 Header 剥离）
-                headers: {
-                    'x-sync-key': (secretKey || '').trim()
-                },
-                body: formData
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                return {
-                    success: true,
-                    path: data.path, // 绝对 CDN URL: https://media.example.com/...
-                    relPath: data.relPath, // 相对路径: photos/images/...
-                    name: data.name
-                };
-            } else {
-                const err = await res.text();
-                return { success: false, msg: `上传失败 (${res.status}): ${err}` };
+            const data = await uploadDraftImage(endpoint, secretKey, formData, onProgress);
+            if (!data.success || !data.path || !data.relPath || (registration && data.draft?.requestId !== registration.requestId) ||
+                (bucketId && bucketId !== 'default' && data.bucketId !== bucketId)) {
+                return { success: false, msg: data.msg || '上传未返回有效的图片草稿信息' };
             }
+            const { path: draftPreview, relPath, name, draft } = data;
+            return { success: true, path: relPath, relPath, name, draft, draftPreview,
+                ...(data.bucketId ? { bucketId: data.bucketId } : {}) };
         } catch (e) {
-            return { success: false, msg: `网络错误: ${e.message}` };
+            return { success: false, msg: e.message };
         }
     }
 }

@@ -185,44 +185,39 @@ export async function performCancel() {
 function bindAdminEvents() {
     const upBtn = document.getElementById('upload-btn');
     const fileInput = document.getElementById('file-input');
-
     if (upBtn) upBtn.style.display = 'flex';
 
     if (fileInput) {
         Utils.bindEvent(fileInput, 'change', async (e) => {
-            // Get active tags to inherit
-            const activeTags = AdminCore?.AppState?.activeFilters ? Array.from(AdminCore.AppState.activeFilters) : [];
-
-            const res = await Controller.uploadFiles(e.target.files, activeTags);
-            const totalCount = e.target.files.length;
-            const successCount = totalCount - res.dupCount;
-
-            if (successCount > 0) {
-                showToast(`成功上传 ${successCount} 张图片` + (activeTags.length > 0 ? ` (已应用 ${activeTags.length} 个标签)` : ''), 'success');
+            const files = [...e.target.files];
+            if (!files.length || fileInput.disabled) return;
+            fileInput.disabled = true;
+            if (upBtn) upBtn.disabled = true;
+            try {
+                const activeTags = AdminCore?.AppState?.activeFilters ? Array.from(AdminCore.AppState.activeFilters) : [];
+                const res = await Controller.uploadFiles(files, activeTags);
+                if (res.success || res.uploadedCount > 0) {
+                    if (manager?.setList) manager.setList(Controller.State.loadedData);
+                    if (AdminCore?.applyFilters) AdminCore.applyFilters();
+                    else if (View?.render) View.render();
+                }
+                if (!res.success) {
+                    showToast(res.error?.message || res.error || '图片上传失败，请刷新后确认已保存的图片', 'error');
+                    return;
+                }
+                const successCount = res.uploadedCount ?? (files.length - res.dupCount);
+                if (successCount > 0) {
+                    showToast(`成功上传 ${successCount} 张图片` + (activeTags.length > 0 ? ` (已应用 ${activeTags.length} 个标签)` : ''), 'success');
+                }
+                if (res.dupCount > 0) showToast(`跳过 ${res.dupCount} 张重复图片的上传`, 'warning');
+                if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
+            } catch (error) {
+                showToast(error.message || '图片上传失败', 'error');
+            } finally {
+                fileInput.value = '';
+                fileInput.disabled = false;
+                if (upBtn) upBtn.disabled = false;
             }
-            if (res.dupCount > 0) {
-                showToast(`跳过 ${res.dupCount} 张重复图片的上传`, 'warning');
-            }
-
-            // Reload is already called in uploadFiles, but we need to ensure UI update
-            // Note: Controller.reloadData() in uploadFiles triggers the override in admin-main which updates AppState
-
-            if (manager && manager.setList) {
-                manager.setList(Controller.State.loadedData);
-            }
-
-            // Render (Preserve Filters)
-            if (AdminCore?.applyFilters) {
-                AdminCore.applyFilters();
-            } else if (View?.render) {
-                View.render();
-            }
-
-            // Explicitly hide SaveBar as upload is auto-saved
-            if (AdminCore?.SaveButton) AdminCore.SaveButton.hide();
-
-            // Reset file input so re-selecting the same files triggers change again
-            fileInput.value = '';
         });
     }
 }
@@ -311,14 +306,9 @@ function bindTagEvents(span, photo, tag) {
 
 async function updateTagsAPI(photo, newTags, silent = false) {
     try {
-        const res = await localFetch('/api/photos/update_tags', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: photo.id, tags: newTags })
-        });
-        const data = await res.json();
+        const saved = await Controller.savePhotoTags(photo, newTags);
 
-        if (data.status === 'success') {
+        if (saved.success) {
             photo.tags = newTags;
 
             // Update manager snapshot so joint-cancel won't revert this instant-save
@@ -338,11 +328,11 @@ async function updateTagsAPI(photo, newTags, silent = false) {
 
             if (!silent && window.MAERS?.Toast) window.MAERS.Toast.success("标签已更新");
         } else {
-            Toast.error("Error: " + (data.error || "Unknown"));
+            Toast.error("标签保存失败: " + (saved.error || "未知错误"));
         }
     } catch (e) {
         console.error(e);
-        Toast.error("Network Error during tag update");
+        Toast.error("标签保存失败: " + e.message);
     }
 }
 

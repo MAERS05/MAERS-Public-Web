@@ -13,7 +13,7 @@ import tempfile
 import threading
 import hashlib
 import config
-from . import storage_journal
+from . import storage_journal, operation_status
 from contextlib import contextmanager
 
 LOCK = threading.RLock()
@@ -24,7 +24,7 @@ def _recover_if_needed():
     if getattr(_state, 'undo', None) is None and not getattr(_state, 'recovering', False):
         _state.recovering = True
         try:
-            storage_journal.recover()
+            storage_journal.recover(progress=lambda done, total, message: operation_status.update(message, done, total))
         finally:
             _state.recovering = False
 
@@ -110,11 +110,11 @@ def compensate(record, callback):
     on_rollback(callback)
 
 
-def recover():
+def recover(progress=None):
     with LOCK:
         if getattr(_state, 'undo', None) is not None:
             raise RuntimeError('Cannot recover inside a transaction')
-        return storage_journal.recover()
+        return storage_journal.recover(progress=progress)
 
 
 def run_once(source, key, payload, operation):
@@ -164,9 +164,12 @@ def transaction() -> Iterator[None]:
             _state.journal.commit()
         except BaseException:
             recovered = True
+            operation_status.update('操作未完成，正在恢复原数据')
             _state.journal.restore_files()
-            for callback in reversed(_state.rollbacks):
+            total = len(_state.rollbacks)
+            for index, callback in enumerate(reversed(_state.rollbacks)):
                 try:
+                    operation_status.update('正在恢复图片权限与文件', index, total)
                     callback()
                 except Exception as error:
                     recovered = False

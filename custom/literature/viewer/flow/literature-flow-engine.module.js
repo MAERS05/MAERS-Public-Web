@@ -7,7 +7,7 @@
 import { loadBooksFromBackend, promoteBook, saveFlowOrder } from './literature-flow-data.module.js';
 import { updateMetrics, generateBooks, startLoop } from './literature-flow-render.module.js';
 
-// Dependency Injection
+// 阅读器由文学入口注入。
 let Reader = null;
 
 export function setEditor(editor) {
@@ -83,14 +83,10 @@ export class FlowEngine {
         if (!immersiveReader) return;
 
         const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'class') {
-                    const isActive = immersiveReader.classList.contains('active');
-                    if (!isActive) {
-                        this.resumeAnimation();
-                    }
-                }
-            });
+            for (const mutation of mutations) {
+                if (mutation.attributeName !== 'class') continue;
+                if (!immersiveReader.classList.contains('active')) this.resumeAnimation();
+            }
         });
 
         observer.observe(immersiveReader, {
@@ -100,11 +96,8 @@ export class FlowEngine {
     }
 
     setMode(mode) {
-        if (mode === 'grid' && !this.isGridMode) {
-            this.toggleMode();
-        } else if (mode === 'gallery' && this.isGridMode) {
-            this.toggleMode();
-        }
+        const shouldToggle = (mode === 'grid' && !this.isGridMode) || (mode === 'gallery' && this.isGridMode);
+        if (shouldToggle) this.toggleMode();
     }
 
     toggleMode() {
@@ -115,83 +108,59 @@ export class FlowEngine {
         this.container.innerHTML = '';
         this.books = [];
 
-        if (this.isGridMode) {
-            this.viewport.classList.remove('gallery-mode');
-            this.viewport.classList.add('grid-mode');
-            this.state.isPaused = true;
-            if (this.breadcrumb) this.breadcrumb.style.display = '';
-        } else {
-            this.viewport.classList.remove('grid-mode');
-            this.viewport.classList.add('gallery-mode');
-            this.state.isPaused = false;
-            if (this.breadcrumb) this.breadcrumb.style.display = 'none';
+        this.viewport.classList.toggle('grid-mode', this.isGridMode);
+        this.viewport.classList.toggle('gallery-mode', !this.isGridMode);
+        this.state.isPaused = this.isGridMode;
+        if (this.breadcrumb) this.breadcrumb.style.display = this.isGridMode ? '' : 'none';
+        if (!this.isGridMode) this._showGallery();
+    }
 
-            this.viewport.style.display = '';
-            this.viewport.style.height = 'calc(100vh - 200px)';
-            this.viewport.style.overflow = 'visible';
-            this.container.style.height = '100%';
+    /** 流动视图恢复尺寸和书籍，并在需要时重启动画。 */
+    _showGallery() {
+        this.viewport.style.display = '';
+        this.viewport.style.height = 'calc(100vh - 200px)';
+        this.viewport.style.overflow = 'visible';
+        this.container.style.height = '100%';
+        this.generateBooks();
 
-            this.generateBooks();
-
-            // Restart animation loop if it was stopped (e.g., by pauseAnimation in grid mode)
-            if (!this.rafId) {
-                this.startLoop();
-            }
-        }
+        // 网格模式下可能已经停止了动画循环。
+        if (!this.rafId) this.startLoop();
     }
 
     updateHeaderTitle() {
         const titleEl = document.querySelector(".header-title");
         if (!titleEl) return;
 
-        const mode = this.isGridMode ? 'GRID' : 'FLOW';
-
         let modeBtn = titleEl.querySelector('.mode-text-btn');
-        if (modeBtn) {
-            modeBtn.textContent = mode;
-            modeBtn.title = this.isGridMode ? '展示最近36本' : '展示所有书籍';
-            return;
+        if (!modeBtn) {
+            modeBtn = document.createElement('span');
+            modeBtn.className = 'mode-text-btn';
+            modeBtn.addEventListener('click', () => this.toggleMode());
+            const image = this._insertModeButton(titleEl, modeBtn);
+            if (image) window.MAERS?.Theme?.setupZoomTrigger?.(image, 'icon_only', true);
         }
-
-        modeBtn = document.createElement('span');
-        modeBtn.className = 'mode-text-btn';
-        modeBtn.textContent = mode;
+        modeBtn.textContent = this.isGridMode ? 'GRID' : 'FLOW';
         modeBtn.title = this.isGridMode ? '展示最近36本' : '展示所有书籍';
-        modeBtn.addEventListener('click', () => this.toggleMode());
+    }
 
+    /** 将模式按钮放在标题图标之后，缺少标准结构时重建相同布局。 */
+    _insertModeButton(titleEl, modeBtn) {
         const existingImg = titleEl.querySelector('img');
-
         if (existingImg) {
             const space = document.createTextNode(' ');
-
-            if (existingImg.nextSibling) {
-                titleEl.insertBefore(space, existingImg.nextSibling);
-                titleEl.insertBefore(modeBtn, space.nextSibling);
-            } else {
-                titleEl.appendChild(space);
-                titleEl.appendChild(modeBtn);
-            }
-
-            if (window.MAERS?.Theme?.setupZoomTrigger) {
-                window.MAERS.Theme.setupZoomTrigger(existingImg, 'icon_only', true);
-            }
-        } else {
-            console.warn('[LiteratureView] Standard header structure not found, rebuilding...');
-            titleEl.innerHTML = '';
-
-            const iconWrapper = document.createElement('span');
-            iconWrapper.innerHTML = '<img src="ui/literature-icon.svg" alt="Literature" style="height: 1.25em; width: auto; vertical-align: middle;">';
-            titleEl.appendChild(iconWrapper);
-
-            titleEl.appendChild(document.createTextNode(' '));
-            titleEl.appendChild(modeBtn);
-            titleEl.appendChild(document.createTextNode(' Literature'));
-
-            if (window.MAERS?.Theme?.setupZoomTrigger) {
-                const imgEl = iconWrapper.querySelector('img');
-                if (imgEl) window.MAERS.Theme.setupZoomTrigger(imgEl, 'icon_only', true);
-            }
+            titleEl.insertBefore(space, existingImg.nextSibling);
+            titleEl.insertBefore(modeBtn, space.nextSibling);
+            return existingImg;
         }
+        console.warn('[LiteratureView] Standard header structure not found, rebuilding...');
+        titleEl.innerHTML = '';
+        const iconWrapper = document.createElement('span');
+        iconWrapper.innerHTML = '<img src="ui/literature-icon.svg" alt="Literature" style="height: 1.25em; width: auto; vertical-align: middle;">';
+        titleEl.appendChild(iconWrapper);
+        titleEl.appendChild(document.createTextNode(' '));
+        titleEl.appendChild(modeBtn);
+        titleEl.appendChild(document.createTextNode(' Literature'));
+        return iconWrapper.querySelector('img');
     }
 
     async init() {
@@ -211,7 +180,7 @@ export class FlowEngine {
                 this.viewport.style.visibility = 'visible';
             }
 
-            // Flow mode is default: hide breadcrumb
+            // 默认流动视图隐藏面包屑。
             if (this.breadcrumb) this.breadcrumb.style.display = 'none';
         } catch (e) {
             console.error('[FlowEngine] Init failed:', e);

@@ -54,7 +54,7 @@ def save_module_tree(module: str, tree: JsonObject) -> bool:
 
 
 def get_context() -> CmsContext:
-    return {'DATA_DIR': DATA_DIR, 'PROJECT_ROOT': PROJECT_ROOT,
+    return {'DATA_DIR': DATA_DIR, 'MARKDOWN_ROOT': os.path.join(PROJECT_ROOT, 'markdown'), 'PROJECT_ROOT': PROJECT_ROOT,
             'load_tree': fetch_module_tree, 'save_tree': save_module_tree}
 
 
@@ -210,15 +210,22 @@ def update_node_tags(module, node_id, tags):
 
 @storage.transactional
 def _lock(module, body, context):
-    from . import cms_covers, photos
+    from . import cms_covers, photos, private_session, media_groups
     cms_nodes.verify_lock_sources(module, body['id'], body['sources'], context)
     photos.rebuild_cache()
     cms_covers.validate_lock_media(module, body['id'], body.get('covers') or [])
+    group = body.get('group', 'default')
+    from . import crypto_keyring
+    crypto_keyring.require_content_group(group)
+    if group != 'default':
+        payload = private_session.crypt('decrypt', [body['enc']], group)[0]
+        if payload.get('id') != body['id']:
+            raise ValueError('加密载荷与内容不匹配')
+        media_groups.assign(private_session.media_keys(payload), group, replace=True)
     covers = cms_covers.prepare_lock(body.get('covers') or [])
-    if covers:
-        storage.compensate(covers['store'].recovery_record('restore_public', covers['keys']),
-                           lambda: cms_covers.rollback_lock(covers))
-    changed = cms_nodes.lock_node(module, body['id'], body['enc'], context)
+    if covers and group == 'default':
+        media_groups.assign(covers['keys'], group, replace=True)
+    changed = cms_nodes.lock_node(module, body['id'], context, group)
     if changed:
         cms_covers.finalize_lock(covers)
     return changed
@@ -237,35 +244,52 @@ def _unlock(module, body, context):
         return changed
 
 
-def _delete(module, body, context):
-    changed = cms_nodes.delete_node(module, body['id'], context)
-    if changed and body.get('purge_private'):
+def _delete(module, body, context, *, allow_protected=True):
+    purge = body.get('purge_private')
+    if purge and not allow_protected:
+        raise ValueError('清理私密图片仅限电脑本地后台操作')
+    changed = cms_nodes.delete_node(module, body['id'], context, allow_protected=allow_protected)
+    if changed and purge:
         from . import cms_covers
-        cms_covers.purge_private_keys(body['purge_private'])
+        cms_covers.purge_private_keys(purge)
     return changed
 
 
 def _protect(module, body, context):
     from . import private_cms
-    return private_cms.protect(module, body['id'])
+    return private_cms.protect(module, body['id'], body.get('group', 'default'))
+
+
+def _unprotect(module, body, context):
+    from . import private_cms
+    return private_cms.unprotect(module, body['id'])
+
+
+def _regroup(module, body, context):
+    from . import private_cms
+    return private_cms.change_group(module, body['id'], body['group'])
 
 
 NODE_ACTIONS = {
     'add': ({'parentId': str, 'type': str, 'title': str},
             lambda m, b, c: cms_nodes.add_node(m, b['parentId'], b['type'], b['title'], c, node_id=b.get('id'))),
-    'update': ({'id': str, 'data': dict}, lambda m, b, c: cms_nodes.update_node(m, b['id'], b['data'], c)),
+    'update': ({'id': str, 'data': dict}, lambda m, b, c, *, from_relay=False, overwrite_revision=None:
+               cms_nodes.update_node(m, b['id'], b['data'], c, from_relay=from_relay, overwrite_revision=overwrite_revision)),
     'delete': ({'id': str}, _delete),
     'move': ({'id': str, 'targetParentId': str}, lambda m, b, c: cms_nodes.move_node(m, b['id'], b['targetParentId'], c)),
     'reorder': ({'ids': list}, lambda m, b, c: cms_nodes.reorder_nodes(m, b['ids'], c)),
     'open_external': ({'id': str}, lambda m, b, c: cms_nodes.open_external_node(m, b['id'], c)),
     'lock': ({'id': str, 'enc': str, 'sources': list}, _lock),
     'protect': ({'id': str}, _protect),
+    'unprotect': ({'id': str}, _unprotect),
+    'regroup': ({'id': str, 'group': str}, _regroup),
     'unlock': ({'id': str, 'tree': dict}, _unlock),
 }
 
 
 @storage.serialized
-def handle_request(path: str, method: str, query_params: Query, body_data: JsonObject) -> Response:
+def handle_request(path: str, method: str, query_params: Query, body_data: JsonObject, *,
+                   from_relay: bool = False, overwrite_revision=None) -> Response:
     from . import validation
     module = query_params.get('module', ['notes'])[0]
     if module not in JS_SYNC_MAP:
@@ -283,5 +307,11 @@ def handle_request(path: str, method: str, query_params: Query, body_data: JsonO
         validation.strings(body_data['purge_private'])
     if 'covers' in body_data:
         validation.strings(body_data['covers'])
-    changed = function(module, body_data, get_context())
+    context = get_context()
+    if action == 'delete':
+        changed = function(module, body_data, context, allow_protected=not from_relay)
+    elif action == 'update':
+        changed = function(module, body_data, context, from_relay=from_relay, overwrite_revision=overwrite_revision)
+    else:
+        changed = function(module, body_data, context)
     return (200, {'status': 'success'}) if changed else (400, {'error': 'No changes made'})

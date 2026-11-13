@@ -71,10 +71,18 @@ def tree(value):
         if depth > 100:
             raise ValueError('Tree is too deep')
         for node in nodes:
+            if '_enc' in node:
+                fields(_enc=str)(node)
+                if not node['_enc'].startswith('enc:'):
+                    raise ValueError('Invalid encrypted node')
+                if 'id' not in node:
+                    continue
             fields(id=str)(node)
             if node['id'] in seen:
                 raise ValueError('Duplicate node id')
             seen.add(node['id'])
+            if '_enc' in node:
+                continue
             if 'tags' in node:
                 strings(node['tags'])
             if node.get('children') is not None:

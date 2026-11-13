@@ -71,7 +71,7 @@
 
     .admin-portal-page .admin-card:hover {
         transform: none;
-        box-shadow: none;
+        box-shadow:none;
     }
 
     .admin-portal-page .admin-card .icon {

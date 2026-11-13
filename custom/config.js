@@ -14,6 +14,9 @@ window.MAERS.Config = {
     // 公开原图入口；改为空字符串时使用站点内相对路径，存量文件键无需变化。
     MEDIA_PUBLIC_BASE: '',
 
+    // 公开正文入口，发布公开 Markdown 时必填。填写公开桶或 Worker 的根域名。
+    CONTENT_PUBLIC_BASE: '',
+
     // 动画延迟配置 (ms)
     ANIMATION_DELAY: 300,
     HIGHLIGHT_DELAY: 600,

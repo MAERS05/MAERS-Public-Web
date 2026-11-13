@@ -1,4 +1,4 @@
-"""历史媒体同步入口：通过统一存储适配上传公开索引原图，支持备份、校验与恢复。"""
+"""媒体同步入口：上传公开索引三级图片，支持备份、校验与恢复。"""
 
 import argparse
 import json
@@ -17,7 +17,7 @@ from services import media_jobs, media_store, data_safety, storage, storage_jour
 def main(argv=None):
     parser = argparse.ArgumentParser(description='媒体同步与数据保障（兼容原 R2 工具入口）')
     actions = parser.add_mutually_exclusive_group()
-    actions.add_argument('--backup', action='store_true', help='创建包含公私媒体的完整备份')
+    actions.add_argument('--backup', choices=('local', 'cloud'), help='创建本机或云端备份')
     actions.add_argument('--verify', metavar='ID', help='校验备份')
     actions.add_argument('--restore', metavar='ID', help='恢复备份，操作前自动备份当前状态')
     actions.add_argument('--retry', action='store_true', help='重试持久化同步待办')
@@ -26,7 +26,7 @@ def main(argv=None):
     with storage_journal.process_lock():
         storage.recover()
         if args.backup:
-            result = data_safety.create_backup()
+            result = data_safety.create_backup(args.backup)
         elif args.verify:
             result = data_safety.verify_backup(args.verify)
         elif args.restore:
@@ -42,14 +42,14 @@ def main(argv=None):
             count = 0
             for rows in gallery.values():
                 for row in rows:
-                    key = row['path']
-                    local = media_path(key)
-                    if not os.path.isfile(local):
-                        if not store.exists('public', key):
-                            raise FileNotFoundError('公开索引原图在本机和远端均缺失，已停止同步')
-                        continue
-                    media_jobs.enqueue('upload', key)
-                    count += 1
+                    for key in dict.fromkeys(row[field] for field in ('path', 'thumb', 'preview') if row.get(field)):
+                        local = media_path(key)
+                        if not os.path.isfile(local):
+                            if not store.exists('public', key):
+                                raise FileNotFoundError('公开索引图片在本机和远端均缺失，已停止同步')
+                            continue
+                        media_jobs.enqueue('upload', key)
+                        count += 1
             result = {**media_jobs.retry(), 'queued': count}
     print(json.dumps(result, ensure_ascii=False))
     return 1 if result.get('state') == 'pending' else 0

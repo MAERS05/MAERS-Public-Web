@@ -16,7 +16,7 @@
     color: #fff;
     padding: 12px 20px;
     border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
     font-size: 0.9rem;
     border-left: 4px solid transparent;
     min-width: 250px;
@@ -52,5 +52,5 @@
 html.light-mode .toast {
     background: rgba(255, 255, 255, 0.9);
     color: #333;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }

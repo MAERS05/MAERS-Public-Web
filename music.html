@@ -12,7 +12,6 @@
     <!-- 🚀 Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
     <link rel="preload" href="static-style/components.css" as="style">
-    <link rel="dns-prefetch" href="https://api.bilibili.com">
 
     <!-- 引入样式 -->
     <link rel="stylesheet" href="static-style/theme.css">
@@ -54,7 +53,7 @@
                                 ↺
                             </div>
                         </button>
-                        <img id="video-cover" class="video-cover" src="ui/music.png">
+                        <img id="video-cover" class="video-cover" src="ui/music.webp" width="1296" height="816" fetchpriority="high" alt="">
                         <div id="video-shield"></div>
                         <!-- iframe 由 music-player.js 动态生成 -->
                         <div id="next-tip" class="next-tip">

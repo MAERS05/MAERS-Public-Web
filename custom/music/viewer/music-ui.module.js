@@ -9,6 +9,8 @@ import { localFetch } from '../../../data-manage/api-client.module.js';
 
 import { Utils } from '../../../shared/utils.module.js';
 import { revealInPlace } from '../../../data-manage/encrypt/secret-unlock.module.js';
+import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
+import { hasPrivateEditorState } from '../../../data-manage/encrypt/private-drafts.module.js';
 
 let Render, Control, Search, Player;
 
@@ -45,16 +47,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 export async function loadMusicData() {
+    let loaded = false;
     try {
         const response = await localFetch('data/music-data.json', { cache: 'no-cache' });
-        if (response.ok) UI.libraryData = await response.json();
-        else throw new Error("JSON load failed");
+        if (!response.ok && response.status !== 404) throw new Error('音乐数据读取失败');
+        const data = response.ok ? await response.json() : [];
+        if (!Array.isArray(data)) throw new Error('音乐数据格式无效');
+        UI.libraryData = data;
+        loaded = true;
     } catch (err) {
         if (typeof musicData !== 'undefined') UI.libraryData = musicData;
         else UI.libraryData = [];
     }
 
-    // 已有会话密钥时，在内存中还原密文记录（分类→合集→专辑）
+    // 云端管理页：已发布数据叠加尚未合并的整份快照，刷新后与暂存队列一致
+    if (window.IS_ADMIN === true) {
+        const { syncManager } = await import('../../../data-manage/sync/sync-manager.module.js');
+        if (loaded) UI.libraryData = await syncManager.loadDocument('music', UI.libraryData);
+        else syncManager.rememberDocument('music', undefined);
+    }
+
+    // 已通过隐藏入口解锁时，在内存中还原密文记录（分类→合集→专辑）
     await revealInPlace(UI.libraryData, { getChildren: (n) => n.collections || n.albums });
 
     migrateData();
@@ -68,6 +81,7 @@ export async function loadMusicData() {
 function migrateData() {
     let modified = false;
     UI.libraryData.forEach(cat => {
+        if (isEncryptedRecord(cat)) return;
         if (cat.albums && !cat.collections) {
             cat.collections = [{ name: "默认合集", albums: cat.albums }];
             delete cat.albums;
@@ -77,27 +91,43 @@ function migrateData() {
     });
 }
 
-export function saveData() {
+/** 持久化字段：加密记录必须保留密文及所属密码组，其余以 _ 开头的均为运行时字段 */
+const PERSISTED_PRIVATE_KEYS = new Set(['_enc', '_group']);
+
+/** 去除运行时字段后的可持久化音乐数据 */
+export function cleanMusicData(data) {
+    return JSON.parse(JSON.stringify(data, (key, value) =>
+        key.startsWith('_') && !PERSISTED_PRIVATE_KEYS.has(key) ? undefined : value));
+}
+
+/**
+ * 保存整份音乐数据：本地写后端，云端以快照暂存。
+ * @returns {Promise<boolean>} 真实结果；失败时已提示，调用方不得显示保存成功
+ */
+export async function saveData() {
     // file:// 协议下无同源后端，API 地址统一读取 custom/config.js
     const API_BASE = (window.location.protocol === 'file:')
         ? (window.MAERS?.Config?.API_BASE || '')
         : '';
+    if (window.IS_ADMIN === true) {
+        const { syncManager } = await import('../../../data-manage/sync/sync-manager.module.js');
+        const cloudView = !syncManager.isLocalHost() && hasPrivateEditorState(UI.libraryData);
+        const data = cloudView ? UI.libraryData : cleanMusicData(UI.libraryData);
+        return (await syncManager.writeDocument('music', data, { apiBase: API_BASE })).success;
+    }
 
-    // [Clean] 移除运行时字段（以 _ 开头），但保留 _enc（加密标记，属于持久化数据）
-    const cleanData = JSON.parse(JSON.stringify(UI.libraryData, (key, value) => {
-        if (key.startsWith('_') && key !== '_enc') return undefined;
-        return value;
-    }));
-
-    localFetch(`${API_BASE}/api/save_music`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cleanData)
-    }).then(response => {
+    try {
+        const response = await localFetch(`${API_BASE}/api/save_music`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(cleanMusicData(UI.libraryData))
+        });
         if (!response.ok) Toast.error("❌ 保存失败！");
-    }).catch(err => {
+        return response.ok;
+    } catch (err) {
         Toast.error("❌ 网络错误");
-    });
+        return false;
+    }
 }
 
 export function refreshCurrentView() {

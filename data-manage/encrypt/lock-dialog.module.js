@@ -2,13 +2,14 @@
 /** 固定的本地图标；名称只允许来自此表，不接受任意 HTML 或地址。 */
 const CRYPTO_ICONS = {
     'secret-key': new URL('../../ui/secret-key.svg', import.meta.url).href,
+    'password-group': new URL('../../ui/password-group.svg', import.meta.url).href,
     encryption: new URL('../../ui/encryption.svg', import.meta.url).href,
     decryption: new URL('../../ui/decryption.svg', import.meta.url).href
 };
 
 export function cryptoIconHtml(name, size = 18) {
+    if (!Object.hasOwn(CRYPTO_ICONS, name)) return '';
     const src = CRYPTO_ICONS[name];
-    if (!src) return '';
     return `<img class="mlock-svg-icon mlock-svg-icon--${name}" src="${escapeHtml(src)}" width="${Number(size) || 18}" height="${Number(size) || 18}" alt="" aria-hidden="true">`;
 }
 
@@ -19,7 +20,13 @@ export function escapeHtml(s) {
     }[c]));
 }
 
-/** 加解密进度：未知数量时保持处理动画，已知数量时显示真实完成数。 */
+let activeProgress = 0;
+const warnPendingProgress = event => {
+    event.preventDefault();
+    event.returnValue = '';
+};
+
+/** 长操作进度：未知数量时保持处理动画，已知数量时显示真实完成数。 */
 export function openProgress(label, icon = 'encryption') {
     injectLockStyles();
     const el = document.createElement('div');
@@ -29,10 +36,13 @@ export function openProgress(label, icon = 'encryption') {
     const text = el.querySelector('.mlock-progress-text');
     const track = el.querySelector('.mlock-progress-bar');
     const bar = track.firstElementChild;
-    const update = (done = 0, total = 0, message = label) => {
+    if (activeProgress++ === 0) window.addEventListener?.('beforeunload', warnPendingProgress);
+    let closed = false;
+    const update = (done = 0, total = 0, message = label, unit = '') => {
         const known = total > 0;
         const value = Math.max(0, Math.min(done, total));
-        text.textContent = known ? `${message} ${value}/${total}` : `${message}，正在处理…`;
+        const amount = unit === '%' ? `${value}%` : `${value}/${total}`;
+        text.textContent = known ? `${message} ${amount}` : `${message}，正在处理…`;
         track.setAttribute('aria-label', message);
         track.classList.toggle('is-pending', !known);
         if (known) {
@@ -45,7 +55,12 @@ export function openProgress(label, icon = 'encryption') {
         bar.style.width = known ? `${Math.round(value / total * 100)}%` : '35%';
     };
     update();
-    return { update, close: () => el.remove() };
+    return { update, close: () => {
+        if (closed) return;
+        closed = true;
+        if (--activeProgress === 0) window.removeEventListener?.('beforeunload', warnPendingProgress);
+        el.remove();
+    } };
 }
 
 /**
@@ -55,6 +70,9 @@ export function openProgress(label, icon = 'encryption') {
  * @param {Array<{name,type,placeholder,autocomplete,value}>} [opts.fields] - 输入框
  * @param {string} [opts.bodyHtml] - 输入框上方的附加 HTML（调用方负责转义）
  * @param {string} [opts.confirmText] / [opts.cancelText]
+ * @param {boolean} [opts.focusDialog] - 打开时聚焦弹窗容器，等待用户选择操作
+ * @param {boolean} [opts.closeButton] - 头部关闭按钮，等同取消
+ * @param {{text:string,onClick:Function}} [opts.alternate] - 另一项操作，先关闭弹窗再执行
  * @param {(values:Object)=>Promise<true|string>|true|string} opts.onSubmit - 返回 true 关闭，返回字符串则作为错误提示
  * @param {Function} [opts.onCancel]
  * @param {{text:string,onClick:Function}} [opts.link] - 底部文字链接，点击后关闭弹窗再执行
@@ -64,20 +82,22 @@ export function openFormModal(opts) {
     injectLockStyles();
     const {
         icon = '🔐', title = '', sub = '', fields = [], bodyHtml = '',
-        confirmText = '确定', cancelText = '取消', onSubmit, onCancel, link
+        confirmText = '确定', cancelText = '取消', onSubmit, onCancel, link, alternate, focusDialog = false, closeButton = false
     } = opts;
+    const iconName = ['🔐', '🔒'].includes(icon) ? 'encryption' : icon;
 
     const previousFocus = document.activeElement;
     const modal = document.createElement('div');
     modal.className = 'mlock-overlay';
     modal.innerHTML = `
-        <div class="mlock-box" role="dialog" aria-modal="true">
+        <div class="mlock-box" role="dialog" aria-modal="true" tabindex="-1">
             <div class="mlock-header">
-                <div class="mlock-icon-wrap">${icon === '🛡️' ? cryptoIconHtml('secret-key', 28) : ['🔐', '🔒'].includes(icon) ? cryptoIconHtml('encryption', 28) : escapeHtml(icon)}</div>
+                <div class="mlock-icon-wrap">${cryptoIconHtml(iconName, 28) || escapeHtml(icon)}</div>
                 <div class="mlock-title-group">
                     <span class="mlock-title">${escapeHtml(title)}</span>
                     ${sub ? `<span class="mlock-sub">${escapeHtml(sub)}</span>` : ''}
                 </div>
+                ${closeButton ? '<button type="button" class="mlock-btn-close" data-act="close" aria-label="关闭弹窗">×</button>' : ''}
             </div>
             <div class="mlock-body">
                 ${bodyHtml}
@@ -92,6 +112,7 @@ export function openFormModal(opts) {
             </div>
             <div class="mlock-footer">
                 ${cancelText ? `<button class="mlock-btn-secondary" data-act="cancel">${escapeHtml(cancelText)}</button>` : ''}
+                ${alternate ? `<button class="mlock-btn-secondary" data-act="alternate">${escapeHtml(alternate.text)}</button>` : ''}
                 <button class="mlock-btn-primary" data-act="ok">${escapeHtml(confirmText)}</button>
             </div>
         </div>
@@ -108,7 +129,7 @@ export function openFormModal(opts) {
     const close = () => {
         if (closed) return;
         closed = true;
-        inputs.forEach(input => { input.value = ''; });
+        modal.querySelectorAll('input').forEach(input => { input.value = ''; });
         modal.remove();
         if (previousFocus?.isConnected) previousFocus.focus();
         document.removeEventListener('keydown', onKey, true);
@@ -145,14 +166,22 @@ export function openFormModal(opts) {
     };
     // 捕获阶段监听，避免被页面其他快捷键拦截；多层弹窗时只有最上层响应
     const onKey = (e) => {
-        const overlays = document.querySelectorAll('.mlock-overlay');
+        const overlays = [...document.querySelectorAll('.mlock-overlay')].filter(el => el.style.display !== 'none');
         if (overlays[overlays.length - 1] !== modal) return;
-        if (e.key === 'Enter' && e.target?.tagName !== 'BUTTON') { e.preventDefault(); submit(); }
+        if (CSS.supports('selector(select:open)') && modal.querySelector('select:open')) return;
+        if (e.key === 'Enter' && !['BUTTON', 'SELECT'].includes(e.target?.tagName)) { e.preventDefault(); submit(); }
         if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel(); }
     };
 
     okBtn.onclick = submit;
     if (cancelBtn) cancelBtn.onclick = cancel;
+    if (closeButton) modal.querySelector('[data-act="close"]').onclick = cancel;
+    const alternateBtn = modal.querySelector('[data-act="alternate"]');
+    if (alternateBtn) alternateBtn.onclick = () => {
+        if (busy || closed) return;
+        close();
+        alternate.onClick();
+    };
     document.addEventListener('keydown', onKey, true);
     const linkEl = modal.querySelector('.mlock-link');
     if (linkEl) {
@@ -163,7 +192,9 @@ export function openFormModal(opts) {
         };
     }
 
-    requestAnimationFrame(() => { if (!closed) (inputs[0] || okBtn).focus(); });
+    requestAnimationFrame(() => {
+        if (!closed) (focusDialog ? modal.querySelector('.mlock-box') : inputs[0] || okBtn).focus();
+    });
     return { close, el: modal, showError };
 }
 
@@ -234,27 +265,28 @@ export function injectLockStyles() {
             -webkit-backdrop-filter: blur(24px);
             border-radius: 18px;
             border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+            box-shadow: none;
             overflow: hidden;
             animation: mlockSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        .mlock-box:focus { outline: none; }
         @keyframes mlockSlide {
             from { transform: translateY(14px) scale(0.97); opacity: 0; }
             to   { transform: translateY(0) scale(1); opacity: 1; }
         }
         html.light-mode .mlock-box {
             background: rgba(255, 255, 255, 0.97);
-            border-color: rgba(0, 0, 0, 0.1);
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+            border-color: rgba(0, 0, 0, 0.16);
+            box-shadow: none;
         }
 
         .mlock-header {
             display: flex; align-items: center; gap: 14px;
             padding: 22px 22px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
         }
         html.light-mode .mlock-header {
-            border-bottom-color: rgba(0, 0, 0, 0.08);
+            border-bottom-color: rgba(0, 0, 0, 0.16);
         }
         .mlock-icon-wrap {
             font-size: 28px;
@@ -266,11 +298,19 @@ export function injectLockStyles() {
             display: flex; align-items: center; justify-content: center;
         }
         .mlock-svg-icon { display: inline-block; flex-shrink: 0; vertical-align: middle; object-fit: contain; pointer-events: none; }
-        .mlock-svg-icon--secret-key { filter: invert(1); }
-        html.light-mode .mlock-svg-icon--secret-key { filter: none; }
+        .mlock-svg-icon--secret-key, .mlock-svg-icon--password-group { filter: invert(1); }
+        html.light-mode .mlock-svg-icon--secret-key, html.light-mode .mlock-svg-icon--password-group { filter: none; }
         .mlock-svg-icon--encryption, .mlock-svg-icon--decryption { filter: invert(1) hue-rotate(180deg) brightness(1.5); }
         html.light-mode .mlock-svg-icon--encryption, html.light-mode .mlock-svg-icon--decryption { filter: none; }
         .mlock-title-group { display: flex; flex-direction: column; gap: 3px; }
+        .mlock-box--choices .mlock-title-group { flex: 1; min-width: 0; }
+        .mlock-btn-close { flex-shrink: 0; width: 44px; height: 44px; padding: 0; border: none; border-radius: 6px; background: transparent; color: var(--text-main, #eee); font-size: 24px; cursor: pointer; }
+        html.light-mode .mlock-btn-close { color: #222; }
+        .mlock-btn-close:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+        .mlock-message { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text-main, #eee); font-size: 13px; line-height: 1.6; }
+        html.light-mode .mlock-message { color: #222; }
+        .mlock-box--choices .mlock-footer { flex-direction: column; align-items: stretch; }
+        .mlock-box--choices .mlock-footer button { min-height: 44px; }
         .mlock-title { font-size: 15px; font-weight: 700; color: var(--text-main, #eee); }
         html.light-mode .mlock-title { color: #111; }
         .mlock-sub { font-size: 12px; color: var(--text-sub, #888); line-height: 1.4; }
@@ -330,32 +370,32 @@ export function injectLockStyles() {
             cursor: pointer; border: none;
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: #fff;
-            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+            box-shadow: none;
             transition: all 0.2s;
         }
         .mlock-btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+            box-shadow: none;
         }
 
         .mlock-crypto-controls {
             position: fixed; left: 20px; bottom: 20px; z-index: 9998;
             display: inline-flex; align-items: stretch; height: 42px; box-sizing: border-box;
             border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 999px;
-            background: rgba(30, 30, 40, 0.85); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+            background: rgba(30, 30, 40, 0.85); box-shadow: none;
         }
-        html.light-mode .mlock-crypto-controls:not(.mlock-crypto-controls--actions) { background: rgba(255, 255, 255, 0.92); border-color: rgba(0, 0, 0, 0.1); }
+        html.light-mode .mlock-crypto-controls:not(.mlock-crypto-controls--actions) { background: rgba(255, 255, 255, 0.92); border-color: rgba(0, 0, 0, 0.16); }
         /* 批量取消加密沿用思维导图的蓝灰、冷白与天蓝强调色。 */
         .mlock-crypto-controls--actions {
             --mlock-action-accent: #38bdf8;
             background: rgba(30, 41, 59, 0.92); border-color: rgba(148, 163, 184, 0.28);
-            color: #f1f5f9; overflow: hidden; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.18);
+            color: #f1f5f9; overflow: hidden; box-shadow: none;
             transition: border-color 0.18s ease, box-shadow 0.18s ease;
         }
         html.light-mode .mlock-crypto-controls--actions {
             --mlock-action-accent: #0284c7;
             background: #f8fafc; border-color: #cbd5e1; color: #1e293b;
-            box-shadow: 0 3px 12px rgba(15, 23, 42, 0.08);
+            box-shadow: none;
         }
         .mlock-crypto-controls--actions:focus-within { border-color: var(--mlock-action-accent); }
         .mlock-settings-btn {
@@ -371,7 +411,7 @@ export function injectLockStyles() {
         }
         .mlock-settings-btn--disabled:hover {
             transform: none !important;
-            box-shadow: none !important;
+            box-shadow:none !important;
         }
         .mlock-unlock-panel {
             flex: 0 0 auto; width: 0; overflow: hidden; opacity: 0; pointer-events: none;
@@ -423,14 +463,55 @@ export function injectLockStyles() {
             font-size: 12.5px; line-height: 1.75; color: var(--text-sub, #aaa);
             padding: 10px 12px; border-radius: 10px;
             background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
-        html.light-mode .mlock-status { background: #f6f6f8; border-color: rgba(0, 0, 0, 0.08); color: #444; }
+        html.light-mode .mlock-status { background: #f6f6f8; border-color: rgba(0, 0, 0, 0.16); color: #444; }
         .mlock-status b { color: var(--text-main, #eee); font-weight: 600; }
         html.light-mode .mlock-status b { color: #111; }
         .mlock-ok { color: #34d399; }
         .mlock-bad { color: #f87171; }
         .mlock-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .mlock-actions.mlock-crypto-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .mlock-crypto-actions .mlock-btn-secondary { min-width: 0; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+        .mlock-actions.mlock-group-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .mlock-group-actions .mlock-btn-secondary { min-width: 0; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+        .mlock-status.mlock-password-group { padding: 0 12px; }
+        .mlock-password-group > summary { position: relative; display: block; min-height: 44px; padding: 10px 22px 10px 0; box-sizing: border-box; cursor: pointer; overflow-wrap: anywhere; list-style: none; }
+        .mlock-password-group > summary::-webkit-details-marker { display: none; }
+        .mlock-password-group > summary::after { content: ''; position: absolute; right: 2px; top: 50%; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 6px solid var(--text-sub, #aaa); transform: translateY(-50%); }
+        .mlock-password-group[open] > summary::after { transform: translateY(-50%) rotate(90deg); }
+        .mlock-status.mlock-password-group > .mlock-actions { margin-top: 0; padding-bottom: 10px; }
+        .mlock-unlocked-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+        .mlock-unlocked-groups:empty { display: none; }
+        .mlock-unlocked-group {
+            min-height: 36px; max-width: 100%; padding: 6px 12px;
+            border-radius: 9px; border: 1px solid rgba(107, 156, 255, 0.55);
+            box-shadow: none;
+            background: transparent; color: var(--text-main, #eee);
+            font: inherit; font-size: 13px; overflow-wrap: anywhere; cursor: pointer;
+        }
+        html.light-mode .mlock-unlocked-group {
+            border-color: rgba(37, 99, 235, 0.48);
+            box-shadow: none;
+        }
+        .mlock-unlocked-group:hover { background: rgba(79, 135, 249, 0.09); }
+        .mlock-unlocked-group:focus-visible { outline: 2px solid #659aff; outline-offset: 2px; }
+        .mlock-unlocked-group.mlock-group-choice[aria-pressed="false"] {
+            border-color: rgba(255, 255, 255, 0.15); box-shadow:none;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        html.light-mode .mlock-group-choice[aria-pressed="false"] {
+            border-color: rgba(0, 0, 0, 0.12); background: #f4f4f6;
+        }
+        .mlock-group-choice:disabled { cursor: default; }
+        .mlock-btn-secondary.mlock-lock-all { display: grid; place-items: center; min-width: 36px; padding: 6px; }
+        .mlock-password-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; margin-bottom: 10px; }
+        .mlock-password-row [role="alert"] { grid-column: 1 / -1; font-size: 12px; }
+        .mlock-password-row input[aria-invalid="true"] { border-color: #f87171; }
+        .mlock-group-items { display: flex; flex-direction: column; gap: 12px; max-height: 45dvh; overflow-y: auto; }
+        .mlock-group-items .mlock-check { align-items: flex-start; overflow-wrap: anywhere; }
+        .mlock-status + .mlock-status { margin-top: 10px; }
+        .mlock-status .mlock-actions { margin-top: 10px; }
         .mlock-actions .mlock-btn-secondary { padding: 9px 10px; text-align: center; }
         .mlock-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }
         .mlock-help { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-sub, #888); }
@@ -438,11 +519,12 @@ export function injectLockStyles() {
         .mlock-box--settings .mlock-body { overflow-y: auto; min-height: 0; }
         .mlock-box--settings .mlock-header, .mlock-box--settings .mlock-footer { flex-shrink: 0; }
         .mlock-progress {
+            visibility: visible;
             position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
-            z-index: 999998; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 10px 16px; border-radius: 14px;
+            z-index: 1000000; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; padding: 10px 16px; border-radius: 14px;
             background: rgba(22, 22, 28, 0.94); color: #eee; font-size: 13px;
             border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: none;
             display: flex; flex-direction: column; gap: 8px;
         }
         .mlock-progress-heading { display: flex; align-items: center; gap: 8px; }

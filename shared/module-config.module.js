@@ -1,117 +1,30 @@
-/**
- * MAERS Module Configuration
- * ES6 Module Version
- * 模块配置常量，替代硬编码的 iconMap 和 titleMap
- * @version 3.0.0 - ES6 Module
- */
+/** 模块元数据：统一提供图标、标题和数据文件，前后台通过显式导入共用。 */
+import { Utils } from './utils.module.js';
 
 const MODULE_CONFIG = {
-    notes: {
-        icon: 'ui/notes-icon.svg',
-        title: 'Study Notes',
-        displayTitle: '<img src="ui/notes-icon.svg" alt="Notes" style="height: 1.25em; width: auto; vertical-align: middle;"> Study Notes',
-        allowTags: true,
-        allowMove: true,
-        allowContent: true,
-        dataFile: 'data/notes-tree.json'
+    notes: { icon: 'ui/notes-icon.svg', title: 'Study Notes', dataFile: 'data/notes-tree.json' },
+    literature: { icon: 'ui/literature-icon.svg', title: 'Literature', dataFile: 'data/literature-tree.json' },
+    record: { icon: 'ui/record-icon.svg', title: 'Records', dataFile: 'data/record-tree.json' },
+    album: { icon: 'ui/album-icon.svg', title: 'Album', dataFile: 'data/album-config.json' },
+    music: { icon: 'ui/music-icon.svg', title: 'Music', dataFile: 'data/music-data.json' },
+    games: { icon: 'ui/games-icon.svg', title: 'Games', dataFile: 'data/games-tree.json' },
+    videos: { icon: 'ui/music-icon.svg', title: 'Videos', dataFile: 'data/videos-tree.json' }
+};
+
+export const ModuleConfig = {
+    get(moduleName = 'notes') {
+        return Object.hasOwn(MODULE_CONFIG, moduleName) ? MODULE_CONFIG[moduleName] : { icon: null, title: moduleName.toUpperCase(),
+            dataFile: `data/${moduleName}-tree.json` };
     },
-    literature: {
-        icon: 'ui/literature-icon.svg',
-        title: 'Literature',
-        displayTitle: '<img src="ui/literature-icon.svg" alt="Literature" style="height: 1.25em; width: auto; vertical-align: middle;"> Literature',
-        allowTags: true,
-        allowMove: true,
-        allowContent: true,
-        dataFile: 'data/literature-tree.json'
-    },
-    record: {
-        icon: 'ui/record-icon.svg',
-        title: 'Records',
-        displayTitle: '<img src="ui/record-icon.svg" alt="Records" style="height: 1.25em; width: auto; vertical-align: middle;"> Records',
-        allowTags: true,
-        allowMove: true,
-        allowContent: true,
-        dataFile: 'data/record-tree.json'
-    },
-    album: {
-        icon: 'ui/album-icon.svg',
-        title: 'Album',
-        displayTitle: '<img src="ui/album-icon.svg" alt="Album" style="height: 1.25em; width: auto; vertical-align: middle;"> Album',
-        allowTags: false,
-        allowMove: true,
-        allowContent: false,
-        dataFile: 'data/album-config.json'
-    },
-    music: {
-        icon: 'ui/music-icon.svg',
-        title: 'Music',
-        displayTitle: '<img src="ui/music-icon.svg" alt="Music" style="height: 1.25em; width: auto; vertical-align: middle;"> Music',
-        allowTags: false,
-        allowMove: false,
-        allowContent: false,
-        dataFile: 'data/music-data.json'
-    },
-    games: {
-        icon: 'ui/games-icon.svg',
-        title: 'Games',
-        displayTitle: '<img src="ui/games-icon.svg" alt="Games" onerror="this.src=\'ui/literature-icon.svg\'" style="height: 1.25em; width: auto; vertical-align: middle;"> Games',
-        allowTags: true,
-        allowMove: true,
-        allowContent: true,
-        dataFile: 'data/games-tree.json'
-    },
-    videos: {
-        icon: 'ui/music-icon.svg',
-        title: 'Videos',
-        displayTitle: '<img src="ui/music-icon.svg" alt="Videos" onerror="this.src=\'ui/literature-icon.svg\'" style="height: 1.25em; width: auto; vertical-align: middle;"> Videos',
-        allowTags: true,
-        allowMove: true,
-        allowContent: true,
-        dataFile: 'data/videos-tree.json'
+
+    getTitle(moduleName, isAdmin = false) {
+        const { icon, title } = this.get(moduleName);
+        const fallback = ['games', 'videos'].includes(moduleName)
+            ? " onerror=\"this.src='ui/literature-icon.svg'\"" : '';
+        const image = icon ? `<img src="${Utils.escapeAttr(icon)}" alt="${Utils.escapeAttr(title)}"${fallback} style="height: 1.25em; width: auto; vertical-align: middle;">` : '📂';
+        const text = moduleName === 'videos' && !isAdmin ? ['music', 'videos'].map(name =>
+            `<span class="music-mode-btn${name === moduleName ? ' active' : ''}" onclick="window.location.href='${name}.html'">${Utils.escapeHtml(this.get(name).title)}</span>`
+        ).join(' & ') : Utils.escapeHtml(title);
+        return `${image} ${text}`;
     }
 };
-
-const ModuleConfig = {
-    // 原始配置对象
-    _config: MODULE_CONFIG,
-
-    /**
-     * 获取模块配置
-     * @param {string} moduleName - 模块名称
-     * @returns {Object} 模块配置
-     */
-    get(moduleName) {
-        return MODULE_CONFIG[moduleName] || MODULE_CONFIG.notes;
-    },
-
-    /**
-     * 获取模块图标
-     * @param {string} moduleName - 模块名称
-     * @returns {string} 图标
-     */
-    getIcon(moduleName) {
-        const config = this.get(moduleName);
-        return config.icon;
-    },
-
-    /**
-     * 获取模块标题
-     * @param {string} moduleName - 模块名称
-     * @returns {string} 标题
-     */
-    getTitle(moduleName) {
-        const config = this.get(moduleName);
-        return config.displayTitle;
-    },
-
-};
-
-// 挂载到全局命名空间（向后兼容）
-if (typeof window !== 'undefined') {
-    window.MAERS = window.MAERS || {};
-    window.MAERS.ModuleConfig = ModuleConfig;
-}
-
-// 导出
-export { MODULE_CONFIG, ModuleConfig };
-export default ModuleConfig;

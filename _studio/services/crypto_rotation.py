@@ -29,6 +29,8 @@ def _shape(before, after):
         if not isinstance(after, dict) or before.keys() != after.keys():
             return False
         if '_enc' in before:
+            if before.get('_group', 'default') != 'default':
+                return before == after
             return (isinstance(after['_enc'], str) and after['_enc'].startswith('enc:')
                     and all(_shape(before[k], after[k]) for k in before if k != '_enc'))
         return all(_shape(before[k], after[k]) for k in before)
@@ -47,7 +49,7 @@ def export_snapshots():
         raw = path.read_bytes()
         snapshots.append({'path': path.relative_to(config.DATA_DIR).as_posix(),
                           'revision': hashlib.sha256(raw).hexdigest(), 'data': json.loads(raw)})
-    return {'dek_id': ring['dek_id'], 'files': snapshots}
+    return {'dek_id': ring['dek_id'], 'keyring_revision': crypto_keyring.revision(ring), 'files': snapshots}
 
 
 @storage.transactional
@@ -55,13 +57,35 @@ def rotate(body):
     if os.path.exists(_marker()):
         raise ValueError('Finish private-token revocation before starting another rotation')
     current = export_snapshots()
-    if body.get('expected_dek_id') != current['dek_id']:
+    if (body.get('expected_dek_id') != current['dek_id']
+            or body.get('expected_keyring_revision') != current['keyring_revision']):
         raise ValueError('Keyring changed; reload before rotating')
+    previous = crypto_keyring._load()
     ring = body.get('keyring')
     if (not isinstance(ring, dict) or ring.get('v') != 1 or ring.get('dek_id') == current['dek_id']
             or not crypto_keyring.valid_ring(ring)
-            or ring.get('media_base') != crypto_keyring._load().get('media_base')):
+            or ring.get('master_only', False) != previous.get('master_only', False)
+            or ring.get('media_base') != previous.get('media_base')):
         raise ValueError('Invalid replacement keyring')
+    ring = crypto_keyring.clean_ring(ring)
+    old_groups, new_groups = previous.get('groups', {}), ring.get('groups', {})
+    old_content, new_content = previous.get('content'), ring.get('content')
+    if bool(old_content) != bool(new_content):
+        raise ValueError('Master rotation must preserve content-password access')
+    if old_content:
+        before_content, after_content = old_content.copy(), new_content.copy()
+        before_wrap = before_content.pop('master_wrap')
+        after_wrap = after_content.pop('master_wrap')
+        if before_content != after_content or before_wrap == after_wrap:
+            raise ValueError('Master rotation must rewrap and preserve the content-password key')
+    if old_groups.keys() != new_groups.keys():
+        raise ValueError('Master key rotation cannot alter content password groups')
+    for identity, group in old_groups.items():
+        old_fields, new_fields = group.copy(), new_groups[identity].copy()
+        old_wrap, new_wrap = old_fields.pop('master_wrap', None), new_fields.pop('master_wrap', None)
+        if (old_fields != new_fields or bool(old_wrap) != bool(new_wrap)
+                or (old_wrap and old_wrap == new_wrap)):
+            raise ValueError('Master key rotation must rewrap linked groups and preserve their own keys')
     snapshots = body.get('files')
     if not isinstance(snapshots, list) or len(snapshots) != len(current['files']):
         raise ValueError('Rotation must cover every source snapshot')
@@ -72,16 +96,17 @@ def rotate(body):
         if before['path'] in {f'{module}-tree.json' for module in ('notes', 'record', 'literature', 'games', 'videos')}:
             cms_store.validate(after['data'])
     token_hash = body.get('token_hash')
-    if ring.get('media_base') and (not isinstance(token_hash, str) or not crypto_keyring.HEX_64.fullmatch(token_hash)):
+    token_pending = bool(ring.get('media_base')) and not ring.get('master_only', False)
+    if token_pending and (not isinstance(token_hash, str) or not crypto_keyring.HEX_64.fullmatch(token_hash)):
         raise ValueError('Private-token hash is required')
     # 本机备份包含旧密文和被包裹的旧密钥环，不包含主密码或明文 DEK。
-    backup = data_safety.create_backup(include_remote=False)
+    backup = data_safety.create_backup('local')
     for item in snapshots:
         storage.write_json(os.path.join(config.DATA_DIR, item['path']), item['data'])
     crypto_keyring.write_ring(ring)
-    if ring.get('media_base'):
+    if token_pending:
         storage.write_json(_marker(), {'dek_id': ring['dek_id'], 'token_hash': token_hash})
-    return {'status': 'success', 'backup': backup['id'], 'token_pending': bool(ring.get('media_base'))}
+    return {'status': 'success', 'backup': backup['id'], 'token_pending': token_pending}
 
 
 @storage.serialized

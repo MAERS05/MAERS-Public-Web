@@ -4,7 +4,7 @@ MAERS 垃圾数据清理服务 (_studio/services/janitor.py)
 职责：
 1. 扫描 CMS (*-tree.json)、相册 (photos-data.json 重建的缓存)、音乐 (music-data.json)、空间 (space-tree.json) 中被引用的有效资源路径；
 2. 清理 photos/ 下未被任何 Markdown 正文、节点封面或独立相册引用的孤立图片（含原图、webp 缩略图、avif 预览图）；
-3. 清理 data/<module>/ 下未被 JSON 节点引用的孤立 .md 文档；
+3. 清理 markdown/<module>/ 下未被 JSON 节点引用的孤立 .md 文档；
 4. 清理数据库中的幽灵记录（指向已不存在本地文件的记录）及空目录，并同步刷新静态 JSON。
 """
 
@@ -92,7 +92,7 @@ class MaersJanitor:
                 content = str(node.get('content') or '')
                 if content.endswith('.md'):
                     self.used_files.add(normalize_path(content))
-                    path = os.path.join(config.DATA_DIR, content)
+                    path = os.path.join(config.PROJECT_ROOT, content)
                     if os.path.isfile(path):
                         with open(path, encoding='utf-8') as source:
                             content = source.read()
@@ -181,8 +181,10 @@ class MaersJanitor:
             raise
 
     def clean_physical_files(self):
-        """遍历 photos/ 与 data/<module>/，删除未被引用的孤立图片与孤立 .md 文档"""
+        """遍历 photos/ 与 markdown/<module>/，删除未被引用的孤立图片与孤立 .md 文档"""
         if os.path.exists(config.PHOTOS_ROOT) and not self.legacy_locked_media:
+            from . import local_media
+            protected = local_media.private_keys()
             image_dirs = ("images", "thumbnails", "previews")
             for root, _, files in os.walk(config.PHOTOS_ROOT):
                 for file in files:
@@ -190,7 +192,8 @@ class MaersJanitor:
                         continue
                     full_path = os.path.join(root, file)
                     rel_path = to_rel_path(full_path)
-                    if rel_path not in self.used_files and any(sub in rel_path for sub in image_dirs):
+                    if (rel_path not in self.used_files and not local_media.is_private(rel_path, protected)
+                            and any(sub in rel_path for sub in image_dirs)):
                         try:
                             data_safety.quarantine(full_path, self.batch)
                             self.deleted_files_count += 1
@@ -198,18 +201,17 @@ class MaersJanitor:
                         except (OSError, ValueError, sqlite3.Error) as e:
                             print(f"  [ JANITOR ] ⚠️ 删除文件失败 | Failed to delete {rel_path}: {e}")
 
-        if os.path.exists(config.DATA_DIR):
-            for item in os.listdir(config.DATA_DIR):
-                sub_dir = os.path.join(config.DATA_DIR, item)
-                if not os.path.isdir(sub_dir) or item == "tags":
+        if os.path.exists(config.MARKDOWN_ROOT):
+            for item in os.listdir(config.MARKDOWN_ROOT):
+                sub_dir = os.path.join(config.MARKDOWN_ROOT, item)
+                if not os.path.isdir(sub_dir) or not data_safety._backup_directory(sub_dir):
                     continue
                 for file in os.listdir(sub_dir):
                     if not file.endswith(".md"):
                         continue
                     full_path = os.path.join(sub_dir, file)
                     rel_path = to_rel_path(full_path)
-                    db_ref_path = rel_path[5:] if rel_path.startswith("data/") else rel_path
-                    if db_ref_path not in self.used_files and rel_path not in self.used_files:
+                    if rel_path not in self.used_files:
                         try:
                             data_safety.quarantine(full_path, self.batch)
                             self.deleted_files_count += 1

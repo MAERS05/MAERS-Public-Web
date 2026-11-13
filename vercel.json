@@ -1,4 +1,8 @@
 {
+    "cleanUrls": true,
+    "rewrites": [
+        { "source": "/photos/:category", "destination": "/photos" }
+    ],
     "headers": [
         {
             "source": "/(.*)\\.(html|json)",
@@ -23,6 +27,7 @@
             ]
         }
     ],
+    "installCommand": "npm ci --prefix _studio/tooling",
     "buildCommand": "node _studio/tooling/build-site.mjs",
     "outputDirectory": "dist"
 }

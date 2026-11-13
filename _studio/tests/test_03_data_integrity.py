@@ -10,7 +10,7 @@ import json
 from .helpers import CMS_MODULES, abs_path, exists, list_files_by_ext, read_json
 
 
-def publication_issues(root):
+def publication_issues(root, *, preparing=False):
     """只读发布门禁：本机事务、云端待办及凭据撤销均须完成。"""
     local = pathlib.Path(root) / '_studio' / '.local'
     issues = []
@@ -23,7 +23,9 @@ def publication_issues(root):
         try:
             with outbox.open(encoding='utf-8') as source:
                 jobs = json.load(source)
-            if not isinstance(jobs, list) or jobs:
+            if not isinstance(jobs, list) or any(
+                not preparing or not isinstance(job, dict) or job.get('deferred') is not True for job in jobs
+            ):
                 issues.append('存在未完成的媒体同步任务')
         except (OSError, ValueError):
             issues.append('媒体待办无法读取')
@@ -50,7 +52,8 @@ class Test03_DataAndStorageIntegrity(unittest.TestCase):
     """验证 data/ 目录下的 JSON 快照、SQLite 数据库 Schema 与物理 .md 文件的一致性"""
 
     def test_13_publication_requires_completed_recovery_and_media(self):
-        self.assertEqual(publication_issues(abs_path('')), [], '数据恢复或同步未完成，禁止发布')
+        preparing = os.environ.get('MAERS_PREPARING_PUBLISH') == '1'
+        self.assertEqual(publication_issues(abs_path(''), preparing=preparing), [], '数据恢复或同步未完成，禁止发布')
 
     def test_01_all_data_json_valid(self):
         """data/ 与 data/tags/ 下所有 .json 文件均为合法 UTF-8 JSON"""
@@ -72,7 +75,9 @@ class Test03_DataAndStorageIntegrity(unittest.TestCase):
                 self.assertIsInstance(tree.get('root'), list, f"{mod}-tree.json 缺少 root 数组")
 
     def test_03_cms_tree_md_files_exist(self):
-        """各模块 *-tree.json 中所有未加密笔记节点的 .md 路径在磁盘上真实存在，且节点 id 全局唯一"""
+        """节点 id 唯一、正文路径合法；本机发布还必须具备正文，纯源码检出允许不含正文。"""
+        from pathlib import PurePosixPath
+        local_bodies = (exists('markdown') and bool(list_files_by_ext('markdown', '.md'))) or os.environ.get('MAERS_PREPARING_PUBLISH') == '1'
         for mod in CMS_MODULES:
             seen_ids = set()
             stack = list(read_json(f"data/{mod}-tree.json").get('root', []))
@@ -88,8 +93,13 @@ class Test03_DataAndStorageIntegrity(unittest.TestCase):
                 content = str(node.get('content') or '')
                 if content.endswith('.md'):
                     with self.subTest(module=mod, md=content):
-                        self.assertTrue(exists(f"data/{content}"),
-                                        f"[{mod}] 节点 '{node.get('title')}' 引用的物理文件缺失: data/{content}")
+                        parts = PurePosixPath(content).parts
+                        self.assertNotIn('\\', content)
+                        self.assertNotIn(':', content)
+                        self.assertTrue(len(parts) >= 3 and parts[0] == 'markdown' and parts[1] == mod and '..' not in parts)
+                        if local_bodies:
+                            self.assertTrue(exists(content),
+                                            f"[{mod}] 节点 '{node.get('title')}' 引用的物理文件缺失: {content}")
                 stack.extend(node.get('children') or [])
 
     def test_04_cms_sqlite_schema(self):

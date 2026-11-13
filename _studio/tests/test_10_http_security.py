@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 from .sandbox import SandboxTestCase, config, routes
-from services import git_service
+from services import git_service, operation_status
 import server
 
 
@@ -70,12 +70,72 @@ class Test10_HttpSecurity(SandboxTestCase):
             code, _, _ = self.request('GET', '/api/crypto/keyring', headers=self.auth)
             self.assertEqual(code, 200)
 
+    def test_storage_bucket_selection_exposes_only_ids_to_local_admin(self):
+        """桶选择接口必须有本机会话，响应只含公开的显示代号。"""
+        from services import media_store
+        store = mock.Mock(bucket_groups={'archive': {'secret_access_key': 'private-fixture'}},
+                          content_bucket='archive')
+        path = '/api/storage/buckets'
+        with (mock.patch.object(server, 'routes', routes), mock.patch.object(media_store, 'get_store', return_value=store)):
+            self.assertEqual(self.request('GET', path)[0], 403)
+            status, _, data = self.request('GET', path, headers=self.auth)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(data), {'buckets': ['default', 'archive'], 'contentBucket': 'archive'})
+
+    def test_storage_settings_require_local_session_and_origin(self):
+        """桶配置和显式复制凭据都经过本机会话鉴权。"""
+        from services import media_settings
+        for path in ('/api/storage/config', '/api/storage/config/'):
+            self.assertEqual(self.request('GET', path)[0], 403)
+        path = '/api/storage/worker-setting'
+        body = b'{"name":"MEDIA_PRIVATE_S3"}'
+        self.assertEqual(self.post(path, body, {'X-MAERS-Token': 'invalid'})[0], 403)
+        self.assertEqual(self.post(path, body, {'Origin': 'https://untrusted.example'})[0], 403)
+        with (mock.patch.object(server, 'routes', routes),
+              mock.patch.object(media_settings, 'worker_setting', return_value='fixture-value')):
+            code, headers, data = self.post(path, body)
+        self.assertEqual(code, 200)
+        self.assertIn('no-store', headers['Cache-Control'])
+        self.assertEqual(json.loads(data), {'value': 'fixture-value'})
+
     def test_01_loopback_and_per_start_token(self):
         """监听仅限回环；每个服务实例生成新令牌。"""
         self.assertEqual(self.httpd.server_address[0], '127.0.0.1')
         with server.LocalServer(0, QuietHandler) as other:
             self.assertNotEqual(self.httpd.session_token, other.session_token)
         self.assertGreaterEqual(len(self.httpd.session_token), 40)
+
+    def test_startup_blocks_business_reads_and_serves_recovery_progress(self):
+        """恢复期不暴露业务文件，但启动器可读取真实恢复进度。"""
+        with self.httpd._status_lock:
+            self.httpd._status.update(state='starting')
+        self.httpd.startup_progress(3, 14, '正在恢复图片权限与文件')
+        code, _, body = self.request('GET', '/api/studio/status')
+        self.assertEqual(code, 200)
+        self.assertEqual(json.loads(body)['done'], 3)
+        self.assertEqual(self.request('GET', '/api/cms/fetch?module=notes')[0], 503)
+        self.assertEqual(self.post()[0], 503)
+
+    def test_shutdown_waits_for_operation_and_progress_bypasses_storage_lock(self):
+        """换组占有写锁时进度可读取，关窗退出会等待写入结束。"""
+        identity = operation_status.start()
+        try:
+            with operation_status.bind(identity):
+                operation_status.update('正在更新图片访问权限', 2, 14)
+            path = '/api/studio/operation?id=' + identity
+            self.assertEqual(self.request('GET', path)[0], 403)
+            with routes.storage.LOCK:
+                code, _, body = self.request('GET', path, headers=self.auth)
+                self.assertEqual(code, 200)
+                self.assertEqual(json.loads(body)['done'], 2)
+            self.assertEqual(self.post('/api/studio/shutdown')[0], 200)
+            self.assertTrue(self.thread.is_alive())
+            self.assertTrue(self.httpd.status()['draining'])
+            self.assertEqual(self.post()[0], 503)
+        finally:
+            operation_status.finish(identity, True)
+        self.thread.join(timeout=2)
+        self.assertFalse(self.thread.is_alive())
 
     def test_11_private_recovery_and_credentials_are_never_static_files(self):
         """同源 GET/HEAD 也拒绝私有文件及 Windows 大小写、尾点、数据流和路径别名。"""
@@ -134,7 +194,8 @@ class Test10_HttpSecurity(SandboxTestCase):
     def test_03_write_routes_require_origin_and_token(self):
         """上传、落盘、推送、清理和外部编辑器入口统一拒绝未授权请求。"""
         paths = ['/upload', '/upload/', '/delete', '/reorder', '/api/admin/clean_data',
-                 '/api/git/commit-push', '/api/photos/register_r2', '/api/crypto/keyring',
+                 '/api/git/commit-push', '/api/photos/register', '/api/crypto/keyring', '/api/crypto/local-session',
+                 '/api/crypto/local-access',
                  '/api/cms/node?module=notes&action=open_external']
         for path in paths:
             for extra in ({'X-MAERS-Token': None}, {'X-MAERS-Token': 'wrong'},
@@ -168,9 +229,9 @@ class Test10_HttpSecurity(SandboxTestCase):
         self.assertEqual(self.post(body=b'[]', overrides={'Content-Type': 'application/json; charset=utf-8'})[0], 200)
         self.assertEqual(self.router.dispatch_post.call_args.args[2], [])
 
-    def test_06_length_validation_and_limits_before_read(self):
-        """异常长度和分块编码被拒绝；超限请求无需发送 body 即返回 413。"""
-        for value, expected in ((None, 411), ('-1', 400), ('abc', 400), ('1, 1', 400), ('9' * 30, 413)):
+    def test_06_content_length_validation(self):
+        """校验 HTTP 请求长度，接受前置零与超过原大小阈值的有效正文。"""
+        for value, expected in ((None, 411), ('-1', 400), ('abc', 400), ('1, 1', 400), ('9' * 30, 400)):
             headers = {**self.auth}
             if value is not None:
                 headers['Content-Length'] = value
@@ -178,15 +239,12 @@ class Test10_HttpSecurity(SandboxTestCase):
         duplicate = list(self.auth.items()) + [('Content-Length', '2'), ('Content-Length', '2')]
         self.assertEqual(self.request('POST', '/api/save_modules', headers=duplicate)[0], 400)
         self.assertEqual(self.post(overrides={'Transfer-Encoding': 'chunked'})[0], 400)
-        for path, limit in (('/api/save_modules', config.MAX_JSON_BYTES),
-                            ('/upload', config.MAX_UPLOAD_BYTES), ('/upload/', config.MAX_UPLOAD_BYTES)):
-            headers = {**self.auth, 'Content-Length': str(limit + 1)}
-            self.assertEqual(self.request('POST', path, headers=headers)[0], 413)
         self.router.dispatch_post.assert_not_called()
-        with mock.patch.object(config, 'MAX_UPLOAD_BYTES', 4):
-            self.assertEqual(self.post('/upload', b'abcd', {'Content-Type': 'image/png'})[0], 200)
-            self.assertEqual(self.router.dispatch_post.call_args.args[3], b'abcd')
-            self.assertEqual(self.post('/upload/', b'abcde')[0], 413)
+        self.assertEqual(self.post('/upload/', b'abcd', {'Content-Type': 'image/png',
+                                                        'Content-Length': '0' * 24 + '4'})[0], 200)
+        self.assertEqual(self.router.dispatch_post.call_args.args[3], b'abcd')
+        body = b'["' + b'a' * (16 * 1024 * 1024) + b'"]'
+        self.assertEqual(self.post(body=body)[0], 200)
 
     def test_07_truncated_body_rejected(self):
         """客户端提前关闭写端时，不把不完整 JSON 当作成功请求。"""

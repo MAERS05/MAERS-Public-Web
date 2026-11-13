@@ -7,6 +7,7 @@
 import { Toast } from '../../../shared/toast.module.js';
 
 import { BatchItemManager, SaveButton } from '../../../data-manage/admin/admin-base.module.js';
+import { includesPrivateTags } from './cms-tags-api.module.js';
 
 // Dependency injection
 let State = null;
@@ -57,15 +58,17 @@ export function updateManagerReference() {
     }
 }
 
+/** 保存标签分类；返回 false 表示失败，保存条保持可见以便重试 */
 export async function tagPerformSave() {
-    if (!categoryManager || !Controller) return;
+    if (!categoryManager || !Controller) return true;
     const cats = categoryManager.list.filter(c => !c._deleted);
-    await Controller.saveTagCategories(cats);
+    if (!(await Controller.saveTagCategories(cats))) return false;
     categoryManager.clearSelection();
     if (categoryManager.setList) {
         categoryManager.setList(Controller.AppState.tagCategories);
         categoryManager.selectedIndices = [];
     }
+    return true;
 }
 
 export async function tagPerformCancel() {
@@ -80,6 +83,10 @@ export async function tagPerformCancel() {
 
 export async function handleMoveTags(tagNames, targetCategoryName, refreshCallback) {
     if (!tagNames || tagNames.length === 0) return;
+    if (includesPrivateTags(Controller.CONFIG?.CURRENT_MODULE || 'notes', Controller.AppState.allNodes, tagNames)) {
+        Toast.error('私密内容的标签归类请在电脑本地后台操作');
+        return;
+    }
 
     const categories = Controller.AppState.tagCategories || [];
 
@@ -199,7 +206,12 @@ export async function createCategory(refreshCallback) {
     const cats = categoryManager.list.filter(c => !c._deleted);
     try {
         if (Controller && Controller.saveTagCategories) {
-            await Controller.saveTagCategories(cats);
+            if (!(await Controller.saveTagCategories(cats))) {
+                // 保存失败：撤回刚添加的分类，避免界面出现从未保存的分类
+                categoryManager.list.pop();
+                refreshCallback();
+                return;
+            }
 
             if (categoryManager.setList) {
                 categoryManager.setList(cats);

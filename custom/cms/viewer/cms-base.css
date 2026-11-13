@@ -24,8 +24,11 @@
 /* ==================== 2. Explorer Header ==================== */
 .explorer-header {
   display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
   align-items: center;
   justify-content: space-between;
+  gap: 12px 16px;
   margin-bottom: 25px;
   padding-bottom: 15px;
   min-height: 42px;
@@ -44,7 +47,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   position: relative;
 }
 
@@ -53,6 +57,27 @@
   align-items: center;
   gap: 12px;
   height: 42px;
+}
+
+.header-tools-row:has(> .search-box) {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 42px;
+  height: auto;
+}
+
+.header-tools-row:has(> .search-box) > button {
+  flex: none;
+  white-space: nowrap;
+}
+
+.header-right > .recent-toggle-btn {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
 }
 
 .header-title {
@@ -71,6 +96,12 @@
   align-items: center;
 }
 
+.header-tools-row > .search-box {
+  flex: 1 1 min(13rem, 100%);
+  width: 260px;
+  min-width: 0;
+}
+
 .search-input {
   min-width: 260px;
   max-width: 600px;
@@ -83,6 +114,15 @@
   font-size: 0.9rem;
   transition: width 0.1s, background-color 0.3s, border-color 0.3s;
 }
+
+.header-tools-row .search-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.search-input::placeholder { color: var(--text-sub); opacity: 0.65; }
 
 /* ==================== 4. Breadcrumb Bar ==================== */
 .breadcrumb-bar {

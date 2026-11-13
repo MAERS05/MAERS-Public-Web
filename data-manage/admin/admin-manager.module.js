@@ -16,9 +16,9 @@ export class BatchItemManager {
         this.initialSnapshot = this.getSnapshot();
     }
 
-    getSnapshot() {
+    getSnapshot(list = this.list) {
         try {
-            return JSON.stringify(this.list, (key, value) => {
+            return JSON.stringify(list, (key, value) => {
                 if (key === 'parent' || key === 'domElement' || key === 'content') return undefined;
                 return value;
             });
@@ -31,7 +31,12 @@ export class BatchItemManager {
     setList(newList) {
         this.list = newList;
         this.selectedIndices = [];
-        this.initialSnapshot = this.getSnapshot();
+        this.markSaved();
+    }
+
+    /** 用实际保存的列表推进基线，保留当前列表中仍待保存的修改。 */
+    markSaved(list = this.list) {
+        this.initialSnapshot = this.getSnapshot(list);
         this.updateSaveState();
     }
 

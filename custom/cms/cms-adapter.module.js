@@ -52,29 +52,13 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
                 applyFiltersCallback();
             }
         },
-        // 统一的标签保存逻辑（线上环境静默放行，仅本地写入后端）
+        // 统一的标签保存：本地写后端，云端走中继暂存；仅在真实保存成功后更新内存
         saveTagCategories: async (categories) => {
-            AppState.tagCategories = JSON.parse(JSON.stringify(categories));
-            if (!_isLocalBackend()) {
-                // 线上无后端，内存更新即可
-                return true;
-            }
-            try {
-                const res = await localFetch(`/api/cms/save_tag_categories?module=${moduleName}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(categories)
-                });
-                if (res.ok) {
-                    return true;
-                } else {
-                    throw new Error("Save failed");
-                }
-            } catch (e) {
-                console.error(e);
-                if (window.MAERS?.Toast) window.MAERS.Toast.error("标签保存失败");
-                return false;
-            }
+            const { TagsApi } = await import('./admin/cms-tags-api.module.js');
+            const saved = await TagsApi.saveCategories(moduleName, categories);
+            if (saved) AppState.tagCategories = JSON.parse(JSON.stringify(categories));
+            else if (window.MAERS?.Toast) window.MAERS.Toast.error("标签保存失败");
+            return saved;
         },
         ...extraConfig.controllerOverrides
     };
@@ -180,6 +164,13 @@ export function setupBaseAdapter(moduleName, applyFiltersCallback, extraConfig =
  */
 export async function preloadTagCategories(AppState, moduleName = 'cms') {
     let success = false;
+
+    // 管理页通过统一入口读取分类及编辑基线。
+    if (AppState.IS_ADMIN) {
+        const { TagsApi } = await import('./admin/cms-tags-api.module.js');
+        AppState.tagCategories = await TagsApi.getCategories(moduleName);
+        return;
+    }
 
     // 1. 仅在本地后端环境下尝试 API（避免线上 Vercel 产生无效 404）
     if (_isLocalBackend()) {

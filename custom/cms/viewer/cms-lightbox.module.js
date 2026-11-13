@@ -5,6 +5,7 @@
  */
 
 const FADE_DELAY = 300;
+const isZoomed = () => (window.visualViewport?.scale || 1) > 1.01;
 
 // 图片列表状态
 let _imageList = [];
@@ -50,6 +51,7 @@ export function initLightbox() {
 
         // 鼠标滚轮切换（250ms 冷却防连跳）
         lightbox.addEventListener("wheel", (e) => {
+            if (e.ctrlKey || isZoomed()) return;
             e.preventDefault();
             if (_imageList.length <= 1 || _wheelCooldown) return;
             _wheelCooldown = true;
@@ -58,30 +60,36 @@ export function initLightbox() {
             else _switchTo(_currentIndex - 1);
         }, { passive: false });
 
-        // 移动端 Touch 滑动支持
-        let touchStartX = 0;
-        let touchEndX = 0;
+        // 仅完整的单指横滑切图；双指操作及放大后的拖动交给浏览器。
+        let swipe = null;
+        const resetSwipe = () => { swipe = null; };
         lightbox.addEventListener("touchstart", (e) => {
-            touchStartX = e.changedTouches[0].screenX;
+            resetSwipe();
+            if (e.touches.length !== 1 || isZoomed()) return;
+            const touch = e.touches[0];
+            swipe = { id: touch.identifier, x: touch.clientX, y: touch.clientY };
+        }, { passive: true });
+
+        lightbox.addEventListener("touchmove", (e) => {
+            if (e.touches.length !== 1 || isZoomed()) resetSwipe();
         }, { passive: true });
 
         lightbox.addEventListener("touchend", (e) => {
-            if (_imageList.length <= 1) return;
-            touchEndX = e.changedTouches[0].screenX;
-            handleGesture();
-        }, { passive: true });
+            const start = swipe;
+            resetSwipe();
+            if (!start || e.touches.length || isZoomed() || _imageList.length <= 1) return;
+            if (!lightbox.classList.contains('active')) return;
+            const touch = Array.from(e.changedTouches).find(item => item.identifier === start.id);
+            if (!touch) return;
+            const deltaX = touch.clientX - start.x;
+            const deltaY = touch.clientY - start.y;
+            if (Math.abs(deltaX) <= 50 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+            if (e.cancelable) e.preventDefault();
+            _switchTo(_currentIndex + (deltaX < 0 ? 1 : -1));
+        }, { passive: false });
 
-        function handleGesture() {
-            const swipeThreshold = 50; // 最小滑动距离 50px
-            if (touchEndX < touchStartX - swipeThreshold) {
-                // 向左滑动 -> 下一张
-                _switchTo(_currentIndex + 1);
-            }
-            if (touchEndX > touchStartX + swipeThreshold) {
-                // 向右滑动 -> 上一张
-                _switchTo(_currentIndex - 1);
-            }
-        }
+        lightbox.addEventListener("touchcancel", resetSwipe, { passive: true });
+        window.visualViewport?.addEventListener('resize', resetSwipe);
     }
 
     if (closeBtn) {

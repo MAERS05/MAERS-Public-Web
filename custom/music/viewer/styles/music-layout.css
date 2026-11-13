@@ -47,7 +47,7 @@
 #search-input:focus {
     background: rgba(255, 255, 255, 0.2);
     width: 220px;
-    box-shadow: none;
+    box-shadow:none;
 }
 
 .search-results {
@@ -62,7 +62,7 @@
     overflow-y: auto;
     display: none;
     backdrop-filter: blur(10px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    box-shadow: none;
     z-index: 20;
 }
 
@@ -73,7 +73,7 @@
 .search-item {
     padding: 10px;
     cursor: pointer;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     font-size: 0.9rem;
 }
 
@@ -99,7 +99,7 @@
     font-size: 2rem;
     font-weight: 800;
     color: var(--text-main);
-    text-shadow: var(--text-shadow);
+    text-shadow: none;
     z-index: 1;
     user-select: none;
     display: flex;
@@ -182,7 +182,7 @@
     background: rgba(0, 0, 0, 0.6);
     border: 1px solid var(--pill-border);
     border-radius: 16px;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     overflow: hidden;
     position: relative;
 }
@@ -191,7 +191,7 @@
 html.light-mode .search-results {
     background: rgba(255, 255, 255, 0.98);
     border: 1px solid #e5e5e5;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: none;
 }
 
 html.light-mode .search-item {
@@ -213,13 +213,13 @@ html.light-mode .search-tag {
 html.light-mode #search-input {
     background: rgba(0, 0, 0, 0.05);
     color: #333;
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.16);
 }
 
 html.light-mode #search-input:focus {
     background: white;
     border-color: #aaa;
-    box-shadow: none;
+    box-shadow:none;
 }
 
 a,

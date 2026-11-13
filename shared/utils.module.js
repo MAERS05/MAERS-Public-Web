@@ -4,6 +4,35 @@
  * @version 3.0.0 - ES6 Module
  */
 
+function setElementAttribute(el, key, value) {
+    if (key === 'className') {
+        el.className = value;
+    } else if (key === 'dataset') {
+        Object.entries(value).forEach(([name, entry]) => { el.dataset[name] = entry; });
+    } else if (key.startsWith('on') && typeof value === 'function') {
+        el.addEventListener(key.slice(2).toLowerCase(), value);
+    } else {
+        el.setAttribute(key, value);
+    }
+}
+
+function appendElementChild(el, child) {
+    if (typeof child === 'string') {
+        el.appendChild(document.createTextNode(child));
+    } else if (child && child instanceof HTMLElement) {
+        el.appendChild(child);
+    }
+}
+
+function matchesTags(tags, selectedTags, mode) {
+    if (!selectedTags.length) return true;
+    if (!tags) return false;
+    if (mode === 'AND') return selectedTags.every(tag => tags.includes(tag));
+    if (mode === 'OR') return selectedTags.some(tag => tags.includes(tag));
+    if (mode === 'DEL') return selectedTags.every(tag => !tags.includes(tag));
+    return true;
+}
+
 export const Utils = {
     // ================= 安全工具 =================
 
@@ -182,35 +211,9 @@ export const Utils = {
     createElement(tag, attrs = {}, children = null) {
         const el = document.createElement(tag);
 
-        Object.entries(attrs).forEach(([key, value]) => {
-            if (key === 'className') {
-                el.className = value;
-            } else if (key === 'dataset') {
-                Object.entries(value).forEach(([k, v]) => {
-                    el.dataset[k] = v;
-                });
-            } else if (key.startsWith('on') && typeof value === 'function') {
-                el.addEventListener(key.slice(2).toLowerCase(), value);
-            } else {
-                el.setAttribute(key, value);
-            }
-        });
-
-        if (children) {
-            if (typeof children === 'string') {
-                el.textContent = children;
-            } else if (children instanceof HTMLElement) {
-                el.appendChild(children);
-            } else if (Array.isArray(children)) {
-                children.forEach(child => {
-                    if (typeof child === 'string') {
-                        el.appendChild(document.createTextNode(child));
-                    } else if (child instanceof HTMLElement) {
-                        el.appendChild(child);
-                    }
-                });
-            }
-        }
+        Object.entries(attrs).forEach(([key, value]) => setElementAttribute(el, key, value));
+        const childList = Array.isArray(children) ? children : children ? [children] : [];
+        childList.forEach(child => appendElementChild(el, child));
 
         return el;
     },
@@ -361,54 +364,48 @@ export const Search = {
         const results = [];
         const keywords = keywordStr ?
             keywordStr.toLowerCase().split(/[,，]/).map(s => s.trim()).filter(s => s) : [];
+        const selectedTags = Array.from(filters || []);
 
-        const _recursive = (list) => {
-            list.forEach(node => {
-                let match = true;
-
-                // 标签筛选
-                if (filters && filters.size > 0) {
-                    if (!node.tags) match = false;
-                    else {
-                        if (filterMode === 'AND') {
-                            for (let t of filters) {
-                                if (!node.tags.includes(t)) { match = false; break; }
-                            }
-                        } else if (filterMode === 'OR') { // OR
-                            let hasAny = false;
-                            for (let t of filters) {
-                                if (node.tags.includes(t)) { hasAny = true; break; }
-                            }
-                            if (!hasAny) match = false;
-                        } else if (filterMode === 'DEL') { // DEL
-                            for (let t of filters) {
-                                if (node.tags.includes(t)) { match = false; break; }
-                            }
-                        }
-                    }
+        const visit = list => {
+            for (const node of list) {
+                if ('_enc' in node) continue;
+                const tagsMatch = matchesTags(node.tags, selectedTags, filterMode);
+                if (tagsMatch && (!keywords.length || keywords.some(keyword => this.match(node.title || node.name, keyword)))) {
+                    results.push(node);
                 }
-
-                // 关键词搜索 (OR - 标题或拼音)
-                if (match && keywords.length > 0) {
-                    const nameMatch = keywords.some(k =>
-                        this.match(node.title || node.name, k)
-                    );
-                    if (!nameMatch) match = false;
-                }
-
-                if (match) results.push(node);
-                if (node.children) _recursive(node.children);
-            });
+                if (node.children) visit(node.children);
+            }
         };
 
-        _recursive(rootList);
+        visit(rootList);
         return results;
     }
 };
 
-// Backward compatibility mount
-if (typeof window !== 'undefined') {
-    window.MAERS = window.MAERS || {};
-    window.MAERS.Utils = Utils;
-    window.MAERS.Utils.Search = Search;
+const assetRequests = new Map();
+
+/** 同一页面共用按需加载请求，失败后移除节点并允许重试。 */
+export function loadLocalAsset(path, { stylesheet = false, before = null } = {}) {
+    const url = new URL(path, document.baseURI).href;
+    if (assetRequests.has(url)) return assetRequests.get(url);
+    const element = document.createElement(stylesheet ? 'link' : 'script');
+    if (stylesheet) {
+        element.rel = 'stylesheet';
+        element.href = url;
+    } else {
+        element.src = url;
+        element.async = true;
+    }
+    const request = new Promise((resolve, reject) => {
+        element.addEventListener('load', resolve, { once: true });
+        element.addEventListener('error', () => {
+            assetRequests.delete(url);
+            element.remove();
+            reject(Error(`资源加载失败 ${path}`));
+        }, { once: true });
+    });
+    assetRequests.set(url, request);
+    if (before) before.before(element);
+    else document.head.appendChild(element);
+    return request;
 }

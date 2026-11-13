@@ -3,6 +3,7 @@
  * @description CMS 导航渲染 - 面包屑与导航逻辑
  * @version 1.0.0 - ES6 Module
  */
+import { ModuleConfig } from '../../../../shared/module-config.module.js';
 
 // Dependency injection
 let State = null;
@@ -243,30 +244,7 @@ export function renderPageTitle() {
     const titleEl = document.querySelector(".header-title");
     if (!titleEl) return;
 
-    let desiredHTML = '';
-    if (window.MAERS?.ModuleConfig) {
-        desiredHTML = window.MAERS.ModuleConfig.getTitle(State.CONFIG.CURRENT_MODULE);
-    } else {
-        const iconMap = {
-            notes: '<img src="ui/notes-icon.svg" style="height: 1.25em; vertical-align: middle;">',
-            literature: '<img src="ui/literature-icon.svg" style="height: 1.25em; vertical-align: middle;">',
-            record: '<img src="ui/record-icon.svg" style="height: 1.25em; vertical-align: middle;">',
-            album: '<img src="ui/album-icon.svg" style="height: 1.25em; vertical-align: middle;">',
-            games: '<img src="ui/games-icon.svg" style="height: 1.25em; vertical-align: middle;">',
-            videos: '<img src="ui/music-icon.svg" style="height: 1.25em; vertical-align: middle;">'
-        };
-        const titleMap = {
-            notes: "Study Notes",
-            literature: "Literature",
-            record: "Records",
-            album: "Album",
-            games: "Games",
-            videos: '<span class="music-mode-btn" onclick="window.location.href=\'music.html\'">Music</span> & <span class="music-mode-btn active" onclick="window.location.href=\'videos.html\'">Videos</span>'
-        };
-        const icon = iconMap[State.CONFIG.CURRENT_MODULE] || "📂";
-        const text = titleMap[State.CONFIG.CURRENT_MODULE] || State.CONFIG.CURRENT_MODULE.toUpperCase();
-        desiredHTML = `${icon} ${text}`;
-    }
+    const desiredHTML = ModuleConfig.getTitle(State.CONFIG.CURRENT_MODULE, State.IS_ADMIN);
 
     const imgMatch = desiredHTML.match(/^<img src="([^"]+)"[^>]*>\s*(.*)$/);
 

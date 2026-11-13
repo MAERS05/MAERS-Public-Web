@@ -1,7 +1,20 @@
 /* 图表卡片、全屏按钮与全屏视口样式。 */
 /* 鼠标点击不显示默认焦点框，键盘导航保留可见提示。 */
-svg[data-mindmap] [data-mindmap-node]:focus:not(:focus-visible) {
+svg[data-mindmap] :is([data-mindmap-node], [data-mindmap-toggle]):focus:not(:focus-visible) {
   outline: none;
+}
+
+svg[data-mindmap] [data-mindmap-label] {
+  -webkit-user-select: text;
+  user-select: text;
+  white-space: pre;
+  cursor: text;
+}
+
+svg[data-mindmap] a[data-mindmap-link] {
+  -webkit-user-drag: none;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 /* 导图容器：保留极简细边框标定显示范围，0内边距最大化可用空间 */
@@ -14,8 +27,8 @@ svg[data-mindmap] [data-mindmap-node]:focus:not(:focus-visible) {
   padding: 0 !important;
   border-radius: 8px !important;
   background: transparent !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: none !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow:none !important;
   overflow: hidden !important;
   display: block !important;
   width: 100% !important;
@@ -29,8 +42,8 @@ html.light-mode .vditor-reset .language-markmap:not(.cms-diagram-card--fullscree
 html.light-mode .markdown-body .language-mindmap:not(.cms-diagram-card--fullscreen),
 html.light-mode .markdown-body .language-markmap:not(.cms-diagram-card--fullscreen) {
   background: transparent !important;
-  border: 1px solid rgba(15, 23, 42, 0.1) !important;
-  box-shadow: none !important;
+  border: 1px solid rgba(15, 23, 42, 0.16) !important;
+  box-shadow:none !important;
 }
 
 
@@ -51,7 +64,7 @@ html.light-mode .markdown-body .language-markmap:not(.cms-diagram-card--fullscre
 .vditor-reset pre:has(.cms-diagram-card) {
   background: transparent !important;
   border: none !important;
-  box-shadow: none !important;
+  box-shadow:none !important;
   padding: 0 !important;
   margin: 0 !important;
   border-radius: 0 !important;
@@ -61,6 +74,10 @@ html.light-mode .markdown-body .language-markmap:not(.cms-diagram-card--fullscre
   display: block !important;
   width: 100% !important;
   box-sizing: border-box !important;
+}
+
+.cms-diagram-pending {
+  min-height: 320px;
 }
 
 /* 导图右上角全屏切换按钮（引用 ui/full-screen.svg） */
@@ -91,7 +108,7 @@ html.light-mode .markdown-body .language-markmap:not(.cms-diagram-card--fullscre
   cursor: pointer !important;
   z-index: 25 !important;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
@@ -122,7 +139,7 @@ html.light-mode .cms-diagram-fs-btn,
 .light-mode .cms-diagram-fs-btn {
   border-color: rgba(15, 23, 42, 0.12) !important;
   background: rgba(255, 255, 255, 0.85) !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+  box-shadow: none;
 }
 
 html.light-mode .cms-diagram-fs-btn:hover,
@@ -203,7 +220,7 @@ body.cms-diagram-fs-open {
 .vditor-reset img.cms-diagram-fs-icon,
 .cms-diagram-fs-btn img.cms-diagram-fs-icon {
   border-radius: 0 !important;
-  box-shadow: none !important;
+  box-shadow:none !important;
   background: transparent !important;
   border: none !important;
   margin: 0 !important;

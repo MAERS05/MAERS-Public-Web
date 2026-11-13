@@ -13,7 +13,8 @@ import importlib.metadata
 import secrets
 import socket
 import mimetypes
-from services import private_session
+import threading
+from services import private_session, operation_status
 
 import config
 
@@ -21,6 +22,7 @@ import config
 REQUIRED_PACKAGES = [
     ("Pillow", "PIL"),
     ("pillow-avif-plugin", "pillow_avif"),
+    ("pillow-heif", "pillow_heif"),
     ("boto3", "boto3"),
 ]
 
@@ -37,6 +39,8 @@ def ensure_dependencies():
             installed = None
         if installed != version:
             print("  [ DEPS ] 📦 安装锁定版本依赖 | Installing pinned dependencies...")
+            if importlib.util.find_spec('pip') is None:
+                subprocess.check_call([sys.executable, '-m', 'ensurepip'])
             subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', requirements])
             break
     for package, module in REQUIRED_PACKAGES:
@@ -57,9 +61,71 @@ PORT = config.PORT
 class LocalServer(http.server.ThreadingHTTPServer):
     """每次启动生成独立令牌，仅在 IPv4 回环地址提供服务。"""
 
-    def __init__(self, port=PORT, handler=None):
+    daemon_threads = False
+
+    def __init__(self, port=PORT, handler=None, *, starting=False):
         self.session_token = secrets.token_urlsafe(32)
+        self._status_lock = threading.Lock()
+        self._status = {'state': 'starting' if starting else 'ready', 'message': '正在启动', 'done': 0, 'total': 0}
+        self._initializer = None
+        self._draining = False
         super().__init__((config.HOST, port), handler or Handler)
+
+    def status(self):
+        with self._status_lock:
+            status = {**self._status, 'draining': self._draining, 'active': operation_status.active_count()}
+            if status['active']:
+                status['operation'] = operation_status.running_progress()
+            if self._draining and status['state'] == 'ready':
+                status.update(operation_status.running_progress())
+            return status
+
+    def startup_progress(self, done=0, total=0, message='正在恢复数据'):
+        with self._status_lock:
+            self._status.update(done=done, total=total, message=message)
+
+    def initialize(self):
+        """恢复期间只开放状态与退出接口，业务读取等待恢复完成。"""
+        try:
+            routes.storage.recover(progress=self.startup_progress)
+            self.startup_progress(message='正在检查密钥环')
+            routes.crypto_keyring.migrate()
+            self.startup_progress(message='正在整理本机图片目录')
+            from services import local_media
+            local_media.migrate_legacy()
+            self.startup_progress(message='正在重建图片索引')
+            routes.photos.rebuild_cache()
+            self.startup_progress(message='正在重建内容索引')
+            routes.cms.rebuild_cache()
+            with self._status_lock:
+                self._status.update(state='ready', message='后台已就绪', done=0, total=0)
+            print(f"  [ SERVER ] 🚀 后台已就绪 | Studio ready: http://localhost:{self.server_address[1]}")
+        except Exception as error:
+            print(f"  [ SERVER ] ❌ 数据恢复失败，保留日志待重试 | Startup recovery failed: {error}")
+            with self._status_lock:
+                self._status.update(state='error', message='数据恢复失败，请检查媒体连接及配置后重新启动')
+
+    def start_initialization(self):
+        self._initializer = threading.Thread(target=self.initialize)
+        self._initializer.start()
+
+    def request_shutdown(self):
+        with self._status_lock:
+            if self._draining:
+                return
+            self._draining = True
+        def drain():
+            operation_status.wait_for_idle()
+            if self._initializer is not None:
+                self._initializer.join()
+            self.shutdown()
+        threading.Thread(target=drain, daemon=True).start()
+
+    def server_close(self):
+        super().server_close()
+        if self._initializer is not None:
+            self._initializer.join()
+        operation_status.wait_for_idle()
 
     @property
     def allowed_hosts(self):
@@ -106,13 +172,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if private:
             self._reject(403, 'Private local file')
             return False
-        if routes is not None and relative.split('/')[0].casefold() in ('data', 'photos'):
-            try:
-                with routes.storage.LOCK:
-                    routes.storage._recover_if_needed()
-            except Exception:
-                self._reject(503, 'Data recovery is pending; check Studio logs')
-                return False
         origins = self.headers.get_all('Origin', [])
         if len(origins) > 1 or (origins and origins[0] not in self.server.allowed_origins):
             self._reject(403, 'Untrusted Origin')
@@ -120,7 +179,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if not origins and self.headers.get('Sec-Fetch-Site') == 'cross-site':
             self._reject(403, 'Cross-site request denied')
             return False
+        status = self.server.status()
+        startup_path = urllib.parse.urlsplit(self.path).path in (
+            '/api/studio/status', '/api/studio/shutdown', '/api/session')
+        if not startup_path and (status['state'] != 'ready' or status['draining']):
+            self._reject(503, status['message'], 'studio_unavailable')
+            return False
+        if routes is not None and relative.split('/')[0].casefold() in ('data', 'photos', 'markdown'):
+            try:
+                with routes.storage.LOCK:
+                    routes.storage._recover_if_needed()
+            except Exception:
+                self._reject(503, 'Data recovery is pending; check Studio logs')
+                return False
         return True
+
+    def translate_path(self, path):
+        """GET 与 HEAD 共用干净页面路径，分类地址映射到同一份图库页面。"""
+        parsed = urllib.parse.urlsplit(path)
+        parts = parsed.path.strip('/').split('/')
+        if len(parts) == 2 and parts[0] == 'photos':
+            path = '/photos.html'
+        elif len(parts) == 1 and parts[0] and '.' not in parts[0]:
+            page = '/' + parts[0] + '.html'
+            if os.path.isfile(super().translate_path(page)):
+                path = page
+        return super().translate_path(path)
 
     def end_headers(self):
         origin = getattr(self, 'headers', {}).get('Origin')
@@ -139,6 +223,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         parsed = urllib.parse.urlparse(self.path)
         query = urllib.parse.parse_qs(parsed.query)
 
+        if parsed.path == '/api/studio/status':
+            return self._send_json(200, self.server.status())
+        if parsed.path == '/api/studio/operation':
+            if not secrets.compare_digest(self.headers.get('X-MAERS-Token', ''), self.server.session_token):
+                return self._reject(403, 'Invalid session token', 'invalid_session')
+            state = operation_status.snapshot(query.get('id', [''])[0])
+            return self._send_json(200 if state else 404, state or {'error': '任务尚未开始'})
+
         if parsed.path == '/api/session':
             # 自定义请求头使跨源读取必须经过预检；令牌不写入文件或 URL。
             if self.headers.get('X-MAERS-Client') != 'studio':
@@ -152,6 +244,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         private = private_session
         trusted = secrets.compare_digest(self.headers.get('X-MAERS-Token', ''), self.server.session_token)
+        if parsed.path.startswith('/api/storage/') and not trusted:
+            return self._reject(403, 'Invalid session token', 'invalid_session')
         if parsed.path == '/api/crypto/keyring' and not trusted:
             return self._reject(403, 'Invalid session token', 'invalid_session')
         if parsed.path.startswith('/api/private/media/'):
@@ -209,14 +303,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._reject(411, 'Content-Length required')
         if len(lengths) != 1 or not lengths[0].isascii() or not lengths[0].isdigit():
             return self._reject(400, 'Invalid Content-Length')
-        if len(lengths[0]) > 20:
-            return self._reject(413, 'Request body too large')
-        length = int(lengths[0])
-        limit = config.MAX_UPLOAD_BYTES if is_upload else config.MAX_JSON_BYTES
-        if length > limit:
-            return self._reject(413, 'Request body too large')
         try:
+            length = int(lengths[0])
             raw = self.rfile.read(length)
+        except (ValueError, OverflowError):
+            return self._reject(400, 'Invalid Content-Length')
         except (TimeoutError, socket.timeout):
             return self._reject(408, 'Request body timeout')
         if len(raw) != length:
@@ -236,9 +327,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not isinstance(body_data, (dict, list)):
                 return self._reject(400, 'JSON body must be an object or array')
 
+        if parsed.path == '/api/studio/shutdown':
+            self._send_json(200, {'status': 'draining'})
+            self.server.request_shutdown()
+            return
+
         try:
-            with private_session.context():
-                code, data = routes.dispatch_post(parsed.path, query, body_data, file_data)
+            identity = operation_status.start(query.get('_operation', [None])[0])
+        except ValueError as error:
+            return self._reject(409, str(error))
+        try:
+            with operation_status.bind(identity), private_session.context():
+                operation_status.update('正在处理图片' if is_upload else '正在处理')
+                code, data = routes.dispatch_post(parsed.path, query, body_data, file_data,
+                                                  relay_secret=self.headers.get('X-MAERS-Relay-Key'))
+                operation_status.finish(identity, code < 400)
                 self._send_json(code, data)
             
         except ConnectionError:
@@ -248,6 +351,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             import traceback
             traceback.print_exc()
             self._send_json(500, {'error': 'Internal server error'})
+        finally:
+            if operation_status.snapshot(identity)['state'] == 'running':
+                operation_status.finish(identity, False)
 
     def do_OPTIONS(self):
         if self.headers.get('Origin') not in self.server.allowed_origins:
@@ -260,11 +366,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return self._reject(403, 'Request headers not allowed')
         self.send_response(204)
         self.send_header('Access-Control-Allow-Methods', 'GET, POST')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-MAERS-Token, X-MAERS-Client')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-MAERS-Token, X-MAERS-Client, X-MAERS-Relay-Key')
         self.send_header('Content-Length', '0')
         self.end_headers()
 
     # --- 辅助方法 ---
+
+    def log_message(self, format, *args):
+        """标准错误流失效时静默忽略日志输出，防止父进程退出后断管中断 HTTP 响应。"""
+        try:
+            super().log_message(format, *args)
+        except OSError:
+            pass
 
     def _reject(self, code, message, error_code=None):
         # 拒绝请求时不继续读取请求体，也不复用可能仍有未读数据的连接。
@@ -280,7 +393,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             data = private.view(data)
         payload = json.dumps(data).encode('utf-8')
         self.send_response(code)
-        if private and urllib.parse.urlsplit(self.path).path in ('/api/crypto/admin-session', '/api/crypto/admin-session/close') and code == 200:
+        if private and urllib.parse.urlsplit(self.path).path in ('/api/crypto/admin-session', '/api/crypto/admin-session/close', '/api/crypto/local-session') and code == 200:
             self.send_header('Set-Cookie', private.cookie_header())
         self.send_header('Content-Type', 'application/json; charset=utf-8')
         self.send_header('Content-Length', str(len(payload)))
@@ -298,41 +411,35 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(content)
 
 if __name__ == '__main__':
-    if sys.stdout is None:
-        sys.stdout = open(os.devnull, 'w', encoding='utf-8')
-    elif hasattr(sys.stdout, 'reconfigure'):
-        try:
-            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-        except Exception:
-            pass
-    if sys.stderr is None:
-        sys.stderr = open(os.devnull, 'w', encoding='utf-8')
-    elif hasattr(sys.stderr, 'reconfigure'):
-        try:
-            sys.stderr.reconfigure(encoding='utf-8', errors='replace')
-        except Exception:
-            pass
+    studio_log_path = os.environ.get('MAERS_STUDIO_LOG', '').strip()
+    if studio_log_path:
+        os.makedirs(os.path.dirname(studio_log_path), exist_ok=True)
+        log_stream = open(studio_log_path, 'a', encoding='utf-8', buffering=1, errors='replace')
+        sys.stdout = log_stream
+        sys.stderr = log_stream
+    else:
+        if sys.stdout is None:
+            sys.stdout = open(os.devnull, 'w', encoding='utf-8')
+        elif hasattr(sys.stdout, 'reconfigure'):
+            try:
+                sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
+        if sys.stderr is None:
+            sys.stderr = open(os.devnull, 'w', encoding='utf-8')
+        elif hasattr(sys.stderr, 'reconfigure'):
+            try:
+                sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+            except Exception:
+                pass
 
     ensure_dependencies()
     import routes
-    print(f"  [ SERVER ] 🚀 服务器已启动 | Server started: http://localhost:{PORT}")
-    
     from services import storage_journal
     with storage_journal.process_lock():
-        # 先恢复未完成事务，再允许静态读取或业务写入。
         try:
-            routes.storage.recover()
-            routes.crypto_keyring.migrate()
-            print("  [ SERVER ] 🔄 从 JSON 重建图库缓存 | Rebuilding gallery cache...")
-            routes.photos.rebuild_cache()
-            print("  [ SERVER ] 🔄 从 JSON 重建 CMS 缓存 | Rebuilding CMS cache...")
-            routes.cms.rebuild_cache()
-        except Exception as e:
-            print(f"  [ SERVER ] ❌ 缓存重建失败，停止启动 | Cache rebuild failed; startup aborted: {e}")
-            raise
-        
-        try:
-            with LocalServer() as httpd:
+            with LocalServer(starting=True) as httpd:
+                httpd.start_initialization()
                 httpd.serve_forever()
         except KeyboardInterrupt:
             pass

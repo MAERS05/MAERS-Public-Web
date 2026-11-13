@@ -16,6 +16,19 @@ const KEY_BITS      = 256;
 const PBKDF2_HASH   = 'SHA-256';
 // sessionStorage 存储字段名
 const SESSION_KEY   = 'maers_crypto_key';
+const SESSION_GROUPS = 'maers_crypto_groups';
+export const DEFAULT_GROUP = 'default';
+
+/** 读取当前标签页内各密码组的密钥；只供加密层与本机内存会话使用。 */
+export function getSessionKeysRaw() {
+    let groups = {};
+    try { groups = JSON.parse(sessionStorage.getItem(SESSION_GROUPS) || '{}'); } catch { /* 损坏的缓存按未解锁处理。 */ }
+    const keys = Object.fromEntries(Object.entries(groups).filter(([id, raw]) =>
+        /^[a-zA-Z0-9_-]{1,64}$/.test(id) && typeof raw === 'string'));
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (raw) keys[DEFAULT_GROUP] = raw;
+    return keys;
+}
 // 加密字符串前缀
 const ENC_PREFIX    = 'enc:';
 const ENC_SEP       = '.';
@@ -80,7 +93,7 @@ export async function encryptRecord(obj, key) {
  * @param {CryptoKey} key
  * @returns {Promise<Object|null>} 失败返回 null
  */
-export async function decryptRecord(encStr, key) {
+export async function decryptRecord(encStr, key, { silent = false } = {}) {
     try {
         if (!isEncryptedString(encStr)) return null;
         const body   = encStr.slice(ENC_PREFIX.length);
@@ -93,7 +106,7 @@ export async function decryptRecord(encStr, key) {
         const plain = await crypto.subtle.decrypt({ name: ALGO, iv }, key, ct);
         return JSON.parse(new TextDecoder().decode(plain));
     } catch (e) {
-        console.warn('[Crypto] 解密失败（密钥错误或数据损坏）:', e.message);
+        if (!silent) console.warn('[Crypto] 解密失败（密钥错误或数据损坏）:', e.message);
         return null;
     }
 }
@@ -108,9 +121,9 @@ export async function decryptRecord(encStr, key) {
  * @param {CryptoKey} key
  * @returns {Promise<Object>}
  */
-export async function wrapRecord(record, key) {
+export async function wrapRecord(record, key, group = DEFAULT_GROUP) {
     const encStr = await encryptRecord(record, key);
-    return { [ENC_FIELD]: encStr };
+    return { [ENC_FIELD]: encStr, ...(group === DEFAULT_GROUP ? {} : { _group: group }) };
 }
 
 /**
@@ -120,7 +133,7 @@ export async function wrapRecord(record, key) {
  * @returns {Promise<Object|null>}
  */
 export async function unwrapRecord(encRecord, key) {
-    return decryptRecord(encRecord[ENC_FIELD], key);
+    return decryptRecord(encRecord[ENC_FIELD], key || await getSessionKey(encRecord._group));
 }
 
 // ══════════════════════════════════════════════
@@ -150,9 +163,9 @@ export function isEncryptedRecord(record) {
  * 从 sessionStorage 恢复会话密钥（DEK）
  * @returns {Promise<CryptoKey|null>}
  */
-export async function getSessionKey() {
+export async function getSessionKey(group = DEFAULT_GROUP) {
     try {
-        const raw = sessionStorage.getItem(SESSION_KEY);
+        const raw = getSessionKeysRaw()[group];
         if (!raw) return null;
         return await importDataKey(fromB64(raw));
     } catch {
@@ -161,19 +174,32 @@ export async function getSessionKey() {
 }
 
 /** 读取会话 DEK 的原始字节（用于改密码时重新包裹），无会话返回 null */
-export function getSessionKeyRaw() {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+export function getSessionKeyRaw(group = DEFAULT_GROUP) {
+    const raw = getSessionKeysRaw()[group];
     return raw ? fromB64(raw) : null;
 }
 
 /** 将 DEK 原始字节存入会话 */
-export function setSessionKeyRaw(rawBytes) {
-    sessionStorage.setItem(SESSION_KEY, toB64(rawBytes));
+export function setSessionKeyRaw(rawBytes, group = DEFAULT_GROUP) {
+    if (group === DEFAULT_GROUP) sessionStorage.setItem(SESSION_KEY, toB64(rawBytes));
+    else {
+        const keys = getSessionKeysRaw();
+        delete keys[DEFAULT_GROUP];
+        keys[group] = toB64(rawBytes);
+        sessionStorage.setItem(SESSION_GROUPS, JSON.stringify(keys));
+    }
 }
 
 /** 清除会话密钥（退出加密会话） */
-export function clearSessionKey() {
-    sessionStorage.removeItem(SESSION_KEY);
+export function clearSessionKey(group) {
+    if (!group || group === DEFAULT_GROUP) sessionStorage.removeItem(SESSION_KEY);
+    if (!group) sessionStorage.removeItem(SESSION_GROUPS);
+    else if (group !== DEFAULT_GROUP) {
+        const keys = getSessionKeysRaw();
+        delete keys[DEFAULT_GROUP];
+        delete keys[group];
+        sessionStorage.setItem(SESSION_GROUPS, JSON.stringify(keys));
+    }
 }
 
 // ══════════════════════════════════════════════
@@ -182,9 +208,10 @@ export function clearSessionKey() {
 
 const ACCESS_TOKEN_SALT = 'maers-private-access-v1|';
 
-/** 计算字符串的 SHA-256 十六进制摘要 */
-export async function sha256Hex(text) {
-    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+/** 计算字符串或二进制内容的 SHA-256 十六进制摘要 */
+export async function sha256Hex(data) {
+    const bytes = typeof data === 'string' ? new TextEncoder().encode(data) : data;
+    const buf = await crypto.subtle.digest('SHA-256', bytes);
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -200,15 +227,15 @@ export function fingerprintRecord(value) {
  * DEK 不随主密码变化，因此修改主密码后令牌与 Worker 配置均无需更新
  * @returns {Promise<string|null>} 无会话密钥时返回 null
  */
-export async function getAccessToken() {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+export async function getAccessToken(group = DEFAULT_GROUP) {
+    const raw = getSessionKeysRaw()[group];
     if (!raw) return null;
     return sha256Hex(ACCESS_TOKEN_SALT + raw);
 }
 
 /** 令牌的哈希（同步到 Worker，Worker 只保存哈希） */
-export async function getAccessTokenHash() {
-    const t = await getAccessToken();
+export async function getAccessTokenHash(group = DEFAULT_GROUP) {
+    const t = await getAccessToken(group);
     return t ? sha256Hex(t) : null;
 }
 

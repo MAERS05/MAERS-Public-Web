@@ -83,7 +83,7 @@ html.light-mode .header-action-btn:hover {
     /* Use theme bg */
     border: 1px solid var(--card-border);
     border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
     padding: 6px;
     display: none;
     /* Hidden by default */
@@ -97,8 +97,8 @@ html.light-mode .header-action-btn:hover {
 html.light-mode .sort-dropdown-menu {
     background: rgba(255, 255, 255, 0.95);
     /* More opaque for readability */
-    border-color: rgba(0, 0, 0, 0.1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: none;
 }
 
 .sort-dropdown-menu.show {
@@ -148,8 +148,8 @@ html.light-mode .sort-item.active {
 html:not(.light-mode) .sort-dropdown-menu {
     background: rgba(18, 18, 18, 0.95);
     /* Neural dark gray/black, no blue */
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: none;
 }
 
 /* Ensure items in dark mode are clean */

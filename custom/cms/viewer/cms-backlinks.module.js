@@ -1,10 +1,11 @@
 /** 只读反向引用索引：仅扫描可访问笔记，最多四个请求并发。 */
+import { markdownUrl } from '../../../shared/content-url.module.js';
 export const BACKLINK_MODULES = ['notes', 'record', 'literature', 'games', 'videos'];
 const MODULE_LABELS = { notes: '笔记', record: '记录', literature: '文学', games: '游戏', videos: '视频' };
 const decode = value => { try { return decodeURIComponent(value); } catch (_) { return value; } };
 export function notePath(node) {
     const path = node._mdPath || (typeof node.content === 'string' && node.content.endsWith('.md') ? node.content : '');
-    return decode(path).replace(/^\/?data\//, '').replace(/^\//, '');
+    return decode(path).replace(/^\//, '');
 }
 export function accessibleNotes(tree) {
     const notes = [];
@@ -18,25 +19,37 @@ export function accessibleNotes(tree) {
     walk(Array.isArray(tree) ? tree : tree?.root);
     return notes;
 }
+/** ID 是唯一定位依据；只有标题的旧链接必须匹配到唯一文章。 */
+export function findLinkedNote(nodes, params) {
+    const id = params.get('openNoteId');
+    const title = params.get('openNote');
+    if (!id && !title) return null;
+    const normalize = value => String(value || '').trim().replace(/[《》]/g, '');
+    const matches = nodes.filter(node => node.type === 'note' &&
+        (id ? node.id === id : normalize(node.title) === normalize(title)));
+    return matches.length === 1 ? matches[0] : null;
+}
+
 export function resolveBacklink(href, source, catalogue, origin = 'https://maers.invalid') {
     if (!href || href.startsWith('#')) return null;
     const unique = list => list.length === 1 ? list[0] : null;
     const raw = href.trim();
     let url;
-    try { url = new URL(raw, origin + '/'); } catch (_) { return null; }
+    try { url = new URL(raw, origin + '/' + source.module + '.html'); } catch (_) { return null; }
     if (url.origin !== new URL(origin).origin) return null;
     const module = url.pathname.split('/').pop().replace(/\.html$/, '');
     if (url.searchParams.has('openNote') || url.searchParams.has('openNoteId')) {
         const targetModule = module === 'admin-cms' ? url.searchParams.get('module') : module;
-        const id = url.searchParams.get('openNoteId');
-        return unique(catalogue.filter(item => item.module === targetModule && (id ? item.node.id === id : item.node.title === url.searchParams.get('openNote'))));
+        const candidates = catalogue.filter(item => item.module === targetModule);
+        const node = findLinkedNote(candidates.map(item => item.node), url.searchParams);
+        return candidates.find(item => item.node === node) || null;
     }
     if (!url.pathname.toLowerCase().endsWith('.md')) return null;
     const path = decode(raw.split(/[?#]/)[0]);
     const sourcePath = notePath(source.node);
-    const relative = new URL(path, origin + '/data/' + (sourcePath || source.module + '/note.md'));
-    const relativePath = decode(relative.pathname).replace(/^\/data\//, '');
-    const explicit = path.replace(/^\/?data\//, '').replace(/^\//, '');
+    const relative = new URL(path, origin + '/' + (sourcePath || `markdown/${source.module}/note.md`));
+    const relativePath = decode(relative.pathname).replace(/^\//, '');
+    const explicit = path.replace(/^\//, '');
     const candidates = catalogue.filter(item => {
         const targetPath = notePath(item.node);
         return targetPath && (targetPath === relativePath || (path.includes('/') && targetPath === explicit));
@@ -49,7 +62,7 @@ export function resolveBacklink(href, source, catalogue, origin = 'https://maers
     return null;
 }
 export function backlinkUrl(item, admin = false) {
-    const query = new URLSearchParams({ openNoteId: item.node.id, openNote: item.node.title });
+    const query = new URLSearchParams({ openNoteId: item.node.id });
     if (admin) query.set('module', item.module);
     return (admin ? 'admin-cms' : item.module) + '.html?' + query;
 }
@@ -143,8 +156,8 @@ export function mountBacklinks({ host, module, getTarget, getNotes, preprocess, 
                     if (typeof item.node._draftContent === 'string') markdown = item.node._draftContent;
                     else if (notePath(item.node)) {
                         const path = notePath(item.node);
-                        if (!path.startsWith(item.module + '/') || path.split('/').includes('..')) throw Error('Invalid note path');
-                        const response = await fetch('data/' + path.split('/').map(encodeURIComponent).join('/'), { signal, cache: 'no-cache' });
+                        if (!path.startsWith(`markdown/${item.module}/`) || path.split('/').includes('..')) throw Error('Invalid note path');
+                        const response = await fetch(markdownUrl(path), { signal, cache: 'no-cache' });
                         if (!response.ok) throw Error('Unreadable note');
                         markdown = await response.text();
                     } else markdown = typeof item.node.content === 'string' ? item.node.content : '';

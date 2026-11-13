@@ -14,20 +14,20 @@
 /* ==================== 1. Grid Item Default Theme ==================== */
 .grid-item {
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   position: relative;
 }
 
 .grid-item:hover {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  box-shadow: none;
 }
 
 .grid-item.drag-over {
   transform: scale(1.05);
   border-color: rgba(120, 255, 214, 0.5);
-  box-shadow: 0 0 20px rgba(120, 255, 214, 0.3);
+  box-shadow: none;
 }
 
 /* ==================== 2. Glow Bar Effect (Left Edge) ==================== */
@@ -49,14 +49,12 @@
   /* 极致高亮荧光色条 (双向漫反射 - 收紧版) */
   background: linear-gradient(180deg, #ccfffa 0%, #00ffca 100%);
   opacity: 1;
-  box-shadow:
-    0 0 5px rgba(204, 255, 250, 0.9),
-    0 0 10px rgba(0, 255, 202, 0.5);
+  box-shadow:none;
 }
 
 .type-folder:hover::before,
 .type-note:hover::before {
-  box-shadow: none;
+  box-shadow:none;
   opacity: 1;
 }
 
@@ -73,21 +71,21 @@
 .type-folder:hover {
   background: transparent;
   border: none;
-  box-shadow: none;
+  box-shadow:none;
 }
 
-/* SVG Mask for folder tab shape */
+/* 文件夹背景与蒙版使用相同的非等比缩放，避免卡片比例变化时裁切边框。 */
 .type-folder::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  background: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' preserveAspectRatio='none' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.5 0.5 H106 Q108 0.5 109 1.5 L118 10.5 Q119 11.5 120 11.5 H236 Q239.5 11.5 239.5 15 V191.5 H0.5 Z' fill='rgba(255,255,255,0.04)' stroke='rgba(255,255,255,0.15)' stroke-width='1' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") left top / 100% 100% no-repeat;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 H106 Q108 0 109 1 L118 10 Q119 11 120 11 H236 Q240 11 240 15 V192 H0 Z' fill='black'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 H106 Q108 0 109 1 L118 10 Q119 11 120 11 H236 Q240 11 240 15 V192 H0 Z' fill='black'/%3E%3C/svg%3E");
-  -webkit-mask-size: cover;
-  mask-size: cover;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' preserveAspectRatio='none' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 H106 Q108 0 109 1 L118 10 Q119 11 120 11 H236 Q240 11 240 15 V192 H0 Z' fill='black'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' preserveAspectRatio='none' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0 H106 Q108 0 109 1 L118 10 Q119 11 120 11 H236 Q240 11 240 15 V192 H0 Z' fill='black'/%3E%3C/svg%3E");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
   -webkit-mask-position: left top;
   mask-position: left top;
   z-index: -1;
@@ -98,7 +96,7 @@
 .type-note {
   border-radius: 0 4px 4px 0;
   background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   position: relative;
   /* 移除 clip-path，因为它会切断外部发光 (Glow Shadow) */
 }
@@ -116,7 +114,7 @@
       transparent 50%,
       rgba(255, 255, 255, 0.1) 50%,
       rgba(255, 255, 255, 0.2));
-  box-shadow: -1px -1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   border-radius: 4px 0 0 0;
 }
 
@@ -124,34 +122,34 @@
 .mini-tag {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-sub);
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.16);
 }
 
 .mini-tag:hover {
   transform: scale(1.05);
   background: rgba(255, 255, 255, 0.15);
   color: var(--text-main);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.16);
 }
 
 .mini-tag.active {
   background: #78ffd6;
   color: #000;
   font-weight: bold;
-  box-shadow: 0 0 10px rgba(120, 255, 214, 0.6);
+  box-shadow: none;
   transform: scale(1.1);
 }
 
 /* ==================== 6. Search Input Theme ==================== */
 .search-input {
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .search-input:focus {
   background: rgba(0, 0, 0, 0.4);
   border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: none;
+  box-shadow:none;
 }
 
 /* ==================== 7. Breadcrumb Theme ==================== */
@@ -162,13 +160,13 @@
 }
 
 .reader-toolbar {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   background: rgba(0, 0, 0, 0.2);
 }
 
 .close-btn {
   background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-main);
 }
 
@@ -181,8 +179,8 @@
 /* ==================== 9. Tag Drawer Theme ==================== */
 .tag-drawer {
   background: #1e1e24;
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.5);
-  border-left: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .drawer-overlay {
@@ -190,7 +188,7 @@
 }
 
 .drawer-header {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .drawer-header h3 {
@@ -231,12 +229,12 @@
 }
 
 .drawer-footer {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .drawer-search-input {
   background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--text-main);
 }
 
@@ -272,7 +270,7 @@
 }
 
 .lightbox-img {
-  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
 }
 
 .lightbox-close {
@@ -293,28 +291,28 @@
 
 .light-mode .grid-item {
   background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: none;
 }
 
 .light-mode .grid-item:hover {
   background: #fdfdfd;
-  border-color: rgba(0, 0, 0, 0.06);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.16);
+  box-shadow: none;
 }
 
 .light-mode .type-folder {
   background: transparent !important;
-  box-shadow: none !important;
-  filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.08));
+  box-shadow:none !important;
+  filter: none;
 }
 
 .light-mode .type-folder:hover {
-  filter: drop-shadow(0 12px 30px rgba(0, 0, 0, 0.12));
+  filter: none;
 }
 
 .light-mode .type-folder::after {
-  background: #ffffff;
+  background: url("data:image/svg+xml,%3Csvg width='240' height='192' viewBox='0 0 240 192' preserveAspectRatio='none' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0.5 0.5 H106 Q108 0.5 109 1.5 L118 10.5 Q119 11.5 120 11.5 H236 Q239.5 11.5 239.5 15 V191.5 H0.5 Z' fill='%23ffffff' stroke='rgba(0,0,0,0.16)' stroke-width='1' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") left top / 100% 100% no-repeat;
 }
 
 .light-mode .type-note {
@@ -323,12 +321,12 @@
 
 .light-mode .type-note::after {
   background: linear-gradient(to top left, transparent 50%, rgba(0, 0, 0, 0.04) 50%, rgba(0, 0, 0, 0.08));
-  box-shadow: -1px -1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
 }
 
 .light-mode .search-input {
   background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.16);
   color: #333;
 }
 
@@ -344,7 +342,7 @@
 
 
 .light-mode .reader-toolbar {
-  border-bottom-color: rgba(0, 0, 0, 0.06);
+  border-bottom-color: rgba(0, 0, 0, 0.16);
   background: rgba(255, 255, 255, 0.4);
 }
 
@@ -361,11 +359,11 @@
 
 .light-mode .tag-drawer {
   background: #f5f5f7;
-  border-left-color: rgba(0, 0, 0, 0.1);
+  border-left-color: rgba(0, 0, 0, 0.16);
 }
 
 .light-mode .drawer-header {
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.16);
 }
 
 .light-mode .drawer-header h3 {
@@ -387,18 +385,18 @@
 }
 
 .light-mode .drawer-footer {
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.16);
 }
 
 .light-mode .drawer-search-input {
   background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.16);
   color: #333;
 }
 
 .light-mode .tag-toggle-btn {
   background: rgba(0, 0, 0, 0.05);
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.16);
   color: #333;
 }
 
@@ -414,7 +412,7 @@
 /* ==================== 13. Tag Category Theme ==================== */
 .tag-category-group {
   background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
 }
 
 .tag-category-group:hover {
@@ -463,35 +461,20 @@
 
 .ready-to-drag {
   cursor: grab;
-  animation: pulse-drag 1.5s infinite;
 }
 
 .dragging {
   opacity: 0.7;
   cursor: grabbing;
-  box-shadow: 0 0 15px rgba(120, 255, 214, 0.6);
+  box-shadow: none;
   border: 1px solid #78ffd6;
   background: rgba(120, 255, 214, 0.1) !important;
   transform: scale(0.98);
 }
 
-@keyframes pulse-drag {
-  0% {
-    box-shadow: 0 0 0 0 rgba(120, 255, 214, 0.4);
-  }
-
-  70% {
-    box-shadow: 0 0 0 6px rgba(120, 255, 214, 0);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 rgba(120, 255, 214, 0);
-  }
-}
-
 .light-mode .tag-category-group {
   background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.16);
 }
 
 .light-mode .category-header {

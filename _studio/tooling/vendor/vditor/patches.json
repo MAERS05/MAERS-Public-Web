@@ -1,51 +1,7 @@
 {
-  "index.min.js": {
-    "sha256": "cc911876d3c41ed5c7f319a8b34ed40195223caf57105cbb707697bf67504dd8",
-    "patches": [
-      {
-        "id": 998,
-        "file": "index-998.js",
-        "originalHash": "b9b6b0cea1f3aca10c74325733b32aa44d78d565786b43021433705754a34793"
-      },
-      {
-        "id": 558,
-        "file": "index-558.js",
-        "originalHash": "26171d42ff47e4bd92ffbf0a48fc3d2bb3c24b8ddc4abbb3992b857e0e564405"
-      },
-      {
-        "id": 570,
-        "file": "index-570.js",
-        "originalHash": "aa402385f0c03e68a801127dee472a373f9c41c64862207f1393764d3c02e4bb"
-      },
-      {
-        "id": 593,
-        "file": "index-593.js",
-        "originalHash": "b64d9e7676de5f38ea34aa6785404495eb9a5378de56a6d5f8f99fa27d44c944"
-      },
-      {
-        "id": 572,
-        "file": "index-572.js",
-        "originalHash": "be4bc5c0c74d70dbc0ef0c3afadcdbdf6528a1ccd619579331772234c0f02be6"
-      },
-      {
-        "id": 169,
-        "file": "index-169.js",
-        "originalHash": "ebc021206b07d8566e3236741dc2f0a5549a59142f5f6f751ca15e768882f811"
-      },
-      {
-        "id": 379,
-        "file": "index-379.js",
-        "originalHash": "64e030ce924c39e3cf0ae70d387864bf60e74c9c34d63644d066847433690c48"
-      },
-      {
-        "id": 664,
-        "file": "index-664.js",
-        "originalHash": "2ca8b7d52bb2098f60fa9aad6f2fdaef648c810cb44c6b7bdad4fc3fb10543e2"
-      }
-    ]
-  },
   "method.min.js": {
     "sha256": "f79c9109f3394969296db884dfaff9853131d7b24df558d0842396389e740076",
+    "previewContentPatch": "method-preview-content.js",
     "patches": [
       {
         "id": 998,

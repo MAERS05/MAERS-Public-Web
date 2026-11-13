@@ -30,16 +30,16 @@ export const SaveButton = {
             const style = document.createElement('style');
             style.id = 'admin-core-style';
             style.innerHTML = `
-                .global-save-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e1e24; padding: 8px 10px; border-radius: 50px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2147483647 !important; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.08); }
+                .global-save-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e1e24; padding: 8px 10px; border-radius: 50px; box-shadow: none; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2147483647 !important; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.15); }
                 .global-save-bar.active { transform: translateX(-50%) translateY(0); }
                 .global-save-bar button { border: none; padding: 10px 20px; border-radius: 30px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s; }
                 .save-btn { background: #2ed573; color: #111; }
-                .save-btn:hover { box-shadow: 0 0 15px rgba(46, 213, 115, 0.4); transform: scale(1.05); }
-                .save-btn:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none; transform: none; }
+                .save-btn:hover { box-shadow: none; transform: scale(1.05); }
+                .save-btn:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow:none; transform: none; }
                 .cancel-btn { background: transparent; color: #ff6b81; border: 1px solid rgba(255, 107, 129, 0.3); }
                 .cancel-btn:hover { background: rgba(255, 107, 129, 0.1); border-color: #ff6b81; }
                 .is-selected { outline: 2px solid #78ffd6 !important; position: relative; }
-                .is-selected::before { content: attr(data-order-num); position: absolute; top: 5px; left: 5px; background: #78ffd6; color: #111; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; box-shadow: 0 2px 8px rgba(120, 255, 214, 0.4); }
+                .is-selected::before { content: attr(data-order-num); position: absolute; top: 5px; left: 5px; background: #78ffd6; color: #111; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; box-shadow: none; }
                 .is-deleted { filter: grayscale(100%); position: relative; }
                 .is-deleted::after { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: #ff4757; pointer-events: none; }
                 .admin-edit-badge {
@@ -52,7 +52,7 @@ export const SaveButton = {
                 .admin-edit-badge.minimized {
                     background: rgba(255, 211, 42, 0.15);
                     color: transparent;
-                    box-shadow: none;
+                    box-shadow:none;
                 }
                 .admin-edit-badge.minimized:hover {
                     background: rgba(255, 211, 42, 0.5);
@@ -90,7 +90,19 @@ export const SaveButton = {
             if (!this.onSave) return;
             saveBtn.textContent = '保存中...';
             saveBtn.disabled = true;
-            await this.onSave();
+            // 回调返回 false 或抛出异常均视为失败：保留保存条与编辑内容，允许重试
+            let ok = false;
+            try {
+                ok = (await this.onSave()) !== false;
+            } catch (error) {
+                console.error('[SaveButton] 保存失败:', error);
+                Feedback.notifySaveFail('保存失败: ' + error.message);
+            }
+            if (!ok) {
+                saveBtn.textContent = '保存修改';
+                saveBtn.disabled = false;
+                return;
+            }
             saveBtn.textContent = '✅ 已保存';
             setTimeout(() => { this.hide(); saveBtn.textContent = '保存修改'; saveBtn.disabled = false; }, this.RESET_DELAY);
         };
@@ -122,11 +134,13 @@ export const SaveButton = {
     initUnified(getManagers, onJointSave, onJointCancel) {
         this.init(document.body, async () => {
             try {
-                await onJointSave();
+                const result = await onJointSave();
                 this.checkUnifiedDirty(getManagers);
+                return result;
             } catch (e) {
                 console.error("[DEBUG] Unified Save Failed", e);
                 Feedback.notifySaveFail("保存失败: " + e.message);
+                return false;
             }
         }, async () => {
             try {

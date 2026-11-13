@@ -4,24 +4,14 @@
 
 @media (max-width: 900px) {
 
-    /* 1. Reset Global Container for Full Width Experience */
-    /* 解决首页或全局 padding 导致的挤压 */
-    body .container {
-        padding: 0 !important;
-        height: 100vh;
-        overflow: hidden;
-        /* 内部滚动 */
-    }
-
-    body .main-card.content-mode {
-        border-radius: 0;
-        height: 100vh;
-        width: 100vw;
-        margin: 0;
-    }
+    /* 1. 卡片外观与相册等页面保持一致：容器与卡片交给 fixed-layout-page 统一控制（圆角、15px 外边距、居中），
+          此处不再把卡片强制改成 100vw 直角，否则会与容器内边距叠加而向右溢出。 */
 
     /* 2. Grid Layout Adjustment: Single/Dual Column */
     body .photo-grid {
+        /* 双列网格的单元格高度：卡片与图片共用，避免两者各写一个高度造成留白或裁切 */
+        --photo-cell-height: 200px;
+
         /* Force 2 columns on mobile instead of masonry auto-fill */
         display: grid;
         grid-template-columns: repeat(2, 1fr) !important;
@@ -41,6 +31,8 @@
     /* 3. Photo Item Optimization */
     body .photo-item {
         border-radius: 4px !important;
+        height: var(--photo-cell-height) !important;
+        margin-top: 0 !important;
         margin-bottom: 0 !important;
         /* Grid gap handles spacing */
         box-shadow: none !important;
@@ -52,7 +44,7 @@
 
     /* Selector fix: JS generates <img> inside .photo-item without specific class */
     body .photo-item img {
-        height: 200px !important;
+        height: 100% !important;
         /* Constraint height for uniform grid look */
         object-fit: cover;
         width: 100%;
@@ -97,32 +89,7 @@
         vertical-align: middle;
     }
 
-    /* 5. Lightbox Touch Optimization (Critical) */
-    body .lightbox {
-        padding: 0;
-        background: #000;
-        /* Deep black for immersion */
-    }
 
-    body .lightbox img {
-        max-width: 100%;
-        max-height: 80vh;
-        /* Leave room for gestures */
-    }
-
-    /* Touch Controls: Make buttons bigger/easier to hit */
-    body .lightbox-close {
-        top: 20px;
-        right: 20px;
-        padding: 15px;
-        font-size: 2rem;
-        color: #fff;
-    }
-
-    body .lb-nav {
-        display: none;
-        /* Hidden on mobile: use swipe gestures instead */
-    }
 }
 /* 后台图片工具栏按行换行，避免文字被挤成竖排。 */
 @media (max-width: 1024px) {
@@ -164,5 +131,12 @@
 
     .photos-admin-page .header-actions > .maers-toolbar-btn {
         padding: 7px 10px;
+    }
+}
+
+/* 手机宽度保持紧凑单元格（与 responsive.css 的 140px 保持一致）。 */
+@media (max-width: 768px) {
+    body .photo-grid {
+        --photo-cell-height: 140px;
     }
 }

@@ -1,6 +1,6 @@
 /**
- * MAERS Games Viewer - View Mode Engine
- * 管理 Playing / Played 视图切换
+ * MAERS 游戏视图与随机抽取
+ * 管理 Playing / Played 切换、封面预载与抽取动画
  * @version 1.3.0
  */
 
@@ -13,9 +13,29 @@ import { DataProvider } from '../../../data-manage/data-provider.module.js';
 const MODES = { PLAYING: 'playing', PLAYED: 'played' };
 const LABELS = { playing: 'Playing', played: 'Played' };
 
-// Animation config — tuned for best feel
-const ANIM_FRAME_COUNT = 10;  // exactly 10 unique covers for a controlled sequential draw
-const ANIM_DURATION = 1000; // 1s: quick and decisive
+// 十帧按快、中、慢三段播放，总时长一秒。
+const ANIM_FRAME_COUNT = 10;
+const ANIM_DURATION = 1000;
+
+function runCoverAnimation(images, onComplete) {
+    let frame = 0;
+    let currentIdx = -1;
+    const tick = () => {
+        if (frame >= ANIM_FRAME_COUNT) {
+            onComplete();
+            return;
+        }
+        if (images.length) {
+            if (currentIdx >= 0) images[currentIdx].style.opacity = '0';
+            currentIdx = frame % images.length;
+            images[currentIdx].style.opacity = '1';
+        }
+        const durationRatio = frame < 5 ? 0.06 : frame < 8 ? 0.1 : 0.2;
+        frame++;
+        setTimeout(tick, ANIM_DURATION * durationRatio);
+    };
+    tick();
+}
 
 export const GamesView = {
     currentMode: MODES.PLAYING,
@@ -36,7 +56,7 @@ export const GamesView = {
         this._refreshModeBtn();
     },
 
-    // ─── Private ─────────────────────────────────────────────────────────────
+    // 视图切换与卡片渲染
 
     _applyMode(mode) {
         const grid = document.getElementById('grid-container');
@@ -94,7 +114,7 @@ export const GamesView = {
         this._btnDraw = document.getElementById('btn-draw-game');
         this._btnDraw?.addEventListener('click', () => this._drawGame());
 
-        // Restore last result from localStorage
+        // 恢复上一次抽取结果
         const savedId = localStorage.getItem('maers_playing_game_id');
         if (savedId) {
             setTimeout(() => {
@@ -120,7 +140,7 @@ export const GamesView = {
 
         const cardEl = createGridItem(node, State, -1);
 
-        // Force lazy-loaded image to resolve immediately (not waiting on IntersectionObserver)
+        // 抽取结果立即加载封面
         const img = cardEl.querySelector('img');
         if (img?.dataset.src) {
             img.src = img.dataset.src;
@@ -137,13 +157,13 @@ export const GamesView = {
         this._cardWrapper.appendChild(cardEl);
     },
 
-    // ─── Animation helpers ────────────────────────────────────────────────────
+    // 封面预载与抽取动画
 
     _getCoverUrl(node) {
-        return DataProvider.getCoverUrl(node, 'preview');
+        return DataProvider.getCoverUrl(node, 'thumb');
     },
 
-    // Build (or refresh) the invisible DOM frame stack for opacity-swap animation
+    // 构建不可见的封面帧栈，抽取时只切换透明度
     _preloadCovers() {
         const notes = (State.AppState.allNodes || []).filter(n => n.type === 'note' && n.coverImage);
         if (!notes.length) return;
@@ -156,7 +176,7 @@ export const GamesView = {
         }
         this._animContainer.innerHTML = '';
 
-        // Pick ANIM_FRAME_COUNT unique random nodes without repetition
+        // 随机选出不重复的封面
         const pool = [...notes];
         const count = Math.min(ANIM_FRAME_COUNT, pool.length);
         for (let i = 0; i < count; i++) {
@@ -166,91 +186,56 @@ export const GamesView = {
             if (!url) continue;
 
             const img = new Image();
-            img.src = url; // Trigger browser fetch & decode
+            img.src = url; // 提前请求并解码封面
             img.style.cssText =
                 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;';
             this._animContainer.appendChild(img);
         }
     },
 
+    _setDrawing(drawing) {
+        this._isAnimating = drawing;
+        const card = this._cardWrapper?.querySelector('.grid-item');
+        card?.classList.toggle('is-animating', drawing);
+        if (this._btnDraw) {
+            this._btnDraw.disabled = drawing;
+            this._btnDraw.textContent = drawing ? '抽取中...' : '抽一下';
+        }
+    },
+
+    _attachAnimation() {
+        const images = this._animContainer ? [...this._animContainer.children] : [];
+        const cover = this._cardWrapper?.querySelector('.item-cover');
+        if (images.length && cover) {
+            cover.appendChild(this._animContainer);
+            this._animContainer.style.opacity = '1';
+            const baseImg = cover.querySelector('.item-cover-img');
+            if (baseImg) baseImg.style.opacity = '0';
+        }
+        return images;
+    },
+
+    _finishDraw(winner) {
+        if (this._animContainer) this._animContainer.style.opacity = '0';
+        this._renderCard(null);
+        // 保留半秒空白停顿，再显示并保存最终结果。
+        setTimeout(() => {
+            this._setDrawing(false);
+            this._renderCard(winner);
+            try { localStorage.setItem('maers_playing_game_id', winner.id); } catch { }
+            this._preloadCovers();
+        }, 500);
+    },
+
     _drawGame() {
         if (this._isAnimating) return;
+        const notes = (State.AppState.allNodes || []).filter(node => node.type === 'note');
+        if (!notes.length) return;
 
-        const allNotes = (State.AppState.allNodes || []).filter(n => n.type === 'note');
-        if (!allNotes.length) return;
-
-        this._isAnimating = true;
-
-        if (this._cardWrapper) {
-            const cardEl = this._cardWrapper.querySelector('.grid-item');
-            if (cardEl) cardEl.classList.add('is-animating');
-        }
-
-        this._btnDraw.disabled = true;
-        this._btnDraw.textContent = '抽取中...';
-
-        // Pick winner now; preload its image immediately
-        const winner = allNotes[Math.floor(Math.random() * allNotes.length)];
+        this._setDrawing(true);
+        const winner = notes[Math.floor(Math.random() * notes.length)];
         const winnerUrl = this._getCoverUrl(winner);
         if (winnerUrl) new Image().src = winnerUrl;
-
-        // Attach the anim frame stack onto the existing card's cover div
-        const imgs = this._animContainer ? [...this._animContainer.children] : [];
-        if (imgs.length) {
-            const coverDiv = this._cardWrapper.querySelector('.item-cover');
-            if (coverDiv) {
-                coverDiv.appendChild(this._animContainer);
-                this._animContainer.style.opacity = '1';
-                // Hide the static underlying card image to eliminate ghosting
-                const baseImg = coverDiv.querySelector('.item-cover-img');
-                if (baseImg) baseImg.style.opacity = '0';
-            }
-        }
-
-        // ── Tick loop ──────────────────────────────────────────────────────────
-        let frameCount = 0;
-        let currentIdx = -1;
-
-        const tick = () => {
-            if (frameCount >= 10) {
-                // Remove the animation stack immediately and render an empty placeholder card
-                if (this._animContainer) this._animContainer.style.opacity = '0';
-                this._renderCard(null);
-
-                // Wait 0.5s showing the blank placeholder before "snapping" the final winner into place
-                setTimeout(() => {
-                    this._isAnimating = false;
-
-                    this._btnDraw.disabled = false;
-                    this._btnDraw.textContent = '抽一下';
-
-                    this._renderCard(winner);
-                    try { localStorage.setItem('maers_playing_game_id', winner.id); } catch { }
-
-                    // Refresh frame pool silently for next draw
-                    this._preloadCovers();
-                }, 500);
-
-                return;
-            }
-
-            // Flip frames sequentially without random selection to guarantee no repeats
-            if (imgs.length) {
-                if (currentIdx >= 0 && imgs[currentIdx]) imgs[currentIdx].style.opacity = '0';
-                currentIdx = frameCount % imgs.length; // guaranteed 0 through 9
-                if (imgs[currentIdx]) imgs[currentIdx].style.opacity = '1';
-            }
-
-            // Exactly 10 frames distributed in a 5, 3, 2 cadence to resolve in exactly 1000ms
-            let delay;
-            if (frameCount < 5) delay = 60;        // Initial 5 frames: 60ms each (fast blur) = 300ms
-            else if (frameCount < 8) delay = 100;  // Next 3 frames: 100ms each (slowing down) = 300ms
-            else delay = 200;                      // Final 2 frames: 200ms each (heavy drama) = 400ms
-
-            frameCount++;
-            setTimeout(tick, delay);
-        };
-
-        tick(); // kick off instantly
+        runCoverAnimation(this._attachAnimation(), () => this._finishDraw(winner));
     }
 };

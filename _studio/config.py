@@ -4,11 +4,9 @@
 
 import os
 
-# 本地管理服务与请求体上限（读取请求体前检查）。
+# 本地管理服务。
 HOST = '127.0.0.1'
 PORT = 8001
-MAX_JSON_BYTES = 16 * 1024 * 1024
-MAX_UPLOAD_BYTES = 64 * 1024 * 1024
 
 # 路径配置
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +20,7 @@ INDEX_CARDS_JSON  = os.path.join(DATA_DIR, 'index-cards.json')
 CHANGELOG_JSON   = os.path.join(DATA_DIR, 'changelog.json')
 
 # 核心存储与数据库 (Core Storage & Databases)
+MARKDOWN_ROOT = os.path.join(PROJECT_ROOT, 'markdown')
 PHOTOS_ROOT = os.path.join(PROJECT_ROOT, 'photos')
 CMS_DB      = os.path.join(DATA_DIR, 'cms.db')
 GALLERY_DB  = os.path.join(DATA_DIR, 'gallery.db')

@@ -10,14 +10,15 @@
 
 import { sha256Hex } from '../../../data-manage/encrypt/crypto.module.js';
 import { localFetch } from '../../../data-manage/api-client.module.js';
-import { cmsMediaReferences } from '../../../data-manage/encrypt/private-media.module.js';
+import { cmsMediaReferences, getPrivateUrlBuilder } from '../../../data-manage/encrypt/private-media.module.js';
 import { Toast } from '../../../shared/toast.module.js';
+import { markdownUrl } from '../../../shared/content-url.module.js';
 import { disposeReaderDiagrams, exitReaderDiagramFullscreen } from './cms-diagrams.module.js';
 import { preprocessMarkdown, enhanceGitHubAlerts, enhanceReaderElements, bindInteractiveTasks, bindReaderFragmentNavigation } from './cms-reader-content.module.js';
 import { bindOutlineToggle, generateOutline, resetReaderOutline, createReaderFileWatcher } from './cms-reader-lifecycle.module.js';
 export { preprocessMarkdown, enhanceGitHubAlerts, enhanceReaderElements };
 
-import { Utils } from '../../../shared/utils.module.js';
+import { Utils, loadLocalAsset } from '../../../shared/utils.module.js';
 import { createReaderEditor } from './cms-reader-editor.module.js';
 import { mountBacklinks, backlinkUrl, resolveBacklink } from './cms-backlinks.module.js';
 
@@ -64,7 +65,7 @@ const _fileWatcher = createReaderFileWatcher({
     isDirty: () => readerState.dirty,
     isLocal: _isLocalEnv,
     onChange(node, text) {
-        const textarea = document.getElementById('cms-source-textarea');
+        const textarea = readerState.sourceEditor;
         if (textarea) textarea.value = text;
         const content = document.getElementById('reader-content');
         const scroll = document.querySelector('#immersive-reader .reader-scroll-area');
@@ -80,13 +81,17 @@ function _interceptMdLinks(container) {
         if (event.defaultPrevented || event.button > 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
         const link = event.target.closest('a[href]');
         const href = link?.getAttribute('href') || '';
-        if (!/\.md(?:[?#]|$)/i.test(href) || /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href)) return;
-        event.preventDefault(); event.stopImmediatePropagation();
+        if (!link || link.hasAttribute('download') || (link.getAttribute('target') || '_self').toLowerCase() !== '_self') return;
+        const isMarkdown = /\.md(?:[?#]|$)/i.test(href) && !/^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href);
+        const isNoteLink = /[?&]openNote(?:Id)?=/.test(href);
+        if (!isMarkdown && !isNoteLink) return;
         const module = Controller?.CONFIG?.CURRENT_MODULE || 'notes';
         const catalogue = (Controller?.AppState?.allNodes || [])
             .filter(node => node.type === 'note' && !node._enc).map(node => ({ module, node }));
         const origin = window.location.origin === 'null' ? 'https://maers.invalid' : window.location.origin;
         const target = resolveBacklink(href, { module, node: readerState.node || {} }, catalogue, origin);
+        if (!target && !isMarkdown) return;
+        event.preventDefault(); event.stopImmediatePropagation();
         if (!target) { _notify('未找到唯一的目标笔记，请检查链接路径', 'error'); return; }
         if (window.IS_ADMIN && readerState.dirty && confirm('有未保存的源码更改，是否先保存再跳转？')) {
             const result = await save();
@@ -114,22 +119,39 @@ export async function open(node) {
     clearTimeout(readerState.previewTimer); clearTimeout(readerState.saveTimer);
     _backlinksView?.destroy(); _backlinksView = null;
     readerState.scrollSync?.destroy(); readerState.scrollSync = null;
+    readerState.sourceEditor?.destroy(); readerState.sourceEditor = null;
     disposeReaderDiagrams(layer);
     _fileWatcher.stop(); resetReaderOutline();
     readerState.dirty = false;
     readerState.node = node;
     readerState.editingId = window.IS_ADMIN ? node.id : null;
     const current = () => generation === readerState.generation && !abort.signal.aborted;
-    if (typeof node.content === 'string' && node.content.endsWith('.md')) node._mdPath = node.content;
+    if (typeof node.content === 'string' && node.content.endsWith('.md')) {
+        node._mdPath = node.content;
+    }
     _interceptMdLinks(layer);
     if (node._draftContent !== undefined) {
-        node.content = node._rawMd = node._draftContent;
+        const text = String(node._draftContent ?? '');
+        const revision = await sha256Hex(text);
+        if (!current()) return;
+        node.content = node._rawMd = node._originalContent = text;
+        node._sourceRevision = revision;
+        node._loadFailed = false;
     } else if (node._mdPath) {
         layer.innerHTML = '<div class="reader-loading">⏳ 正在加载文档...</div>';
         layer.classList.add('active'); document.body.style.overflow = 'hidden';
         try {
-            const path = 'data/' + node._mdPath.split('/').map(encodeURIComponent).join('/');
-            const response = await (node._private ? localFetch : fetch)(path, { cache: 'no-cache', signal: abort.signal });
+            let path;
+            if (_isLocalEnv()) {
+                path = markdownUrl(node._mdPath, { local: true });
+            } else if (node._private) {
+                const toPrivate = await getPrivateUrlBuilder(node._private_group || node._group || 'default');
+                if (!toPrivate) throw new Error('请先解锁对应的密码组以阅读私密文档');
+                path = toPrivate(node._mdPath);
+            } else {
+                path = markdownUrl(node._mdPath);
+            }
+            const response = await (node._private && _isLocalEnv() ? localFetch : fetch)(path, { cache: 'no-cache', signal: abort.signal });
             const text = response.ok ? await response.text() : null;
             if (!current()) return;
             if (text !== null) {
@@ -168,6 +190,7 @@ export function close() {
     _backlinksView = null;
     readerState.scrollSync?.destroy();
     readerState.scrollSync = null;
+    readerState.sourceEditor?.destroy(); readerState.sourceEditor = null;
     exitReaderDiagramFullscreen();
     _fileWatcher.stop();
     readerState.dirty = false;
@@ -185,7 +208,6 @@ export function close() {
 // ─── 阅读器骨架 ───
 function _renderUnifiedReader(layer, node) {
     const isAdmin = Boolean(window.IS_ADMIN);
-    const isLocal = _isLocalEnv();
     const safeTitle = _escapeHtml(node.title || 'Untitled');
     const rawMd = node._loadFailed ? '> [!WARNING]\n> 文档加载失败，请重新打开；正文保存已禁用。' : (node._rawMd ?? node.content ?? '');
 
@@ -203,8 +225,8 @@ function _renderUnifiedReader(layer, node) {
            <span class="reader-title">${safeTitle}</span>`;
 
     const actionsRightHtml = isAdmin
-        ? `${isLocal && node._mdPath ? `<button type="button" class="reader-admin-btn" id="btn-open-external" title="${node._private ? '在浏览器内编辑私密正文' : '使用系统默认软件（如 Typora / Obsidian）直接打开原文件'}"><span class="btn-label">编辑</span></button>` : ''}
-           <button type="button" class="reader-admin-btn" id="btn-toggle-source" title="展开/收起 Markdown 源码抽屉"><span class="btn-label">源码</span></button>
+        ? `${node._mdPath || node._private ? `<button type="button" class="reader-admin-btn" id="btn-open-external" title="${node._private ? '在浏览器内编辑私密正文' : '使用系统默认软件（如 Typora / Obsidian）直接打开原文件'}"><span class="btn-label">外部编辑</span></button>` : ''}
+           <button type="button" class="reader-admin-btn" id="btn-toggle-source" title="展开/收起 Markdown 源码抽屉"><span class="btn-label">内部编辑</span></button>
            <button type="button" class="close-btn" title="关闭阅读器">✕</button>`
         : `<button type="button" class="close-btn" title="关闭阅读器">✕</button>`;
 
@@ -219,7 +241,7 @@ function _renderUnifiedReader(layer, node) {
                        <button type="button" class="cms-source-close-btn" id="btn-close-source" title="收起源码抽屉">✕</button>
                    </div>
                </div>
-               <textarea id="cms-source-textarea" class="cms-source-textarea" spellcheck="false" placeholder="在此输入或粘贴 Markdown 源码..."></textarea>
+               <div id="cms-source-editor" class="cms-source-editor"></div>
            </aside>`
         : '';
 
@@ -276,7 +298,8 @@ function _renderMarkdownBody(contentDiv, rawMd, node, preserveScrollTop = null) 
     const job = Promise.resolve(_renderJobs.get(contentDiv)).catch(() => {}).then(async () => {
         if (!current()) return;
         exitReaderDiagramFullscreen();
-        const previousDiagrams = Array.from(contentDiv.querySelectorAll('.cms-diagram-card'));
+        const previousDiagrams = Array.from(contentDiv.querySelectorAll(
+            '.cms-diagram-card, .language-mindmap, .language-markmap, .language-mermaid, .language-echarts, .language-flowchart, .language-graphviz'));
 
         const layer = document.getElementById('immersive-reader');
         const scrollArea = layer?.querySelector('.reader-scroll-area');
@@ -289,10 +312,16 @@ function _renderMarkdownBody(contentDiv, rawMd, node, preserveScrollTop = null) 
             const isLight = document.documentElement.classList.contains('light-mode');
             const contentTheme = isLight ? 'light' : 'dark';
             let previewMd = rawMd || '> 暂无内容';
-            if (node._private && window.IS_ADMIN && _isLocalEnv()) {
-                for (const { source, key } of cmsMediaReferences(previewMd)) {
-                    const url = '/api/private/media/' + key.split('/').map(encodeURIComponent).join('/');
-                    previewMd = previewMd.split(source).join(url);
+            if (node._private && window.IS_ADMIN) {
+                const references = cmsMediaReferences(previewMd);
+                if (references.length) {
+                    const toUrl = _isLocalEnv()
+                        ? key => '/api/private/media/' + key.split('/').map(encodeURIComponent).join('/')
+                        : await getPrivateUrlBuilder(node._private_group).catch(() => null);
+                    if (!current()) return;
+                    for (const { source, key } of references) {
+                        previewMd = previewMd.split(source).join(toUrl?.(key) || 'about:blank');
+                    }
                 }
             }
             const processedMd = preprocessMarkdown(previewMd);
@@ -346,7 +375,19 @@ function _renderMarkdownBody(contentDiv, rawMd, node, preserveScrollTop = null) 
                 }
             };
 
-            if (typeof window !== 'undefined' && window.Vditor && typeof window.Vditor.preview === 'function') {
+            if (typeof window !== 'undefined' && document.head) {
+                const assets = [];
+                if (typeof window.Vditor?.preview !== 'function') {
+                    assets.push(loadLocalAsset('plugins/vditor-assets/method.min.js'));
+                }
+                if (document.documentElement.dataset?.readerStyle === 'vditor') {
+                    const before = document.querySelector('link[href$="custom/cms/viewer/cms-base.css"]');
+                    assets.push(loadLocalAsset('plugins/vditor-assets/index.css', { stylesheet: true, before }));
+                }
+                await Promise.allSettled(assets);
+                if (!current()) return;
+            }
+            if (typeof window !== 'undefined' && typeof window.Vditor?.preview === 'function') {
                 await window.Vditor.preview(contentDiv, processedMd, {
                     mode: isLight ? 'light' : 'dark',
                     markdown: { mark: true, toc: true },

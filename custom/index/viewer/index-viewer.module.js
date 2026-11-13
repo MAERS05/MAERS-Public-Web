@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (navGrid) {
         getNavData()
             .then(async data => {
-                await revealInPlace(data); // 已有会话密钥时，在内存中还原密文卡片
+                await revealInPlace(data); // 已通过隐藏入口解锁时，在内存中还原密文卡片
                 navGrid.innerHTML = '';
                 let delay = 0.1;
 

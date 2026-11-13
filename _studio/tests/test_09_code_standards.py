@@ -6,7 +6,7 @@
   - 硬性规则：零容忍，任何违规直接失败；
   - 棘轮规则：对照 standards_baseline.json，禁止新增或增长；修复后要求收缩基线，
     防止已偿还的技术债被悄悄回退；
-  - 版本号同步：改动前端文件后，对应 Service Worker 版本分组必须递增。
+  - 公开版本：保留既有 Service Worker 版本，不随前端改动递增。
 
 本套件只读、JS 规则依赖 Node / Acorn，纳入 Git 推送前门禁。
 """
@@ -77,17 +77,24 @@ class Test09_CodeStandards(unittest.TestCase):
         missing = sorted(rule_ids - doc_ids)
         self.assertFalse(missing, f"{standards.DOC_LINK} 未记录规则: {missing}")
 
-    def test_06_version_bumped_for_changed_frontend(self):
-        """STD-VER-01：相对上游合并基点（无上游时为 HEAD）改动的前端文件，其版本键已递增"""
-        try:
-            missing = standards.scan_version_bump()
-        except (RuntimeError, OSError) as exc:
-            self.skipTest(f"Git 不可用，跳过版本号同步检查: {exc}")
-        details = [f"{path} → 需递增 {key}" for path, key in sorted(missing.items())]
-        self.assertFalse(
-            missing,
-            f"[STD-VER-01] 前端文件已改动但版本号未更新（maers-version-controller.js）：{_format(details)}",
-        )
+    def test_06_public_versions_remain_fixed(self):
+        """STD-VER-01：公开版沿用既有缓存版本，禁止递增或新增单文件版本。"""
+        config = standards.parse_version_config(read_text('maers-version-controller.js'))
+        actual = {
+            'default': config['default'],
+            'groups': {name: value[0] for name, value in config['groups'].items()},
+            'files': config['files'],
+        }
+        self.assertEqual(actual, {
+            'default': '2026.1103-0002',
+            'groups': {
+                'styles': '3', 'cms': '3', 'literature': '2', 'notes': '1',
+                'record': '1', 'games': '1', 'music': '2', 'videos': '1',
+                'photos': '3', 'shared': '3', 'space': '3', 'index': '2',
+            },
+            'files': {},
+        }, '[STD-VER-01] 公开版本必须保持既有版本号')
+        self.assertTrue(all(paths for _, paths in config['groups'].values()))
 
 
 if __name__ == '__main__':

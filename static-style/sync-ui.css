@@ -34,6 +34,16 @@
     transform: translateY(0);
 }
 
+/* 本地专属操作在云端保留位置，但不显示可点击的动效。 */
+body .maers-local-disabled[aria-disabled="true"],
+body .maers-local-disabled[aria-disabled="true"]:is(:hover, :active) {
+    opacity: 0.45;
+    filter: grayscale(1);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow:none;
+}
+
 /* .header-actions 已通过 gap 统一间距，避免与 margin-right 叠加而多占一格宽度导致提前换行 */
 .header-actions > .maers-toolbar-btn {
     margin-right: 0;
@@ -87,6 +97,10 @@ html.light-mode .maers-toolbar-btn:not(.maers-toolbar-btn--sync-relay, .maers-to
    2. mlock 弹窗与控制基础样式体系
    ═══════════════════════════════════════════════ */
 
+html.studio-entry-locked body > :not(.mlock-overlay) {
+    visibility: hidden;
+}
+
 .mlock-overlay {
     position: fixed; inset: 0; z-index: 999999;
     background: rgba(0, 0, 0, 0.72);
@@ -106,7 +120,7 @@ html.light-mode .maers-toolbar-btn:not(.maers-toolbar-btn--sync-relay, .maers-to
     -webkit-backdrop-filter: blur(24px);
     border-radius: 18px;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+    box-shadow: none;
     overflow: hidden;
     animation: mlockSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -116,17 +130,17 @@ html.light-mode .maers-toolbar-btn:not(.maers-toolbar-btn--sync-relay, .maers-to
 }
 html.light-mode .mlock-box {
     background: rgba(255, 255, 255, 0.97);
-    border-color: rgba(0, 0, 0, 0.1);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.12);
+    border-color: rgba(0, 0, 0, 0.16);
+    box-shadow: none;
 }
 
 .mlock-header {
     display: flex; align-items: center; gap: 14px;
     padding: 22px 22px 16px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 html.light-mode .mlock-header {
-    border-bottom-color: rgba(0, 0, 0, 0.08);
+    border-bottom-color: rgba(0, 0, 0, 0.16);
 }
 .mlock-icon-wrap {
     font-size: 28px;
@@ -197,12 +211,12 @@ html.light-mode .mlock-btn-secondary:hover { background: #e4e4ea; }
     cursor: pointer; border: none;
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: #fff;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    box-shadow: none;
     transition: all 0.2s;
 }
 .mlock-btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+    box-shadow: none;
 }
 .mlock-btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 .mlock-link {
@@ -226,21 +240,31 @@ html.light-mode .mlock-code { color: #111; }
     font-size: 12.5px; line-height: 1.75; color: var(--text-sub, #aaa);
     padding: 10px 12px; border-radius: 10px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
-html.light-mode .mlock-status { background: #f6f6f8; border-color: rgba(0, 0, 0, 0.08); color: #444; }
+html.light-mode .mlock-status { background: #f6f6f8; border-color: rgba(0, 0, 0, 0.16); color: #444; }
 .mlock-status b { color: var(--text-main, #eee); font-weight: 600; }
 html.light-mode .mlock-status b { color: #111; }
 .mlock-ok { color: #34d399; }
 .mlock-bad { color: #f87171; }
 .mlock-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mlock-actions.mlock-crypto-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mlock-crypto-actions .mlock-btn-secondary { min-width: 0; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+.mlock-actions.mlock-group-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mlock-group-actions .mlock-btn-secondary { min-width: 0; min-height: 44px; white-space: normal; overflow-wrap: anywhere; }
+.mlock-status.mlock-password-group { padding: 0 12px; }
+.mlock-password-group > summary { position: relative; display: block; min-height: 44px; padding: 10px 22px 10px 0; box-sizing: border-box; cursor: pointer; overflow-wrap: anywhere; list-style: none; }
+.mlock-password-group > summary::-webkit-details-marker { display: none; }
+.mlock-password-group > summary::after { content: ''; position: absolute; right: 2px; top: 50%; border-top: 5px solid transparent; border-bottom: 5px solid transparent; border-left: 6px solid var(--text-sub, #aaa); transform: translateY(-50%); }
+.mlock-password-group[open] > summary::after { transform: translateY(-50%) rotate(90deg); }
+.mlock-status.mlock-password-group > .mlock-actions { margin-top: 0; padding-bottom: 10px; }
 .mlock-actions .mlock-btn-secondary { padding: 9px 10px; text-align: center; }
 .mlock-progress {
     position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
-    z-index: 999998; min-width: 240px; padding: 10px 16px; border-radius: 14px;
+    z-index: 1000000; min-width: 240px; padding: 10px 16px; border-radius: 14px;
     background: rgba(22, 22, 28, 0.94); color: #eee; font-size: 13px;
     border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     display: flex; flex-direction: column; gap: 8px;
 }
 .mlock-progress-bar { height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
@@ -253,9 +277,9 @@ html.light-mode .mlock-status b { color: #111; }
     position: fixed; left: 20px; bottom: 20px; z-index: 9998;
     display: inline-flex; align-items: stretch; height: 42px; box-sizing: border-box;
     border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 999px;
-    background: rgba(30, 30, 40, 0.85); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    background: rgba(30, 30, 40, 0.85); box-shadow: none;
 }
-html.light-mode .mlock-crypto-controls:not(.mlock-crypto-controls--actions) { background: rgba(255, 255, 255, 0.92); border-color: rgba(0, 0, 0, 0.1); }
+html.light-mode .mlock-crypto-controls:not(.mlock-crypto-controls--actions) { background: rgba(255, 255, 255, 0.92); border-color: rgba(0, 0, 0, 0.16); }
 .mlock-crypto-controls--actions { background: linear-gradient(135deg, #3b82f6, #6366f1); border-color: rgba(99, 102, 241, 0.45); }
 .mlock-settings-btn {
     position: relative; display: flex; align-items: center; justify-content: center;
@@ -286,7 +310,7 @@ html.light-mode .mlock-settings-btn { background: rgba(255, 255, 255, 0.96); }
 
 /* 弹窗卡片区块 */
 .sync-section {
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 12px;
     padding: 16px;
     background: rgba(255, 255, 255, 0.03);
@@ -294,7 +318,7 @@ html.light-mode .mlock-settings-btn { background: rgba(255, 255, 255, 0.96); }
 
 html.light-mode .sync-section {
     background: #f8f8fa;
-    border-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.16);
 }
 
 /* 说明条 */
@@ -346,6 +370,251 @@ html.light-mode .sync-field__label {
 .sync-field__row {
     display: flex;
     gap: 8px;
+}
+
+.mlock-box.mlock-box--storage {
+    width: min(560px, 94vw);
+    max-height: 92dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.mlock-box--storage .mlock-body {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 22px 18px;
+    scrollbar-gutter: stable;
+}
+
+.mlock-box--storage > .mlock-header,
+.mlock-box--storage > .mlock-footer,
+.storage-pane__box > .mlock-header,
+.storage-pane__box > .mlock-footer {
+    flex-shrink: 0;
+}
+
+.mlock-box--storage > .mlock-footer,
+.storage-pane__box > .mlock-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+html.light-mode .mlock-box--storage > .mlock-footer,
+html.light-mode .storage-pane__box > .mlock-footer {
+    border-top-color: rgba(0, 0, 0, 0.12);
+}
+
+.storage-config [hidden],
+.storage-pane [hidden] { display: none; }
+
+.storage-config p,
+.storage-pane p { margin: 0; }
+
+.storage-editor {
+    border: 0;
+    padding: 0;
+    margin: 10px 0 0;
+    min-width: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.storage-picker {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.storage-picker .sync-field { flex: 1 1 0; min-width: 0; }
+.storage-picker .mlock-btn-secondary { flex-shrink: 0; min-height: 42px; white-space: nowrap; }
+
+/* 入口卡片：一行两个，点击打开子弹窗 */
+.storage-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 12px;
+}
+
+.storage-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+    min-height: 92px;
+    min-width: 0;
+    padding: 14px;
+    box-sizing: border-box;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
+}
+
+.storage-card:hover { border-color: rgba(100, 150, 255, 0.5); background: rgba(255, 255, 255, 0.06); }
+.storage-card:active { transform: scale(0.99); }
+.storage-card:focus-visible { outline: 2px solid #659aff; outline-offset: 2px; }
+
+html.light-mode .storage-card { border-color: rgba(0, 0, 0, 0.16); background: #f8f8fa; }
+html.light-mode .storage-card:hover { border-color: rgba(59, 130, 246, 0.55); background: #f0f4ff; }
+
+.storage-card__title {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-main, #eee);
+}
+
+html.light-mode .storage-card__title { color: #111; }
+
+.storage-card__title small,
+.storage-card__usage {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: var(--text-sub, #888);
+}
+
+.storage-error {
+    color: #f87171;
+    font-size: 12px;
+    font-weight: 400;
+}
+
+html.light-mode .storage-error { color: #b91c1c; }
+.sync-field__label .storage-error { margin-inline-start: 8px; }
+
+.storage-card__state {
+    max-width: 100%;
+    padding: 2px 9px;
+    border-radius: 999px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11.5px;
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.12);
+}
+
+.storage-card__state.is-empty {
+    color: var(--text-sub, #888);
+    background: rgba(127, 127, 127, 0.14);
+}
+
+/* 子弹窗：覆盖在存储设置之上 */
+.storage-pane {
+    position: fixed;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    animation: mlockFadeIn 0.18s ease;
+}
+
+.storage-pane[hidden] { display: none; }
+
+.mlock-box.storage-pane__box {
+    width: min(480px, 94vw);
+    max-height: 88dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.storage-pane__box > .mlock-body { min-height: 0; overflow-y: auto; padding-bottom: 18px; }
+
+.storage-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+    gap: 12px;
+}
+
+.storage-fields .sync-field { margin-top: 0; min-width: 0; }
+.storage-fields__wide { grid-column: 1 / -1; }
+.storage-stack { display: grid; gap: 12px; }
+.storage-stack [data-worker-value] { margin-top: 0; }
+.storage-pane :is([data-name="endpoint_url"], [data-site])::placeholder { color: var(--text-sub, #a0a0a5); opacity: 1; }
+html.light-mode .storage-pane :is([data-name="endpoint_url"], [data-site])::placeholder { color: #62626a; }
+
+/* 下拉框：统一外观、自绘箭头，并让原生选项列表跟随深浅主题 */
+:is(.storage-config, .storage-pane) select.mlock-input {
+    appearance: none;
+    -webkit-appearance: none;
+    color-scheme: dark;
+    padding-right: 36px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none' stroke='%23999' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1.5l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+}
+:is(.storage-config, .storage-pane) .mlock-input:disabled { cursor: not-allowed; opacity: 0.6; }
+:is(.storage-config, .storage-pane) select.mlock-input :is(option, optgroup) { background: #1c1c22; color: #eee; }
+html.light-mode :is(.storage-config, .storage-pane) select.mlock-input { color-scheme: light; }
+html.light-mode :is(.storage-config, .storage-pane) select.mlock-input :is(option, optgroup) { background: #fff; color: #111; }
+
+@supports (appearance: base-select) and selector(::picker(select)) {
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select,
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select::picker(select) {
+        appearance: base-select;
+    }
+
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select {
+        min-height: 42px;
+        padding-right: 14px;
+        background-image: none;
+    }
+
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select:open { border-color: #659aff; }
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select::picker-icon { color: var(--text-sub); }
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select:open::picker-icon { rotate: 180deg; }
+
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select::picker(select) {
+        box-sizing: border-box;
+        inline-size: anchor-size(width);
+        max-block-size: min(18rem, 50dvh);
+        overflow-y: auto;
+        margin-block: 5px;
+        padding: 4px;
+        border: 1px solid var(--pill-border);
+        border-radius: 10px;
+        background: var(--pill-bg);
+        color: var(--text-main);
+        font: inherit;
+    }
+
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select option {
+        display: flex;
+        align-items: center;
+        min-block-size: 40px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: transparent;
+        color: inherit;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        cursor: pointer;
+    }
+
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select option:checked { background: rgba(100, 150, 255, 0.16); }
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select option:hover { background: rgba(100, 150, 255, 0.24); }
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select option:focus-visible {
+        outline: 1px solid #659aff;
+        outline-offset: -1px;
+    }
+    :is(.storage-config, .storage-pane) select.mlock-input.storage-bucket-select option::checkmark {
+        order: 1;
+        margin-inline-start: auto;
+        padding-inline-start: 8px;
+    }
 }
 
 /* 区块底部操作栏 */
@@ -404,12 +673,12 @@ html.light-mode .sync-section--git {
     border-radius: 10px;
     font-size: 13px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 html.light-mode .git-env-badge {
     background: #f6f6f8;
-    border-color: rgba(0, 0, 0, 0.08);
+    border-color: rgba(0, 0, 0, 0.16);
 }
 
 .git-env-badge__branch {
@@ -420,7 +689,7 @@ html.light-mode .git-env-badge {
 /* Git 改动详情面板 */
 .git-changes-panel {
     background: rgba(0, 0, 0, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 10px;
     padding: 12px;
     font-size: 12px;
@@ -431,7 +700,7 @@ html.light-mode .git-env-badge {
 
 html.light-mode .git-changes-panel {
     background: #f4f4f6;
-    border-color: rgba(0, 0, 0, 0.06);
+    border-color: rgba(0, 0, 0, 0.16);
     color: #555;
 }
 
@@ -515,7 +784,7 @@ html.light-mode .git-log-area {
     border-color: rgba(100, 150, 255, 0.5);
     background: rgba(100, 150, 255, 0.08);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(100, 150, 255, 0.1);
+    box-shadow: none;
 }
 
 html.light-mode .locked-card {
@@ -526,7 +795,7 @@ html.light-mode .locked-card {
 html.light-mode .locked-card:hover {
     border-color: rgba(59, 130, 246, 0.4);
     background: rgba(59, 130, 246, 0.06);
-    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.08);
+    box-shadow: none;
 }
 
 .locked-card__icon {
@@ -580,16 +849,21 @@ html.light-mode .locked-card:hover {
 /* 备份面板：操作、记录与空状态 */
 .recovery-panel { display: grid; gap: 14px; font-size: 13px; line-height: 1.6; }
 .recovery-tools { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 10px; }
-.recovery-section { padding: 14px; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; background: rgba(255, 255, 255, 0.03); }
+.recovery-section { padding: 14px; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; background: rgba(255, 255, 255, 0.03); }
 .recovery-section__header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .recovery-section h3 { margin: 0; font-size: 14px; color: var(--text-main, #eee); }
 .recovery-caption { margin: 3px 0 0; font-size: 12px; color: var(--text-sub, #888); }
 .recovery-empty { margin-top: 12px; padding: 16px 12px; border-radius: 8px; text-align: center; font-size: 12px; color: var(--text-sub, #888); background: rgba(255, 255, 255, 0.03); }
-.recovery-record { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+.recovery-record { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.15); }
 .recovery-record:last-child { border-bottom: 0; padding-bottom: 0; }
 .recovery-record__date { color: var(--text-main, #eee); font-size: 13px; }
 .recovery-record__actions { display: flex; gap: 8px; }
 .recovery-record__actions .mlock-btn-secondary { padding: 6px 12px; font-size: 12px; }
-html.light-mode .recovery-section { border-color: rgba(0, 0, 0, 0.08); background: rgba(0, 0, 0, 0.015); }
+html.light-mode .recovery-section { border-color: rgba(0, 0, 0, 0.16); background: rgba(0, 0, 0, 0.015); }
 html.light-mode .recovery-empty { background: rgba(0, 0, 0, 0.03); }
-html.light-mode .recovery-record { border-color: rgba(0, 0, 0, 0.08); }
+html.light-mode .recovery-record { border-color: rgba(0, 0, 0, 0.16); }
+.recovery-location { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.recovery-location .mlock-input { flex: 1 1 200px; min-width: 0; padding: 8px 12px; font-size: 12.5px; }
+.recovery-location .mlock-btn-secondary { padding: 8px 12px; font-size: 12.5px; white-space: nowrap; }
+.storage-mode-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; background: rgba(255, 255, 255, 0.025); }
+html.light-mode .storage-mode-bar { border-color: rgba(0, 0, 0, 0.14); background: rgba(0, 0, 0, 0.02); }

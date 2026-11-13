@@ -14,7 +14,7 @@ def _clean(rel):
 class Test04_FrontendArchitectureContracts(unittest.TestCase):
     """前端零全局污染、适配器双轨权限、三模标签筛选、内链拦截与 E2EE 契约"""
 
-    ALLOWED_GLOBAL_MOUNT = {'Toast', 'Theme', 'ModuleConfig', 'Config'}
+    ALLOWED_GLOBAL_MOUNT = {'Toast', 'Theme', 'Config'}
 
     # 业务层禁止直接触达的底层实现（必须经由 data-manage 门面）
     FORBIDDEN_CRYPTO_TOKENS = ('crypto.subtle', 'keyring.module.js', "startsWith('enc:')", 'startsWith("enc:")')
@@ -52,12 +52,13 @@ class Test04_FrontendArchitectureContracts(unittest.TestCase):
         self.assertIn(".endsWith('.md')", code)
 
     def test_05_cross_module_open_note_support(self):
-        """CMS 各模块访客入口与管理入口均支持 ?openNote= 跨模块深度链接跳转"""
+        """CMS 各入口共用页面启动流程，文章定位由同一处处理。"""
         for rel in ('custom/cms/main.module.js', 'custom/cms/admin-main.module.js',
                     'custom/literature/main.module.js', 'custom/games/main.module.js',
                     'custom/videos/main.module.js'):
             with self.subTest(file=rel):
-                self.assertIn('openNote', read_text(rel), f"{rel} 缺少 ?openNote= 跨模块跳转支持")
+                self.assertIn('initCmsPage', _clean(rel), f"{rel} 未接入共用页面启动流程")
+        self.assertIn('findLinkedNote', _clean('custom/cms/viewer/cms-page.module.js'))
 
     def test_06_reader_dynamic_outline_support(self):
         """阅读器生命周期模块包含 H1-H6 动态目录大纲提取与平滑跳转逻辑"""
@@ -83,14 +84,18 @@ class Test04_FrontendArchitectureContracts(unittest.TestCase):
         """BatchItemManager 支持 autoSaveBar: false 中央保存条调度机制"""
         self.assertIn('autoSaveBar', read_text('data-manage/admin/admin-manager.module.js'))
         self.assertIn('autoSaveBar: false', read_text('custom/cms/viewer/cms-admin.module.js'))
-        self.assertIn('checkGlobalDirty', read_text('custom/cms/admin-main.module.js'))
+        self.assertIn('checkGlobalDirty', read_text('custom/cms/viewer/cms-page.module.js'))
 
     def test_10_native_lazy_loading_contract(self):
-        """核心网格渲染器均使用浏览器原生 loading='lazy' 属性"""
+        """网格图片使用原生懒加载，首图可以显式优先加载。"""
+        native_lazy = re.compile(
+            r"""\bloading\s*[=:]\s*"""
+            r"""(?:[^;?\n]+\?\s*['"]eager['"]\s*:\s*)?['"]lazy['"]"""
+        )
         for rel in ('custom/cms/viewer/render/cms-render-grid.module.js',
                     'custom/photos/viewer/photos-view.module.js'):
             with self.subTest(file=rel):
-                self.assertRegex(read_text(rel), r'loading\s*[=:]\s*[\'"]?lazy', f"{rel} 未使用原生懒加载")
+                self.assertIsNotNone(native_lazy.search(_clean(rel)), f"{rel} 未使用原生懒加载")
 
     def test_11_crypto_boundary_guard(self):
         """架构边界守卫：custom/ 业务模块严禁直接调用 crypto.subtle、keyring.module.js 或硬编码 enc: 前缀"""

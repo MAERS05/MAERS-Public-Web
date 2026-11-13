@@ -41,7 +41,7 @@ body {
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     border-radius: 30px;
-    box-shadow: var(--card-shadow);
+    box-shadow: none;
     backdrop-filter: var(--card-backdrop);
     padding: 50px 60px;
     display: flex;
@@ -55,7 +55,7 @@ body {
 .main-card.clean-layout {
     background: transparent !important;
     border: none !important;
-    box-shadow: none !important;
+    box-shadow:none !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
     padding: 0 !important;
@@ -91,7 +91,7 @@ body {
     border-radius: 50px;
     position: relative;
     cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     display: block;
     user-select: none;
 }
@@ -109,7 +109,7 @@ body {
     font-size: 12px;
     background-color: #ffffff;
     color: #ffa500;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    box-shadow: none;
     transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1), background-color 500ms ease;
     view-transition-name: theme-switch-knob;
     z-index: 2;
@@ -170,7 +170,7 @@ html.light-mode .mode-icon-sun {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    box-shadow: none;
 }
 
 .auto-mode-btn.active {
@@ -196,7 +196,7 @@ html.light-mode .mode-icon-sun {
     font-size: 12px;
     font-weight: bold;
     white-space: nowrap;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: none;
     pointer-events: none;
     opacity: 0;
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -223,7 +223,7 @@ html.light-mode .auto-mode-btn::after {
     backdrop-filter: blur(20px);
     border-radius: 14px;
     padding: 15px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    box-shadow: none;
     display: none;
     flex-direction: column;
     z-index: 1999;
@@ -322,7 +322,7 @@ html.light-mode .save-trigger.active .save-icon {
 
 html.light-mode .setting-row input {
     background: rgba(0, 0, 0, 0.05);
-    border-color: rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.16);
 }
 
 /* --- 6. Buttons --- */
@@ -358,7 +358,7 @@ html.light-mode .setting-row input {
     border: 1px solid rgba(255, 255, 255, 0.25);
     border: 1px solid var(--pill-border);
     border-radius: 100px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
 }
 
 .icon-btn:hover {
@@ -366,7 +366,7 @@ html.light-mode .setting-row input {
     background: rgba(255, 255, 255, 0.15);
     border-color: rgba(255, 255, 255, 0.6);
     transform: scale(1.1) translateY(-4px);
-    box-shadow: 0 15px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    box-shadow: none;
     letter-spacing: 0.5px;
 }
 
@@ -379,7 +379,7 @@ html.light-mode .theme-switch-label {
     border-color: rgba(0, 0, 0, 0.15) !important;
     background-color: rgba(255, 255, 255, 0.4) !important;
     color: #333 !important;
-    box-shadow: none !important;
+    box-shadow:none !important;
 }
 
 html.light-mode .back-btn:hover,
@@ -403,7 +403,7 @@ html.light-mode .icon-btn:hover {
     font-size: 2.2rem;
     font-weight: 800;
     color: var(--text-main);
-    text-shadow: var(--text-shadow);
+    text-shadow: none;
     letter-spacing: 0.5px;
     line-height: 1.2;
 }
@@ -507,7 +507,7 @@ html.light-mode .icon-btn:hover {
 
 body.immersive-active .main-card {
     background: transparent !important;
-    box-shadow: none !important;
+    box-shadow:none !important;
     border-color: transparent !important;
     backdrop-filter: none !important;
 }
