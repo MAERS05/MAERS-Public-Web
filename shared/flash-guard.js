@@ -33,7 +33,7 @@
         (window.matchMedia && window.matchMedia('(display-mode: standalone), (display-mode: minimal-ui), (display-mode: window-controls-overlay)').matches)
     );
     if (isLoopbackHost && isStandaloneApp) {
-        const localAppBadge = ` [Local:${pageUrl.port || '80'}]`;
+        const localAppBadge = ` [本机:${pageUrl.port || '80'}]`;
         const syncLocalAppTitle = () => {
             if (typeof document.title !== 'string') return;
             const trimmed = document.title.trim();
@@ -108,12 +108,12 @@
         root.classList.toggle('light-mode', !isDark);
 
         // 首帧底色与主题变量保持一致，揭示正文时清除
-        root.style.backgroundColor = isDark ? '#0a0a0c' : '#ffffff';
+        root.style.backgroundColor = isDark ? '#171d19' : '#ffffff';
         root.style.color = isDark ? '#f0f0f2' : '#333330';
     } catch (err) {
         // 出错默认深色
         isDark = true;
-        root.style.backgroundColor = '#0a0a0c';
+        root.style.backgroundColor = '#171d19';
         root.style.color = '#e0e0e0';
     }
 
@@ -153,7 +153,7 @@
     try {
         ensureHeadElement("link[rel*='icon']", 'link', { type: 'image/svg+xml', rel: 'icon', href: 'ui/logo.svg' });
         ensureHeadElement('link[rel="manifest"]', 'link', { rel: 'manifest', href: '/manifest.json' });
-        upsertHeadMeta('theme-color', isDark ? '#0a0a0c' : '#ffffff');
+        upsertHeadMeta('theme-color', isDark ? '#171d19' : '#ffffff');
         upsertHeadMeta('color-scheme', isDark ? 'dark' : 'light');
         ensureHeadElement('link[rel="apple-touch-icon"]', 'link', { rel: 'apple-touch-icon', href: '/ui/logo.svg' });
 

@@ -27,7 +27,7 @@ export async function openPasswordGroups() {
         cancelText: '', closeButton: true,
         bodyHtml:
             '<div data-role="groups"></div><div class="mlock-actions">' +
-            '<button class="mlock-btn-secondary" type="button" data-action="create">＋新建密码组</button>' +
+            '<button class="mlock-btn-secondary" type="button" data-action="create">新建密码组</button>' +
             '<button class="mlock-btn-secondary" type="button" data-action="unlock">解锁其他组</button></div>',
         onSubmit: () => {
             complete();

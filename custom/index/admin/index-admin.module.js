@@ -2,6 +2,9 @@
  * MAERS Index Admin (index-admin.module.js)
  * 职责：初始化首页卡片管理，处理卡片编辑、加解锁和保存反馈。
  */
+import { icon as appIcon } from '../../../shared/icons.module.js';
+import { navigationInfo } from '../../../shared/spatial-nav.module.js';
+
 import { initChangelogEditor } from './index-changelog.module.js';
 import {
     appendSavedCard, ensureCardPage, readCardList, refreshSavedCards, saveCardChanges
@@ -37,17 +40,11 @@ initChangelogEditor();
 const SAVE_INDEX_CARDS = '/api/save_index_cards';
 
 /** 生成普通卡片的展示内容，图标路径及文本都按对应的 HTML 上下文转义。 */
-function renderCardContent({ icon, title, bgText, description }) {
-    const isIconPath = icon && (icon.includes('/') || icon.endsWith('.svg')) && !icon.trim().startsWith('<');
-    const iconHtml = isIconPath
-        ? `<img src="${Utils.escapeAttr(icon)}" class="nav-icon-img" alt="${Utils.escapeAttr(title)}" />`
-        : `<span style="font-size: 3rem; line-height: 1;">${Utils.escapeHtml(icon)}</span>`;
-    return `
-        <div class="card-bg-text">${Utils.escapeHtml(bgText)}</div>
-        <div class="card-icon">${iconHtml}</div>
-        <div class="card-title">${Utils.escapeHtml(title)}</div>
-        <div class="card-desc">${Utils.escapeHtml(description)}</div>
-    `;
+function renderCardContent(item) {
+    const info = navigationInfo(item);
+    return '<span class="card-icon">' + appIcon(info.icon, 24) + '</span><span class="card-copy">' +
+        '<span class="card-title">' + Utils.escapeHtml(info.title) + '</span><span class="card-desc">' +
+        Utils.escapeHtml(info.description) + '</span></span>';
 }
 
 export const IndexAdmin = {
@@ -136,6 +133,7 @@ export const IndexAdmin = {
         const stateClass = this.manager.getItemClass(index);
         card.className = `nav-card ${stateClass}`;
         card.id = item.id || `card-${index}`;
+        card.tabIndex = 0;
         card.style.position = 'relative'; // 确保内部绝对定位按钮正确
 
         // 如果处于选中排序模式，显示序号
@@ -147,6 +145,7 @@ export const IndexAdmin = {
 
         // 点击逻辑
         card.onclick = (e) => this._handleCardClick(e, item, index);
+        card.onkeydown = e => { if (e.target === card && e.key === 'Enter') card.click(); };
 
         // 注入管理按钮组（含加锁按钮）
         const btnContainer = this._renderAdminButtons(item, index, localOnlyUnavailable);
@@ -232,7 +231,7 @@ export const IndexAdmin = {
         addCard.innerHTML = `
             <div style="text-align:center; opacity:0.6;">
                 <div style="font-size:3rem; margin-bottom:10px;">+</div>
-                <div>Add New Card</div>
+                <div>添加入口</div>
             </div>
         `;
 
@@ -262,11 +261,11 @@ export const IndexAdmin = {
      */
     _cardFields() {
         return [
-            { name: 'title', label: 'Title', type: 'text', required: true },
-            { name: 'description', label: 'Description', type: 'textarea', required: true },
-            { name: 'bgText', label: 'Background Text (4 chars)', type: 'text', required: true, placeholder: 'ABCD' },
-            { name: 'icon', label: 'Icon (Path or Emoji)', type: 'text', required: true, placeholder: 'ui/logo.svg or 📝' },
-            { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' }
+            { name: 'title', label: '名称', type: 'text', required: true },
+            { name: 'description', label: '说明', type: 'textarea', required: true },
+            { name: 'bgText', label: '标记（选填）', type: 'text', required: true, placeholder: 'ABCD' },
+            { name: 'icon', label: '图标地址', type: 'text', required: true, placeholder: 'ui/logo.svg or ' },
+            { name: 'url', label: '网址', type: 'text', required: true, placeholder: 'page.html' }
         ];
     },
 
@@ -290,7 +289,7 @@ export const IndexAdmin = {
         const oldUrl = item.url;
 
         AdminModal.open({
-            title: 'Edit Card',
+            title: '编辑入口',
             isNew: false,
             data: item,
             fields: this._cardFields(),
@@ -312,13 +311,13 @@ export const IndexAdmin = {
             id: '',
             bgText: 'NEW',
             icon: 'ui/logo.svg',
-            title: 'New Card',
+            title: '新入口',
             description: 'Description...',
             url: ''
         };
 
         AdminModal.open({
-            title: 'Add New Card',
+            title: '添加入口',
             isNew: true,
             data: newItem,
             fields: this._cardFields(),
@@ -375,7 +374,7 @@ export const IndexAdmin = {
         this.items[index] = original;
         this.manager.updateSaveState();
         this.render();
-        Toast.success('🔓 已解密，点击保存生效');
+        Toast.success(' 已解密，点击保存生效');
     },
 
     // --- 核心保存/取消 ---

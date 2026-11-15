@@ -2,6 +2,8 @@
  * MAERS Album Main Entry
  * @version 2.0.0 - ES6 Module
  */
+import { icon } from '../../shared/icons.module.js';
+
 
 // 0. Shared Utilities (Required for Layout/Theme safety)
 import { Utils, Search as UrlSearch } from '../../shared/utils.module.js';
@@ -42,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await revealInPlace(CATEGORY_CONFIG, { transform: (plain) => plain.category || plain });
 
     // 2. Render Header
-    renderPageHeader('<img src="ui/album-icon.svg" alt="Album" style="height: 1.25em; width: auto; vertical-align: middle;"> My Gallery');
+    renderPageHeader('<img src="ui/album-icon.svg" alt="相册" style="height: 1.25em; width: auto; vertical-align: middle;"> 相册');
 
     // 3. Render Grid
     const grid = document.getElementById('category-grid');
@@ -53,6 +55,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 过滤加密记录（_enc 字段存在的分类完全不渲染）
     const visibleCats = CATEGORY_CONFIG.filter(c => !isEncryptedRecord(c));
+    if (!visibleCats.length) grid.innerHTML = '<p class="empty-tip">这里还没有公开相册。</p>';
     visibleCats.forEach((cat, index) => {
         const a = document.createElement('a');
 
@@ -70,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         a.style.animationDelay = `${index * -1}s`;
 
         a.innerHTML = `
-            <div class="card-icon">${cat.icon}</div>
+            <div class="card-icon">${albumIcon(cat.icon)}</div>
             <div class="text-group">
                 <div class="card-title">${cat.title}</div>
                 <div class="card-subtitle">${cat.subtitle}</div>
@@ -80,3 +83,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         grid.appendChild(a);
     });
 });
+
+function albumIcon(value) {
+    const raw = String(value || '').trim();
+    const match = raw.match(/src=["']([^"']+)["']/);
+    const src = match ? match[1] : raw;
+    if (/^(?:ui\/|https?:\/\/)[^\s<>]+$/i.test(src)) return '<img src="' + Utils.escapeAttr(src) + '" alt="" loading="lazy">';
+    return icon('photo', 30);
+}

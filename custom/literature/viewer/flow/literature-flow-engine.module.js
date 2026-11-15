@@ -155,7 +155,7 @@ export class FlowEngine {
         console.warn('[LiteratureView] Standard header structure not found, rebuilding...');
         titleEl.innerHTML = '';
         const iconWrapper = document.createElement('span');
-        iconWrapper.innerHTML = '<img src="ui/literature-icon.svg" alt="Literature" style="height: 1.25em; width: auto; vertical-align: middle;">';
+        iconWrapper.innerHTML = '<img src="ui/literature-icon.svg" alt="文学" style="height: 1.25em; width: auto; vertical-align: middle;">';
         titleEl.appendChild(iconWrapper);
         titleEl.appendChild(document.createTextNode(' '));
         titleEl.appendChild(modeBtn);

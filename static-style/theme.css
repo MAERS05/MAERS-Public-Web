@@ -1,80 +1,24 @@
-/* ==========================================================================
-   Theme Variables (Dark/Light Mode)
-   ========================================================================== */
+/* 应用主题：中性底色、低饱和绿和统一语义变量。 */
 :root {
-  /* 声明同时支持浅色与深色，并随 meta[name="color-scheme"] 与主题类同步浏览器界面与原生控件。 */
-  color-scheme: light dark;
-  --bg-base: #0a0a0c;
-  --bg-light-base: #ffffff;
-
-  /* 全局克制背景网格令牌（CSS 硬边渐变生成，零外部图片开销） */
-  --bg-grid-size: 48px;
-  --bg-grid-line: rgba(255, 255, 255, 0.058);
-  --bg-grid-pattern:
-    linear-gradient(to right, var(--bg-grid-line) 1px, transparent 0),
-    linear-gradient(to bottom, var(--bg-grid-line) 1px, transparent 0);
-
-  /* 白昼背景纹理 (已移除 noise.svg) */
-  --bg-light-texture: linear-gradient(180deg, #fffefc 0%, #f2f0eb 100%);
-  --text-main: #f0f0f2;
-  --text-sub: #a0a0a5;
-  --text-shadow:none;
-
-  /* Dark Mode Transparent Settings (No Blur) */
-  --card-bg: rgba(20, 20, 22, 0.95);
-  --card-border: rgba(255, 255, 255, 0.16);
-  --card-shadow: none;
-  --card-backdrop: none;
-  /* Removed blur to show stars */
-
-  /* Internal Elements: Opaque */
-  --pill-bg: #1a1a1a;
-  --pill-border: rgba(255, 255, 255, 0.16);
-  --pill-shadow: none;
-  --pill-hover-bg: #222222;
-
-  --toggle-bg: #1a1a1a;
-  --toggle-circle: #000000;
-  --font-main: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-  --scrollbar-thumb: rgba(255, 255, 255, 0.35);
-  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.6);
-
-  /* 分类渐变色 */
-  --accent-nature: linear-gradient(135deg, #a8ff78 0%, #78ffd6 100%);
-  --accent-arch: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  --accent-avatar: linear-gradient(135deg, #fccb90 0%, #d57eeb 100%);
-  --accent-life: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
-  --accent-bio: linear-gradient(135deg, #9fab95 0%, #cfd6cd 100%);
-  --accent-exhibit: linear-gradient(135deg, #e57254 0%, #f0a68d 100%);
+    color-scheme: dark;
+    --bg-base: #171d19; --bg-light-base: #f4f6f3;
+    --surface: #222a24; --surface-soft: #29342c; --surface-hover: #303d33;
+    --text-main: #e6eee7; --text-sub: #aab8ad;
+    --accent: #a4cbb0; --accent-strong: #b7ddc3; --accent-soft: #304537; --on-accent: #16291d;
+    --border: #3b483e; --danger: #f1a5a2; --danger-soft: #452b2c; --focus-ring: #9bc7aa;
+    --font-main: "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Segoe UI", Arial, sans-serif;
+    --card-bg: var(--surface); --card-border: var(--border); --card-shadow: none; --card-backdrop: none;
+    --pill-bg: var(--surface-soft); --pill-border: var(--border); --pill-shadow: none; --pill-hover-bg: var(--surface-hover);
+    --toggle-bg: var(--surface-soft); --toggle-circle: var(--text-main);
+    --scrollbar-thumb: #55665a; --scrollbar-thumb-hover: #7c9181; --text-shadow: none; --bg-grid-line: transparent;
+    --accent-nature: var(--accent); --accent-arch: var(--accent); --accent-avatar: var(--accent);
+    --accent-life: var(--accent); --accent-bio: var(--accent); --accent-exhibit: var(--accent);
 }
-
-:root:has(> head > meta[name="color-scheme"][content="dark"]) {
-  color-scheme: dark;
-}
-
-:root:has(> head > meta[name="color-scheme"][content="light"]),
 html.light-mode {
-  color-scheme: light;
-  --bg-base: var(--bg-light-base);
-  --bg-grid-line: rgba(0, 0, 0, 0.055);
-  --text-main: #333330;
-  --text-sub: #8a8a85;
-  --text-shadow:none;
-
-  /* Light Mode Transparent Settings (No Blur) */
-  --card-bg: rgba(255, 255, 255, 0.95);
-  --card-border: rgba(0, 0, 0, 0.16);
-  --card-shadow: none;
-  --card-backdrop: none;
-
-  /* Internal Elements */
-  --pill-bg: #ffffff;
-  --pill-border: rgba(0, 0, 0, 0.16);
-  --pill-shadow: none;
-  --pill-hover-bg: #ffffff;
-
-  --scrollbar-thumb: rgba(0, 0, 0, 0.35);
-  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.6);
-  --toggle-bg: #e0e0e0;
-  --toggle-circle: #ffffff;
+    color-scheme: light;
+    --bg-base: #f4f6f3; --surface: #f6faf3; --surface-soft: #e3edde; --surface-hover: #d9e7d4;
+    --text-main: #25352b; --text-sub: #617064;
+    --accent: #476f56; --accent-strong: #355a43; --accent-soft: #e6efe7; --on-accent: #ffffff;
+    --border: #cddcc8; --danger: #ac3e3e; --danger-soft: #f8eaea; --focus-ring: #476f56;
+    --scrollbar-thumb: #bccabc; --scrollbar-thumb-hover: #8b9e8e;
 }

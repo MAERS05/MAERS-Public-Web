@@ -1,153 +1,91 @@
 /**
- * MAERS 空间导航 (spatial-nav.module.js)
- * 生成全站空间导航，与首页复用导航 JSON 请求，失败可重试。
- * @version 2.0.0 - ES6 Module
+ * @version 2.0.0
  */
-
-// Helper to create element
-function u(tag, className, html) {
-    const el = document.createElement(tag);
-    if (className) el.className = className;
-    if (html) el.innerHTML = html;
-    return el;
-}
-
+/** 应用侧栏：公开入口分组，与首页共用导航请求。 */
+import { icon } from './icons.module.js';
+import { isEncryptedRecord } from '../data-manage/encrypt/crypto.module.js';
+import { Utils } from './utils.module.js';
+import { revealInPlace } from '../data-manage/encrypt/secret-unlock.module.js';
 let navDataRequest = null;
-
-/** 同一页面共用一次导航请求，返回独立卡片副本，失败后允许重试。 */
 export function getNavData() {
     if (!navDataRequest) {
-        navDataRequest = fetch('data/index-cards.json')
-            .then(async response => {
-                if (!response.ok) throw new Error(`导航数据请求失败：${response.status}`);
-                const data = await response.json();
-                if (!Array.isArray(data)) throw new Error('导航数据必须为数组');
-                return data;
-            })
-            .catch(error => { navDataRequest = null; throw error; });
+        navDataRequest = fetch('data/index-cards.json').then(async response => {
+            if (!response.ok) throw new Error('导航暂时无法读取');
+            const data = await response.json();
+            if (!Array.isArray(data)) throw new Error('导航数据格式不正确');
+            return data;
+        }).catch(error => { navDataRequest = null; throw error; });
     }
     return navDataRequest.then(data => data.map(card => ({ ...card })));
 }
-
-function createCardElement(data) {
-    const card = u('div', 'spatial-card');
-    if (data.style) {
-        card.setAttribute('style', data.style);
-    }
-
-    let iconContent = data.icon;
-    if (data.icon && (data.icon.includes('/') || data.icon.endsWith('.svg'))) {
-        // If it looks like a path and NOT an HTML tag (check for <)
-        if (!data.icon.trim().startsWith('<')) {
-            iconContent = `<img src="${data.icon}" class="nav-icon-img"/>`;
-        }
-    }
-
-    card.innerHTML = `
-        <div class="card-bg-text">${data.bgText}</div>
-        <div class="card-icon">${iconContent}</div>
-        <div class="card-title">${data.title}</div>
-        <div class="card-desc">${data.desc}</div>
-    `;
-
-    card.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const target = data.url;
-        if (target) window.location.href = target;
-    });
-
-    return card;
+const modules = {
+    notes: ['笔记', 'note', '随手记录，慢慢整理'],
+    record: ['记录', 'clock', '留下一些日常'],
+    literature: ['文学', 'book', '读过的书与文字'],
+    videos: ['影视', 'video', '看过与想看的作品'],
+    album: ['相册', 'photo', '留住喜欢的瞬间'],
+    photos: ['照片', 'photo', '打开这一刻'],
+    music: ['音乐', 'music', '给此刻一点声音'],
+    space: ['收藏', 'collection', '把喜欢的放在一起'],
+    games: ['游戏', 'game', '玩过与正在玩的世界']
+};
+export function navigationInfo(item) {
+    const url = new URL(item.url || 'index.html', location.href);
+    const key = url.searchParams.get('module') || url.pathname.split('/').pop().replace(/^admin-/, '').replace(/\.html$/, '');
+    const info = modules[key];
+    return { title: info ? info[0] : item.title || '自定义入口', icon: info ? info[1] : 'link',
+        description: info ? info[2] : item.description || '', key };
 }
-
-function createBrandHeader() {
-    const header = u('div', 'spatial-brand-header');
-    header.innerHTML = `
-        <img src="ui/index.svg" alt="Logo" class="spatial-brand-logo" data-logo-unlock draggable="false" />
-        <div class="spatial-brand-title">
-            <span class="spatial-interactive" data-link="me.html">MAERS</span>
-            <span class="spatial-interactive" data-link="space.html">SPACE</span>
-        </div>
-        <div class="spatial-brand-subtitle">Personal Knowledge & Creative Hub</div>
-    `;
-
-    // Event Listeners
-    const logo = header.querySelector('.spatial-brand-logo');
-    if (logo) {
-        logo.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.location.href = 'index.html';
-        });
-    }
-
-    const interactives = header.querySelectorAll('.spatial-interactive');
-    interactives.forEach(span => {
-        span.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const link = span.getAttribute('data-link');
-            if (link) window.location.href = link;
-        });
-    });
-
-    return header;
+function navLink(item, current) {
+    const info = navigationInfo(item);
+    const active = current === info.key || info.key === 'album' && current === 'photos';
+    return '<a class="app-nav-link' + (active ? ' is-current' : '') + '" href="' + Utils.escapeAttr(item.url) + '"' +
+        (active ? ' aria-current="page"' : '') + '>' + icon(info.icon) + '<span>' + Utils.escapeHtml(info.title) + '</span></a>';
 }
-
-/**
- * 初始化空间导航系统
- * Replicated from init() in original spatial-nav.js
- */
 export async function initSpatialNav() {
-    if (window.self !== window.top) return;
     if (document.getElementById('spatial-nav-container')) return;
-
-    let navData;
+    const aside = document.createElement('aside');
+    aside.id = 'spatial-nav-container';
+    aside.className = 'app-sidebar';
+    aside.setAttribute('aria-label', '应用导航');
+    aside.innerHTML = '<a class="app-brand" href="index.html"><img src="ui/index.svg" alt="" data-logo-unlock draggable="false"><span>我的空间</span></a>' +
+        '<nav class="app-nav" aria-label="主导航"><a class="app-nav-link" href="index.html">' + icon('home') + '<span>首页</span></a></nav>' +
+        '<div class="app-sidebar-bottom"><a class="app-nav-link" href="me.html">' + icon('info') +
+        '<span>关于</span></a><div class="app-sidebar-actions" aria-label="应用工具"></div></div>';
+    document.body.prepend(aside);
+    document.body.classList.add('app-shell');
+    document.documentElement.classList.remove('shrink-view');
+    const theme = document.querySelector('.theme-switch-wrapper');
+    if (theme) aside.querySelector('.app-sidebar-actions').append(theme);
+    document.querySelectorAll('.site-guide-wrapper, #whats-new-btn, .od-btn').forEach(button => aside.querySelector('.app-sidebar-actions').append(button));
+    const sheet = document.createElement('link');
+    sheet.rel = 'stylesheet';
+    sheet.href = 'static-style/spatial-nav.css';
+    document.head.append(sheet);
+    const current = new URLSearchParams(location.search).get('module') ||
+        location.pathname.split('/').pop().replace(/^admin-/, '').replace(/\.html$/, '') || 'index';
+    if (current === 'index') aside.querySelector('.app-nav-link').setAttribute('aria-current', 'page');
     try {
-        navData = await getNavData();
-    } catch (error) {
-        console.warn('空间导航加载失败：', error);
-        return;
-    }
-    if (!navData || navData.length === 0) return;
-
-    const container = u('div');
-    container.id = 'spatial-nav-container';
-
-    if (document.querySelector('.nav-grid')) {
-        container.classList.add('on-index-page');
-    }
-
-    // Add Brand Header
-    const header = createBrandHeader();
-    container.appendChild(header);
-
-    const leftGroup = u('div', 'spatial-group');
-    leftGroup.id = 'spatial-left-group';
-
-    const rightGroup = u('div', 'spatial-group');
-    rightGroup.id = 'spatial-right-group';
-
-    // Automatic Split Logic:
-    // Distribute cards evenly between left and right groups
-    const half = Math.ceil(navData.length / 2);
-
-    navData.forEach((item, index) => {
-        const cardEl = createCardElement(item);
-        if (index < half) {
-            leftGroup.appendChild(cardEl);
-        } else {
-            rightGroup.appendChild(cardEl);
+        const cards = await getNavData();
+        await revealInPlace(cards);
+        const data = cards.filter(item => !isEncryptedRecord(item) && item.url);
+        const groups = [
+            ['阅读', 'book', ['notes', 'record', 'literature']],
+            ['影像', 'photo', ['album', 'videos']],
+            ['音乐', 'music', ['music']],
+            ['收藏', 'collection', ['space', 'games']]
+        ];
+        const nav = aside.querySelector('.app-nav');
+        for (const [label, symbol, keys] of groups) {
+            const entries = data.filter(item => keys.includes(navigationInfo(item).key));
+            if (!entries.length) continue;
+            if (entries.length === 1) { nav.insertAdjacentHTML('beforeend', navLink(entries[0], current)); continue; }
+            const open = keys.includes(current) || keys.includes('album') && current === 'photos';
+            nav.insertAdjacentHTML('beforeend', '<details class="app-nav-group"' + (open ? ' open' : '') +
+                '><summary>' + icon(symbol) + '<span>' + label + '</span>' + icon('forward', 14) +
+                '</summary><div class="app-nav-children">' + entries.map(item => navLink(item, current)).join('') + '</div></details>');
         }
-    });
-
-    container.appendChild(leftGroup);
-    container.appendChild(rightGroup);
-    document.body.appendChild(container);
-
-    if (!document.querySelector('link[href*="spatial-nav.css"]')) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'static-style/spatial-nav.css';
-        document.head.appendChild(link);
-    }
+        const extra = data.filter(item => !Object.hasOwn(modules, navigationInfo(item).key));
+        if (extra.length) nav.insertAdjacentHTML('beforeend', extra.map(item => navLink(item, current)).join(''));
+    } catch (error) { console.warn('[MAERS.Nav] 导航读取失败：', error); }
 }

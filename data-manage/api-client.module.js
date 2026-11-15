@@ -3,6 +3,8 @@
  * 统一 HTTP 请求客户端，处理 fetch 封装、错误捕获和参数序列化
  * @version 3.0.0 - ES6 Module
  */
+import { confirmAction } from "./admin/admin-confirm.module.js";
+
 
 import { uploadFetch } from './upload-progress.module.js';
 
@@ -50,14 +52,14 @@ function getSession(origin) {
     return sessions.get(origin);
 }
 
-function confirmLargeLocalWrite(path, body) {
+async function confirmLargeLocalWrite(path, body) {
     const upload = path === '/upload' || path === '/upload/';
     const limit = LOCAL_WRITE_WARNING[upload ? 'upload' : 'json'];
     let size = body?.size ?? body?.byteLength ?? 0;
     if (typeof body === 'string' && body.length * 3 >= limit) size = new TextEncoder().encode(body).byteLength;
     if (size < limit) return;
     const label = upload ? '图片' : '保存数据';
-    if (!window.confirm(`${label}约 ${(size / (1024 * 1024)).toFixed(1)} MiB，可能导致本地后台崩溃。确认继续？`)) {
+    if (!await confirmAction({ confirmText: "继续写入", cancelText: "先不写入", description: (`${label}约 ${(size / (1024 * 1024)).toFixed(1)} MiB，可能导致本地后台崩溃。确认继续？`).replace('确认继续？', '') })) {
         throw new DOMException('已取消本地写入', 'AbortError');
     }
 }
@@ -67,7 +69,7 @@ export async function localFetch(url, options = {}) {
     const method = (options.method || 'GET').toUpperCase();
     const target = new URL(url, (typeof document !== 'undefined' && document.baseURI) || window.location.href);
     if (!isLoopback(target)) return fetch(url, options);
-    if (method === 'POST') confirmLargeLocalWrite(target.pathname, options.body);
+    if (method === 'POST') await confirmLargeLocalWrite(target.pathname, options.body);
     const current = new URL(window.location.href);
     const admin = window.IS_ADMIN === true || isAdminAddress(current);
     if (admin && target.origin === window.location.origin &&

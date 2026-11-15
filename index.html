@@ -1,109 +1,33 @@
 <!doctype html>
-<html lang="zh-CN" data-early-render="home" style="background-color: #0a0a0a; color: #e0e0e0">
-
+<html lang="zh-CN" data-early-render="home">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="color-scheme" content="light dark" />
-  <!-- 🔥 第一优先级：关键主题CSS，在任何其他内容之前定义 -->
-  <script>
-    // 1. 恢复缩放状态 (Index Only - Memory)
-    try {
-      if (localStorage.getItem("globalZoomState") === "true") {
-        document.documentElement.classList.add("shrink-view");
-      }
-    } catch (e) { }
-  </script>
-
-  <style id="critical-theme-css">
-    /* 🔥 最高优先级：立即强制深色背景 */
-    html {
-      background-color: #0a0a0a !important;
-      color: #e0e0e0 !important;
-    }
-
-    /* 浅色主题覆盖 */
-    html.light-mode {
-      background-color: #ffffff !important;
-      color: #1a1a1a !important;
-    }
-
-    /* body 继承背景色 */
-    body {
-      background-color: transparent !important;
-      color: inherit !important;
-      margin: 0;
-      padding: 0;
-    }
-
-    #index-story-icon {
-      width: 20px;
-      height: 20px;
-      filter: invert(1);
-    }
-
-    html.light-mode #index-story-icon {
-      filter: invert(0.2);
-      /* Adjust to a dark gray #333ish for light mode */
-    }
-  </style>
-
-  <!-- 提前并行发现模块与嵌套样式，避免沿 import 链逐层等待网络。 -->
-  <link rel="preload" href="static-style/theme.css" as="style" />
-  <link rel="preload" href="static-style/components.css" as="style" />
-  <link rel="preload" href="static-style/style.css" as="style" />
-  <link rel="preload" href="static-style/site-guide.css" as="style" />
-  <link rel="preload" href="custom/index/viewer/index.css" as="style" />
-  <link rel="preload" href="custom/zmobile adaptation/mobile-global.css" as="style" />
-  <link rel="preload" href="custom/zmobile adaptation/mobile-index.css" as="style" media="(max-width: 768px)" />
-  <link rel="preload" href="data/index-cards.json" as="fetch" crossorigin="anonymous" />
-  <link rel="modulepreload" href="custom/index/viewer/index-viewer.module.js" />
-  <link rel="modulepreload" href="shared/layout.module.js" />
-  <link rel="modulepreload" href="shared/spatial-nav.module.js" />
-  <link rel="modulepreload" href="shared/theme.module.js" />
-  <link rel="modulepreload" href="shared/theme/theme-core.module.js" />
-  <link rel="modulepreload" href="shared/theme/theme-zoom.module.js" />
-  <link rel="modulepreload" href="shared/theme/theme-drag.module.js" />
-  <link rel="modulepreload" href="shared/utils.module.js" />
-  <link rel="modulepreload" href="shared/whats-new.module.js" />
-  <link rel="modulepreload" href="data-manage/encrypt/crypto.module.js" />
-  <link rel="modulepreload" href="data-manage/encrypt/secret-unlock.module.js" />
-
-  <!-- 同步确定主题，之后才允许首页显示。 -->
-  <script defer src="custom/config.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script src="custom/config.js"></script>
   <script src="shared/flash-guard.js"></script>
-  <title>MAERS Space</title>
-  <link rel="icon" type="image/svg+xml" href="ui/logo.svg" />
-
-  <link rel="stylesheet" href="static-style/theme.css" />
-  <link rel="stylesheet" href="static-style/components.css" />
-  <link rel="stylesheet" href="static-style/style.css" />
+  <title>首页 · 我的空间</title>
+  <link rel="icon" type="image/svg+xml" href="ui/logo.svg">
+  <link rel="stylesheet" href="static-style/theme.css">
+  <link rel="stylesheet" href="static-style/components.css">
+  <link rel="stylesheet" href="static-style/style.css">
+  <link rel="stylesheet" href="custom/index/viewer/index.css">
+  <link rel="stylesheet" href="static-style/site-guide.css">
+  <link rel="preload" href="data/index-cards.json" as="fetch" crossorigin="anonymous">
   <script type="module" src="custom/index/viewer/index-viewer.module.js"></script>
-  <link rel="stylesheet" href="static-style/site-guide.css" />
   <script defer src="custom/index/viewer/site-guide.js"></script>
-  <link rel="stylesheet" href="custom/index/viewer/index.css" />
 </head>
-
 <body>
-  <!-- 🔥 防闪烁遮罩 - 在页面内容渲染完成后会被移除 -->
-  <!-- 故事入口图标 -->
-  <a href="space.html" target="_blank" title="空间"
-    style="position:fixed;top:45px;left:54px;z-index:10000;display:flex;align-items:center;justify-content:center;">
-    <img id="index-story-icon" src="ui/story.svg" alt="故事" />
-  </a>
-  <div class="home-container">
-    <div class="brand-area">
-      <img src="ui/index.svg" alt="Logo" class="brand-logo" id="brand-logo" data-logo-unlock draggable="false" />
-      <div class="brand-title">
-        <span class="maers-interactive" id="brand-maers">MAERS</span>
-        <span class="maers-interactive" id="brand-space">SPACE</span>
-      </div>
-      <div class="brand-subtitle">Personal Knowledge & Creative Hub</div>
-    </div>
-    <div class="nav-grid">
-      <!-- Cards will be loaded dynamically from data/index-cards.json -->
-    </div>
-  </div>
+  <main class="home-container">
+    <header class="home-heading">
+      <h1>我的空间</h1>
+      <p>读一点，记一点，留住喜欢的。</p>
+    </header>
+    <section class="home-library" aria-label="公开内容">
+      <div class="home-section-heading"><h2>从这里开始</h2><a href="me.html" class="home-about">关于这里</a></div>
+      <div class="nav-grid" aria-live="polite"></div>
+    </section>
+    <a class="home-story" href="space.html">打开收藏空间<svg class="app-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M7 17 17 7M7 7h10v10"/></svg></a>
+  </main>
 </body>
-
 </html>

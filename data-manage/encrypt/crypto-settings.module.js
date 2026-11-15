@@ -119,7 +119,7 @@ async function _workerStatus() {
 // 2. 设置面板
 // ══════════════════════════════════════════════
 
-const flag = (ok, yes, no) => ok ? `<span class="mlock-ok">✔ ${yes}</span>` : `<span class="mlock-bad">✘ ${no}</span>`;
+const flag = (ok, yes, no) => ok ? `<span class="mlock-ok"> ${yes}</span>` : `<span class="mlock-bad"> ${no}</span>`;
 
 async function localAccess(enabled) {
     const response = await localFetch('/api/crypto/local-access', enabled === undefined ? { cache: 'no-store' } : {
@@ -152,7 +152,7 @@ async function _renderStatus(el) {
 
     const ws = await _workerStatus();
     lines[3] = !ws.ok
-        ? `<b>Worker</b>：<span class="mlock-bad">✘ ${escapeHtml(ws.error)}</span>`
+        ? `<b>Worker</b>：<span class="mlock-bad"> ${escapeHtml(ws.error)}</span>`
         : `<b>Worker</b>：${flag(ws.bucket, '私密桶已绑定', '未绑定 PRIVATE_PHOTOS_BUCKET')} · ` +
           (ws.noGroups ? '尚无密码组' : ws.tokenMatch === null
               ? flag(ws.tokenReady, '令牌已配置', '令牌未同步')
@@ -277,7 +277,7 @@ async function _toggleLocalAccessFlow() {
 function _changePasswordFlow() {
     return new Promise((resolve) => {
         openFormModal({
-            icon: '🔑',
+            icon: '',
             title: '修改主密码',
             sub: '只更新密钥环文件，已加密内容与 Worker 令牌均不变',
             fields: [
@@ -295,7 +295,7 @@ function _changePasswordFlow() {
                 if (!raw) return '当前主密码不正确';
                 await saveKeyring(await rewrapPassword(keyring, raw, pwd), keyring);
                 await activatePasswordGroup(keyring, 'default', raw);
-                Toast.success('✅ 主密码已修改，请提交 data/crypto-keyring.json 后发布');
+                Toast.success(' 主密码已修改，请提交 data/crypto-keyring.json 后发布');
                 resolve();
                 return true;
             },
@@ -334,7 +334,7 @@ async function _contentPasswordFlow() {
 function _regenerateRecoveryFlow() {
     return new Promise((resolve) => {
         openFormModal({
-            icon: '🧩',
+            icon: '',
             title: '重置恢复码',
             sub: '更新主密码的恢复码。已有密钥环副本仍保留原来的包裹密钥。',
             fields: [{ name: 'old', type: 'password', placeholder: '当前主密码', autocomplete: 'current-password' }],
@@ -357,7 +357,7 @@ function _regenerateRecoveryFlow() {
 
 function _rotateFlow() {
     return new Promise(resolve => openFormModal({
-        icon: '🔐', title: '轮换主密钥',
+        icon: '', title: '轮换主密钥',
         sub: '重新包裹各组密钥并保留本机备份。各组保留自己的数据密钥，旧主密码曾解出的组密钥仍有效。',
         fields: [
             { name: 'old', type: 'password', placeholder: '当前主密码' },
@@ -380,7 +380,7 @@ async function _editMediaBaseFlow() {
     const { endpoint } = await _relay();
     return new Promise((resolve) => {
         openFormModal({
-            icon: '🌐',
+            icon: '',
             title: '私密图片地址',
             sub: '访客解锁后从该地址加载私密图片，留空则使用中继地址',
             fields: [{ name: 'base', type: 'url', placeholder: endpoint || 'https://xxx.workers.dev', value: keyring.media_base || '' }],

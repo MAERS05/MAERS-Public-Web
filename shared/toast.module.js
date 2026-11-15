@@ -1,6 +1,6 @@
 /**
  * MAERS Toast Notification System
- * Usage: import { Toast } from './toast.module.js'; Toast.success('Saved!')
+ * Usage: import { Toast } from './toast.module.js'; Toast.success('已保存')
  * @version 3.0.0 - ES6 Module
  */
 

@@ -65,7 +65,7 @@
     display: inline-flex;
     align-items: center;
     background: rgba(120, 255, 214, 0.15);
-    color: #78ffd6;
+    color: var(--accent);
     border-radius: 12px;
     padding: 4px 10px;
     font-size: 13px;
@@ -95,7 +95,7 @@
 .tag-remove:hover {
     background: rgba(255, 255, 255, 0.2);
     opacity: 1;
-    color: #fff;
+    color: var(--text-main);
 }
 
 .btn-add-tag {
@@ -111,7 +111,7 @@
 
 .btn-add-tag:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    color: var(--text-main);
     border-color: rgba(255, 255, 255, 0.6);
 }
 
@@ -152,8 +152,8 @@
 
 .btn-quick-add-tag:hover {
     background: rgba(120, 255, 214, 0.2);
-    border-color: #78ffd6;
-    color: #78ffd6;
+    border-color: var(--accent);
+    color: var(--accent);
     transform: scale(1.1);
 }
 
@@ -166,13 +166,13 @@
 
 
 .light-mode .btn-quick-add-tag:hover {
-    border-color: #000;
-    color: #000;
+    border-color: var(--text-main);
+    color: var(--text-main);
 }
 
 /* Light Mode Modal Overrides */
 .light-mode .modal-content {
-    background: #ffffff;
+    background: var(--surface);
     border-color: rgba(0, 0, 0, 0.16);
     color: #1a1a1a;
 }
@@ -194,7 +194,7 @@
 
 .light-mode .modal-content input:focus,
 .light-mode .modal-content textarea:focus {
-    background: #ffffff;
+    background: var(--surface);
     border-color: var(--accent-color, #0066cc);
 }
 

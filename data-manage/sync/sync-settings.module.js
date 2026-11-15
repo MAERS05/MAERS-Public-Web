@@ -59,12 +59,12 @@ export function openSyncSettings(manager) {
                         </div>
                     </div>
 
-                    <!-- Git 提交 -->
+                    <!-- 发布更新 -->
                     <div class="sync-section sync-section--git">
                         <div class="sync-section__header">
                             <div>
-                                <div class="sync-section__title" data-role="git-count-title">${isLocal ? `Git 一键提交(${manager.pendingGitCount})` : `待电脑合并草稿(${pending})`}</div>
-                                <div class="sync-section__desc">${isLocal ? '将所有改动（含草稿）提交并推送到 GitHub 仓库' : '查看待电脑拉取合并的草稿'}</div>
+                                <div class="sync-section__title" data-role="git-count-title">${isLocal ? `发布更新(${manager.pendingGitCount})` : `待电脑合并草稿(${pending})`}</div>
+                                <div class="sync-section__desc">${isLocal ? '将所有改动（含草稿）发布更新到 GitHub 仓库' : '查看待电脑拉取合并的草稿'}</div>
                             </div>
                             <button type="button" id="btn-open-git-commit" class="mlock-btn-primary" style="white-space:nowrap;">${isLocal ? '提交' : '查看草稿'}</button>
                         </div>
@@ -118,7 +118,7 @@ export function openSyncSettings(manager) {
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
         modal.querySelector('#sync-modal-cancel').onclick = closeModal;
 
-        // 打开 Git 提交弹窗
+        // 打开 发布更新弹窗
         const gitCommitBtn = modal.querySelector('#btn-open-git-commit');
         if (gitCommitBtn) {
             gitCommitBtn.onclick = () => {

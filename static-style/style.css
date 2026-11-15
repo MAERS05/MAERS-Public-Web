@@ -1,324 +1,50 @@
-@import "../custom/zmobile adaptation/mobile-global.css";
+@import "./admin-modal.css";
+/* 全站应用骨架，内容使用原生滚动。 */
+* { box-sizing: border-box; }
+html { font-size: 16px; min-height: 100%; background: var(--bg-base); }
+body { margin: 0; min-height: 100vh; color: var(--text-main); background: var(--bg-base); font: 15px/1.65 var(--font-main); -webkit-font-smoothing: antialiased; }
+body.app-shell { padding-left: 224px; }
+a { color: inherit; text-decoration: none; }
+button, input, textarea, select { font: inherit; }
+button, a, summary, [role="button"] { -webkit-tap-highlight-color: transparent; }
+button, summary { cursor: pointer; }
+button:disabled { cursor: default; opacity: .48; }
+button, input, textarea, select { accent-color: var(--accent); }
+::selection { color: var(--text-main); background: var(--accent-soft); }
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+input, textarea { caret-color: var(--accent); }
+img { max-width: 100%; }
+svg.app-icon { flex: 0 0 auto; vertical-align: middle; }
+body.app-shell > .container { width: 100%; max-width: none; height: auto; min-height: 100vh; padding: 28px 32px; margin: 0; display: flex; align-items: stretch; justify-content: center; transform: none; }
+body.app-shell .main-card { position: relative; width: 100%; max-width: 1400px; height: auto; min-height: calc(100vh - 56px); margin: 0; padding: 30px 32px; display: flex; flex-direction: column; gap: 0; background: transparent; border: 0; border-radius: 0; box-shadow: none; transform: none; overflow: visible; backdrop-filter: none; }
+html.fixed-layout-page body.app-shell > .container { height: 100vh; min-height: 600px; }
+html.fixed-layout-page body.app-shell .main-card { height: 100%; min-height: 0; overflow: hidden; }
+.page-header-bar, .explorer-header, .music-header-bar { display: flex; align-items: center; justify-content: space-between; gap: 24px; flex: 0 0 auto; width: 100%; margin: 0 0 28px; padding: 0; min-height: 40px; }
+.header-left, .header-right, .header-actions, .header-tools-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.header-title, .page-title, .center-title { font-size: 22px; font-weight: 650; line-height: 1.4; letter-spacing: -.02em; color: var(--text-main); }
+.title-icon { height: 22px; width: 22px; object-fit: contain; margin-right: 9px; filter: invert(1); vertical-align: middle; }
+html.light-mode .title-icon { filter: none; }
+.app-shell .back-btn { width: 34px; height: 34px; padding: 0; overflow: hidden; flex: 0 0 34px; }
+.app-shell .back-btn .app-icon { width: 18px; height: 18px; }
+.empty-tip, .empty-message { padding: 72px 24px; color: var(--text-sub); text-align: center; font-size: 14px; }
+.nav-icon-img { width: 22px; height: 22px; object-fit: contain; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; clip-path: inset(50%); overflow: hidden; white-space: nowrap; }
+.immersive-bg { position: fixed; inset: 0; z-index: -1; display: none; }
+#theme-mask, .zoom-trigger-icon, .zoom-trigger-whole { display: none; }
+html.shrink-view body, html.shrink-view .container, html.shrink-view .main-card, html.shrink-view .home-container { transform: none; }
+* { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+.markdown-body, .vditor-reset { color: var(--text-main); line-height: 1.9; }
+.markdown-body a, .vditor-reset a { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+.markdown-body img, .vditor-reset img { border-radius: 8px; cursor: zoom-in; }
+body.is-photo-viewing .app-sidebar { visibility: hidden; }
 
-/* ==========================================================================
-   MAERS Space - Core Stylesheet
-   ========================================================================== */
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0s !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
 
-/* 2. Basic Resets & Performance */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-html {
-    height: 100%;
-    background-color: var(--bg-base);
-    transition: background-color 300ms ease;
-}
-
-html.light-mode {
-    background-color: var(--bg-light-base);
-}
-
-body {
-    font-family: var(--font-main);
-    color: var(--text-main);
-    line-height: 1.6;
-    min-height: 100vh;
-    position: relative;
-    background: transparent;
-    transition: color 300ms ease;
-}
-
-/* 全站视口级克制背景网格层（置于负层级，不干扰缩略视图与空间导航点击） */
-body:not(.immersive-active)::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-    background-image: var(--bg-grid-pattern);
-    background-size: var(--bg-grid-size) var(--bg-grid-size);
-    background-position: top center;
-}
-
-
-/* 3. Theme Mask (Uniform Clean Dark Backdrop) */
-#theme-mask {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -2;
-    pointer-events: none;
-    background: var(--bg-base);
-    opacity: 1;
-    transition: opacity 300ms ease;
-    transform: translateZ(0);
-    will-change: opacity;
-}
-
-/* Fade the whole background together; no directional reveal. */
-html.light-mode #theme-mask {
-    opacity: 0;
-}
-
-/* 4. Core Layout */
-.container {
-    width: 100%;
-    min-height: 104.5vh;
-    height: auto;
-    padding: 40px 20px 60px 20px;
-    display: flex;
-    flex-direction: column;
-}
-
-
-/* 7. Special View States (Shrink/Zoom) */
-html.shrink-view body {
-    overflow: hidden !important;
-    transform: none !important;
-    border-radius: 0;
-    box-shadow:none;
-}
-
-html.shrink-view .container {
-    cursor: zoom-out;
-    height: 100vh;
-    overflow: hidden;
-}
-
-/* Global Image Hover Effects */
-.vditor-reset img,
-.markdown-body img {
-    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s ease;
-    cursor: zoom-in;
-}
-
-.vditor-reset img:hover,
-.markdown-body img:hover {
-    transform: scale(1.02);
-    box-shadow: none;
-}
-
-html.shrink-view .main-card,
-html.shrink-view .home-container {
-    transform: scale(0.65);
-    transform-origin: center center;
-    border-radius: 40px;
-    box-shadow: none;
-    transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.5s, box-shadow 0.5s, background-color 0.5s ease, border-color 0.5s ease;
-    cursor: auto;
-    pointer-events: auto;
-}
-
-html.shrink-view .zoom-trigger-icon,
-html.shrink-view .zoom-trigger-whole {
-    z-index: 9999;
-}
-
-html.shrink-view::after {
-    display: none;
-}
-
-.zoom-trigger-icon,
-.zoom-trigger-whole {
-    cursor: pointer;
-    display: inline-block;
-    transition: all 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-    user-select: none;
-    position: relative;
-    z-index: 10;
-}
-
-.zoom-trigger-icon:hover,
-.zoom-trigger-whole:hover {
-    transform: scale(1.15);
-    /* filter: none !important; Removed glow */
-    cursor: pointer;
-}
-
-/* 8. Lightbox State */
-body.is-viewing .theme-switch-wrapper,
-body.is-viewing .auto-mode-btn {
-    opacity: 0.1 !important;
-    filter: grayscale(100%) !important;
-    transform: scale(0.9);
-    transition: all 0.5s ease;
-    pointer-events: auto !important;
-    z-index: 10001 !important;
-}
-
-body.is-viewing .theme-switch-wrapper:hover,
-body.is-viewing .auto-mode-btn:hover {
-    opacity: 1 !important;
-    filter: none !important;
-    transform: scale(1);
-    cursor: pointer;
-    box-shadow: none;
-}
-
-/* Helper class for SVG icons in Navigation Cards */
-.nav-icon-img {
-    width: 1em;
-    height: 1em;
-    vertical-align: middle;
-    object-fit: contain;
-    display: inline-block;
-}
-
-/* ==========================================================================
-   Fixed Layout Utility - Photos Model
-   ========================================================================== */
-/* Standardizes layout: fixed 100vh container + hidden card overflow */
-/* Content areas (.photo-grid, .folder-grid, etc.) handle their own scrolling */
-/* Page itself remains scrollable (NO overflow:hidden on html/body) */
-
-html.fixed-layout-page .container {
-    height: 100vh !important;
-    padding: 15px !important;
-    display: flex;
-    flex-direction: column;
-}
-
-html.fixed-layout-page .main-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    max-height: none !important;
-}
-
-/* ==========================================================================
-   Global Custom Scrollbar
-   ========================================================================== */
-/* Unified scrollbar styles for all scrollable containers */
-
-.photo-grid,
-.folder-grid,
-.drawer-body,
-.reader-view,
-.reader-scroll-area,
-.gallery-content,
-.reader-outline-panel,
-.admin-content {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
-}
-
-.photo-grid::-webkit-scrollbar,
-.folder-grid::-webkit-scrollbar,
-.drawer-body::-webkit-scrollbar,
-.reader-view::-webkit-scrollbar,
-.reader-scroll-area::-webkit-scrollbar,
-.gallery-content::-webkit-scrollbar,
-.reader-outline-panel::-webkit-scrollbar,
-.admin-content::-webkit-scrollbar {
-    display: block;
-    width: 6px;
-    height: 6px;
-    background-color: transparent;
-}
-
-.photo-grid::-webkit-scrollbar-track,
-.folder-grid::-webkit-scrollbar-track,
-.drawer-body::-webkit-scrollbar-track,
-.reader-view::-webkit-scrollbar-track,
-.reader-scroll-area::-webkit-scrollbar-track,
-.gallery-content::-webkit-scrollbar-track,
-.reader-outline-panel::-webkit-scrollbar-track,
-.admin-content::-webkit-scrollbar-track {
-    background-color: transparent;
-}
-
-.photo-grid::-webkit-scrollbar-thumb,
-.folder-grid::-webkit-scrollbar-thumb,
-.drawer-body::-webkit-scrollbar-thumb,
-.reader-view::-webkit-scrollbar-thumb,
-.reader-scroll-area::-webkit-scrollbar-thumb,
-.gallery-content::-webkit-scrollbar-thumb,
-.reader-outline-panel::-webkit-scrollbar-thumb,
-.admin-content::-webkit-scrollbar-thumb {
-    background-color: var(--scrollbar-thumb);
-    border-radius: 10px;
-}
-
-.photo-grid::-webkit-scrollbar-thumb:hover,
-.folder-grid::-webkit-scrollbar-thumb:hover,
-.drawer-body::-webkit-scrollbar-thumb:hover,
-.reader-view::-webkit-scrollbar-thumb:hover,
-.reader-scroll-area::-webkit-scrollbar-thumb:hover,
-.gallery-content::-webkit-scrollbar-thumb:hover,
-.reader-outline-panel::-webkit-scrollbar-thumb:hover,
-.admin-content::-webkit-scrollbar-thumb:hover {
-    background-color: var(--scrollbar-thumb-hover);
-}
-
-/* Light mode overrides specific to these classes */
-html.light-mode .photo-grid::-webkit-scrollbar-thumb,
-html.light-mode .folder-grid::-webkit-scrollbar-thumb,
-html.light-mode .gallery-content::-webkit-scrollbar-thumb,
-html.light-mode .admin-content::-webkit-scrollbar-thumb {
-    background-color: rgba(0, 0, 0, 0.6);
-}
-
-html.light-mode .photo-grid::-webkit-scrollbar-thumb:hover,
-html.light-mode .folder-grid::-webkit-scrollbar-thumb:hover,
-html.light-mode .gallery-content::-webkit-scrollbar-thumb:hover,
-html.light-mode .admin-content::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(0, 0, 0, 0.8);
-}
-/* Enabled only for an actual theme change, so ordinary UI animations keep their
-   own timing. Animate colors together without introducing layout movement. */
-html.theme-switching,
-html.theme-switching *,
-html.theme-switching *::before,
-html.theme-switching *::after {
-    transition-property: background-color, color, border-color, box-shadow, fill, stroke, opacity !important;
-    transition-duration: 500ms !important;
-    transition-timing-function: ease !important;
-    transition-delay: 0s !important;
-}
-
-/* 兼容模式下为主题滑块保留位移过渡，避免全站颜色规则覆盖 transform。 */
-html.theme-switching .theme-switch-label .ball {
-    transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1), background-color 500ms ease !important;
-}
-
-
-
-/* A single page snapshot fade gives the backdrop and cards one timeline.
-   Suspend element transitions so the new snapshot contains final theme colors. */
-html.theme-crossfade,
-html.theme-crossfade *,
-html.theme-crossfade *::before,
-html.theme-crossfade *::after {
-    transition: none !important;
-}
-html.theme-crossfade::view-transition-group(root) {
-    animation: none;
-}
-html.theme-crossfade::view-transition-old(root) {
-    animation: none;
-    mix-blend-mode: normal;
-    opacity: 1;
-}
-html.theme-crossfade::view-transition-new(root) {
-    animation: theme-page-fade 500ms ease both;
-    mix-blend-mode: normal;
-}
-/* 滑块单独捕获位置与图标，不随整页快照直接跳到终点。 */
-html.theme-crossfade::view-transition-group(theme-switch-knob) {
-    animation-duration: 500ms;
-    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-html.theme-crossfade::view-transition-old(theme-switch-knob),
-html.theme-crossfade::view-transition-new(theme-switch-knob) {
-    animation-duration: 500ms;
-}
-@keyframes theme-page-fade {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
+.header-title, #page-title { display: flex; align-items: center; gap: 10px; margin: 0; }
+.header-title > .app-icon, .page-title-symbol { flex: 0 0 24px; width: 24px; height: 24px; }
+.page-title-symbol { display: inline-flex; align-items: center; justify-content: center; color: var(--text-sub); }
+.header-title img, .page-title-symbol img { width: 24px; height: 24px; object-fit: contain; filter: invert(1); }
+html.light-mode .header-title img, html.light-mode .page-title-symbol img { filter: none; }

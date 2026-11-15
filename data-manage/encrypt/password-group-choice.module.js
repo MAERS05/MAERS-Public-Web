@@ -57,7 +57,7 @@ export async function choosePasswordGroup({
                 <input class="mlock-input" data-name="pwd" type="password" autocomplete="current-password"
                     aria-label="所选密码组的密码" placeholder="输入所选组的密码" hidden>
                 <button type="button" class="mlock-btn-secondary" data-recover-group hidden>忘记密码？使用恢复码重置</button>
-                <button type="button" class="mlock-btn-secondary" data-create-group>＋新建密码组</button>`,
+                <button type="button" class="mlock-btn-secondary" data-create-group>新建密码组</button>`,
             onCancel: () => resolve(null),
             onSubmit: async ({ group, pwd }) => {
                 const slot = groupKeyring(ring, group);

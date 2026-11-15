@@ -3,6 +3,8 @@
  * @description CMS 标签管理 - 分类管理与批量操作
  * @version 1.0.0 - ES6 Module
  */
+import { confirmAction, requestText } from "../../../data-manage/admin/admin-confirm.module.js";
+
 
 import { Toast } from '../../../shared/toast.module.js';
 
@@ -126,11 +128,7 @@ export async function handleMoveTags(tagNames, targetCategoryName, refreshCallba
     const isSearching = searchInput && searchInput.value.trim().length > 0;
 
     if (isSearching) {
-        const keepSearch = confirm(
-            '是否保持搜索？\n\n' +
-            '确认：保持当前搜索过滤\n' +
-            '取消：清空搜索并定位到移动后的标签位置'
-        );
+        const keepSearch = await confirmAction({ confirmText: "保持当前筛选", cancelText: "定位到新位置" });
 
         if (!keepSearch) {
             searchInput.value = '';
@@ -181,11 +179,11 @@ export function uiMoveTo(index, e) {
     }
 }
 
-export function uiEdit(index, e) {
+export async function uiEdit(index, e) {
     if (e) e.stopPropagation();
     if (!categoryManager || !categoryManager.list[index]) return;
     const cat = categoryManager.list[index];
-    const newName = prompt("编辑分类名称:", cat.name);
+    const newName = await requestText({ title: "编辑分类名称:", value: cat.name });
     if (newName && newName.trim()) {
         cat.name = newName.trim();
         categoryManager.onChange();
@@ -198,7 +196,7 @@ export function uiDelete(index, e) {
 }
 
 export async function createCategory(refreshCallback) {
-    const name = prompt("Enter Category Name:");
+    const name = await requestText({ title: "新建分类", value: '' });
     if (!name || !categoryManager) return;
 
     categoryManager.list.push({ name: name, tags: [] });

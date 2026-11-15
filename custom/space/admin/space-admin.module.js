@@ -3,6 +3,8 @@
  * @description 空间管理：网站卡片、批量操作、筛选与云端持久化
  * @version 4.1.0 - Filters restored, markDirty fixed.
  */
+import { requestText } from "../../../data-manage/admin/admin-confirm.module.js";
+
 import { Search } from '../../../shared/utils.module.js';
 import { api, localFetch } from '../../../data-manage/api-client.module.js';
 import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
@@ -86,7 +88,7 @@ async function loadData() {
         loaded = true;
     } catch (e) {
         console.error("Load failed", e);
-        if (window.MAERS?.Toast) window.MAERS.Toast.error("Failed to load data");
+        if (window.MAERS?.Toast) window.MAERS.Toast.error("暂时无法读取内容");
         treeData = { root: [] };
     }
     // 云端模式：已发布的树叠加尚未合并的整份快照与标签草稿，刷新后保持一致
@@ -265,7 +267,7 @@ async function saveNodeTags(node, newTags) {
 
 async function addNodeTags(event, node) {
     event.stopPropagation();
-    const input = prompt('添加标签 (可使用 , 或 ， 分隔多个):');
+    const input = await requestText({ title: '添加标签 (可使用 , 或 ， 分隔多个):', value: '' });
     if (!input) return;
     const oldTags = node.tags || [];
     const additions = [...new Set(input.split(/[,，]/).map(tag => tag.trim()).filter(Boolean))]
@@ -371,7 +373,7 @@ function createAddCard() {
     const card = document.createElement('div');
     card.className = 'space-card add-card-wrapper';
     card.style.cssText = "border: 2px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; opacity:0.6;";
-    card.innerHTML = `<div style="font-size:48px; font-weight:300;">+</div><div style="font-size:12px; font-weight:600;">ADD NEW SITE</div>`;
+    card.innerHTML = `<div style="font-size:48px; font-weight:300;">+</div><div style="font-size:12px; font-weight:600;">添加收藏</div>`;
     card.onclick = handleAdd;
     return card;
 }
@@ -395,14 +397,14 @@ function openEditModal(node, index, isNew = false) {
         data: node,
         fields: [
             ...(node.type === 'link' ? [
-                { name: 'url', label: 'URL', type: 'url', required: true, placeholder: 'https://example.com', showFetch: true }
+                { name: 'url', label: '网址', type: 'url', required: true, placeholder: 'https://example.com', showFetch: true }
             ] : []),
-            { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Site Name' },
+            { name: 'name', label: '名称', type: 'text', required: true, placeholder: '网站名称' },
             ...(node.type === 'link' ? [
-                { name: 'icon', label: 'Icon URL', type: 'image', placeholder: 'https://.../icon.png' }
+                { name: 'icon', label: '图标地址', type: 'image', placeholder: 'https://.../icon.png' }
             ] : []),
-            { name: 'content', label: 'Description', type: 'textarea', placeholder: 'Optional description' },
-            { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'tag1, tag2' }
+            { name: 'content', label: '说明', type: 'textarea', placeholder: '补充说明（选填）' },
+            { name: 'tags', label: '标签', type: 'tags', placeholder: '多个标签用逗号分开' }
         ],
         onSave: async (formData) => {
             const edited = { ...node, name: formData.name, content: formData.content, tags: formData.tags };
@@ -495,7 +497,7 @@ async function handleSave() {
         return true;
     } catch (e) {
         console.error(e);
-        if (window.MAERS?.Toast) window.MAERS.Toast.error("Save failed");
+        if (window.MAERS?.Toast) window.MAERS.Toast.error("保存失败");
         return false;
     }
 }

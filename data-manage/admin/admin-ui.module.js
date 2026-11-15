@@ -22,7 +22,7 @@ export const SaveButton = {
         this.element = document.createElement('div');
         this.element.className = 'global-save-bar';
         this.element.innerHTML = `
-            <button id="global-cancel-btn" class="cancel-btn">取消修改</button>
+            <button id="global-cancel-btn" class="cancel-btn">放弃修改</button>
             <button id="global-save-btn" class="save-btn" disabled>保存修改</button>
         `;
 
@@ -30,57 +30,22 @@ export const SaveButton = {
             const style = document.createElement('style');
             style.id = 'admin-core-style';
             style.innerHTML = `
-                .global-save-bar { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: #1e1e24; padding: 8px 10px; border-radius: 50px; box-shadow: none; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 2147483647 !important; display: flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.15); }
-                .global-save-bar.active { transform: translateX(-50%) translateY(0); }
-                .global-save-bar button { border: none; padding: 10px 20px; border-radius: 30px; font-weight: 600; cursor: pointer; font-size: 14px; transition: all 0.2s; }
-                .save-btn { background: #2ed573; color: #111; }
-                .save-btn:hover { box-shadow: none; transform: scale(1.05); }
-                .save-btn:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow:none; transform: none; }
-                .cancel-btn { background: transparent; color: #ff6b81; border: 1px solid rgba(255, 107, 129, 0.3); }
-                .cancel-btn:hover { background: rgba(255, 107, 129, 0.1); border-color: #ff6b81; }
-                .is-selected { outline: 2px solid #78ffd6 !important; position: relative; }
-                .is-selected::before { content: attr(data-order-num); position: absolute; top: 5px; left: 5px; background: #78ffd6; color: #111; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; z-index: 10; box-shadow: none; }
-                .is-deleted { filter: grayscale(100%); position: relative; }
-                .is-deleted::after { content: ''; position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: #ff4757; pointer-events: none; }
-                .admin-edit-badge {
-                    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
-                    background: #ffd32a; color: #000; padding: 4px 14px;
-                    border-radius: 4px; font-weight: 900; font-size: 13px;
-                    z-index: 9999; letter-spacing: 1px;
-                    cursor: pointer; transition: all 0.3s ease; user-select: none;
-                }
-                .admin-edit-badge.minimized {
-                    background: rgba(255, 211, 42, 0.15);
-                    color: transparent;
-                    box-shadow:none;
-                }
-                .admin-edit-badge.minimized:hover {
-                    background: rgba(255, 211, 42, 0.5);
-                }
-                }
+                .global-save-bar { position: fixed; bottom: 24px; left: calc(50% + 112px); transform: translate(-50%, 80px); opacity: 0; visibility: hidden; pointer-events: none; padding: 8px; border: 0; border-radius: 12px; background: var(--surface); color: var(--text-main); box-shadow: 0 8px 30px #00000024; z-index: 4000; display: flex; gap: 8px; transition: opacity 180ms ease-out, transform 180ms ease-out; }
+                .global-save-bar.active { transform: translate(-50%, 0); opacity: 1; visibility: visible; pointer-events: auto; }
+                .global-save-bar button { min-height: 38px; padding: 8px 18px; border: 0; border-radius: 8px; font: inherit; font-weight: 500; }
+                .global-save-bar .save-btn { color: var(--on-accent); background: var(--accent); }
+                .global-save-bar .save-btn:hover { background: var(--accent-strong); }
+                .global-save-bar .save-btn:disabled { color: var(--text-sub); background: var(--surface-soft); }
+                .global-save-bar .cancel-btn { color: var(--text-sub); background: var(--surface-soft); }
+                .global-save-bar .cancel-btn:hover { color: var(--text-main); background: var(--surface-hover); }
+                .is-selected { outline: 2px solid var(--accent); outline-offset: 2px; position: relative; }
+                .is-selected[data-order-num]::before { content: attr(data-order-num); position: absolute; top: 6px; left: 6px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font-size: 12px; z-index: 10; }
+                .is-deleted { opacity: .48; position: relative; }
+                .is-deleted .card-title, .is-deleted .item-title, .is-deleted .space-title, .is-deleted .name { text-decoration: line-through; }
             `;
             document.head.appendChild(style);
         }
         document.body.appendChild(this.element);
-
-        // Inject persistent EDIT badge with localStorage persistence
-        if (!document.getElementById('admin-edit-badge')) {
-            const badge = document.createElement('div');
-            badge.id = 'admin-edit-badge';
-            badge.className = 'admin-edit-badge';
-
-            // Restore state
-            const isMinimized = localStorage.getItem('maers_admin_badge_minimized') === 'true';
-            if (isMinimized) badge.classList.add('minimized');
-
-            badge.textContent = 'EDIT';
-            badge.onclick = () => {
-                const nowMinimized = badge.classList.toggle('minimized');
-                localStorage.setItem('maers_admin_badge_minimized', nowMinimized);
-            };
-            badge.title = "点击隐藏/显示";
-            document.body.appendChild(badge);
-        }
 
         const saveBtn = document.getElementById('global-save-btn');
         const cancelBtn = document.getElementById('global-cancel-btn');
@@ -103,7 +68,7 @@ export const SaveButton = {
                 saveBtn.disabled = false;
                 return;
             }
-            saveBtn.textContent = '✅ 已保存';
+            saveBtn.textContent = '已保存';
             setTimeout(() => { this.hide(); saveBtn.textContent = '保存修改'; saveBtn.disabled = false; }, this.RESET_DELAY);
         };
 

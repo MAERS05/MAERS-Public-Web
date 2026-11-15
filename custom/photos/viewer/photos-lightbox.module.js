@@ -87,7 +87,7 @@ export class PhotoLightbox {
             Object.assign(slides[index], first);
             const thumbnail = this.getThumbnail(items[index].path);
             slides[index].msrc = thumbnail?.currentSrc || thumbnail?.src;
-            const viewer = this.viewer = new PhotoSwipe({ dataSource: slides, index,
+            const viewer = this.viewer = new PhotoSwipe({ closeTitle: '关闭', zoomTitle: '放大照片', arrowPrevTitle: '上一张', arrowNextTitle: '下一张', errorMsg: '照片暂时无法加载，请稍后重试', dataSource: slides, index,
                 mainClass: 'maers-photoswipe', bgOpacity: 0.9, showHideAnimationType: 'zoom',
                 showAnimationDuration: 320, hideAnimationDuration: 260,
                 easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
@@ -110,7 +110,7 @@ export class PhotoLightbox {
                 const retry = failure?.index === viewer.currIndex;
                 qualityButton.disabled = Boolean(activeJob);
                 qualityButton.textContent = activeJob ? (activeJob.hd ? '原图加载中…' : '预览加载中…') :
-                    `${isHD ? 'Ori' : 'Pre'}${retry ? ' · 重试' : ''}`;
+                    `${isHD ? '原图' : '预览'}${retry ? ' · 重试' : ''}`;
                 qualityButton.setAttribute('aria-pressed', String(isHD));
                 qualityButton.setAttribute('aria-busy', String(Boolean(activeJob)));
                 qualityButton.setAttribute('data-load-state', activeJob ? 'loading' : retry ? 'error' : 'ready');
@@ -161,7 +161,7 @@ export class PhotoLightbox {
                         caption.textContent = slides[viewer.currIndex].alt;
                     } });
                 viewer.ui.registerElement({ name: 'quality', order: 9,
-                    isButton: true, title: '切换预览/原图', html: 'Pre',
+                    isButton: true, title: '切换预览/原图', html: '预览',
                     onInit: element => { qualityButton = element; updateButton(); },
                     onClick: () => {
                         if (activeJob) return;

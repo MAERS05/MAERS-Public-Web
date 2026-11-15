@@ -51,7 +51,7 @@ export const TagsUI = {
         // Rename option
         const rename = document.createElement('div');
         rename.className = 'tag-menu-option';
-        rename.textContent = '✎ 重命名';
+        rename.textContent = ' 重命名';
         rename.onclick = () => {
             menu.remove();
             if (callbacks.onRename) callbacks.onRename(tagName);
@@ -69,7 +69,7 @@ export const TagsUI = {
         // Delete option
         const del = document.createElement('div');
         del.className = 'tag-menu-option delete-option';
-        del.textContent = '✕ 删除';
+        del.textContent = ' 删除';
         del.onclick = () => {
             menu.remove();
             if (callbacks.onDelete) callbacks.onDelete(tagName);

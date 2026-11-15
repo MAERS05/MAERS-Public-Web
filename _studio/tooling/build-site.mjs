@@ -3,7 +3,7 @@
  * dist 可重建；源数据及本机完整密钥环始终保留在原位置。
  */
 import { execFileSync } from 'node:child_process';
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -125,7 +125,7 @@ for (const name of publish) {
         }
         writeFileSync(target, JSON.stringify(tree, null, 2) + '\n');
     } else {
-        cpSync(path.join(root, name), target);
+        copyFileSync(path.join(root, name), target);
     }
 }
 // Cloudflare 静态资源按分类路径返回图库页面；URL 中保留分类和查询参数。

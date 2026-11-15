@@ -3,6 +3,8 @@
  * 依赖: UI, Player, AdminCore (通过 import)
  * @version 4.0.0 - ES6 Module
  */
+import { requestText, confirmAction } from "../../../data-manage/admin/admin-confirm.module.js";
+
 import { Toast } from '../../../shared/toast.module.js';
 import { isRelayMode } from '../../../data-manage/admin/local-only.module.js';
 
@@ -126,9 +128,9 @@ async function loadBiliInfo(bvid) {
         return info;
     } catch (error) {
         if (!isRelayMode()) throw error;
-        const title = prompt("云端无法获取 B 站信息，请手动输入标题：");
+        const title = await requestText({ title: "云端无法获取 B 站信息，请手动输入标题：", value: '' });
         if (!title) throw error;
-        const count = parseInt(prompt("分P数量：", "1"), 10);
+        const count = parseInt(await requestText({ title: "分P数量：", value: "1" }), 10);
         if (!(count >= 1)) throw error;
         return {
             title, duration: 0,
@@ -214,13 +216,13 @@ export async function uiUnlock(level, index) {
     if (UI.refreshCurrentView) UI.refreshCurrentView();
 }
 
-export function uiRename(e, level, index) { // Generic rename for Cat/Col
+export async function uiRename(e, level, index) { // Generic rename for Cat/Col
     e.stopPropagation();
     const mgr = ensureManager(level);
     if (mgr && mgr.isDeleted(index)) return;
 
     const item = mgr.list[index];
-    const newName = prompt("重命名:", item.name);
+    const newName = await requestText({ title: "重命名:", value: item.name });
     if (newName && newName !== item.name) {
         item.name = newName;
         mgr.onChange();
@@ -240,13 +242,13 @@ export function uiEditAlbum(e, catIdx, colIdx, albIdx) {
 }
 
 async function handleComplexEdit(alb, mgr) {
-    const newBvid = prompt("修改 B站 BV号 (留空保留):", alb.bvid);
+    const newBvid = await requestText({ title: "修改 B站 BV号 (留空保留):", value: alb.bvid });
 
     if (newBvid && newBvid !== alb.bvid) {
         // Fetch new info
         try {
             const info = await loadBiliInfo(newBvid);
-            const newTitle = prompt("修改标题:", info.title) || info.title;
+            const newTitle = await requestText({ title: "修改标题:", value: info.title }) || info.title;
             alb.bvid = newBvid;
             alb.title = newTitle;
             alb.total = info.pages.length;
@@ -268,17 +270,17 @@ async function handleComplexEdit(alb, mgr) {
     }
 
     // Manual Edit
-    const t = prompt("修改标题:", alb.title);
+    const t = await requestText({ title: "修改标题:", value: alb.title });
     if (t) alb.title = t;
     mgr.onChange();
     UI.refreshCurrentView();
 }
 
-export function uiRenamePart(e, albIdx, trackIdx) {
+export async function uiRenamePart(e, albIdx, trackIdx) {
     e.stopPropagation();
     const alb = ensureManager(2).list[albIdx];
     const old = (alb.custom_parts && alb.custom_parts[trackIdx]) || `P${trackIdx + 1}`;
-    const n = prompt("重命名该分P:", old);
+    const n = await requestText({ title: "重命名该分P:", value: old });
     if (n && n !== old) {
         if (!alb.custom_parts) alb.custom_parts = [];
         alb.custom_parts[trackIdx] = n;
@@ -287,9 +289,9 @@ export function uiRenamePart(e, albIdx, trackIdx) {
     }
 }
 
-export function uiDeletePart(e, albIdx, trackIdx) {
+export async function uiDeletePart(e, albIdx, trackIdx) {
     e.stopPropagation();
-    if (!confirm("确定要删除吗？")) return;
+    if (!await confirmAction({ confirmText: "确认删除", cancelText: "不删了", danger: true })) return;
     const alb = ensureManager(2).list[albIdx];
     const mapping = alb.page_mapping || Array.from({ length: parseInt(alb.total) || 1 }, (_, k) => k + 1);
     if (mapping.length <= 1) return Toast.error("最后一个不可删除");
@@ -303,7 +305,7 @@ export function uiDeletePart(e, albIdx, trackIdx) {
 
 export async function uiResetTracks(e, catIdx, colIdx, albIdx) {
     e.stopPropagation();
-    if (!confirm("确定要恢复该视频的所有原始分P吗？")) return;
+    if (!await confirmAction({ confirmText: "恢复全部曲目", cancelText: "保持当前曲目" })) return;
 
     // 我们既可以调用 API，也可以在本地尝试重置并保存
     // 优先本地重置以保持 UI 状态同步
@@ -333,7 +335,7 @@ export async function uiResetTracks(e, catIdx, colIdx, albIdx) {
 // Creation Helper (Direct execution logic: Update -> Save -> No Prompt)
 
 export async function addCategory() {
-    const name = prompt("新分类名称：");
+    const name = await requestText({ title: "新分类名称：", value: '' });
     if (name) {
         const created = { name: name, collections: [] };
         UI.libraryData.push(created);
@@ -356,7 +358,7 @@ export async function addCategory() {
 }
 
 export async function addCollection() {
-    const name = prompt("新合集名称：");
+    const name = await requestText({ title: "新合集名称：", value: '' });
     if (name) {
         const cat = UI.libraryData[UI.currentCatIndex];
         const created = { name: name, albums: [] };
@@ -381,11 +383,11 @@ export async function addCollection() {
 
 // Album creation is complex (fetch). 
 export async function addAlbum() {
-    const bvid = prompt("B站 BV号：");
+    const bvid = await requestText({ title: "B站 BV号：", value: '' });
     if (!bvid) return;
     try {
         const info = await loadBiliInfo(bvid);
-        const title = prompt("确认标题：", info.title) || info.title;
+        const title = await requestText({ title: "确认标题：", value: info.title }) || info.title;
         const newAlbum = {
             title: title, bvid: bvid, total: info.pages.length,
             duration: info.duration, durations: {}, custom_parts: []

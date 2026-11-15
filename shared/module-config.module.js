@@ -1,14 +1,15 @@
 /** 模块元数据：统一提供图标、标题和数据文件，前后台通过显式导入共用。 */
 import { Utils } from './utils.module.js';
+import { icon as appIcon } from './icons.module.js';
 
 const MODULE_CONFIG = {
-    notes: { icon: 'ui/notes-icon.svg', title: 'Study Notes', dataFile: 'data/notes-tree.json' },
-    literature: { icon: 'ui/literature-icon.svg', title: 'Literature', dataFile: 'data/literature-tree.json' },
-    record: { icon: 'ui/record-icon.svg', title: 'Records', dataFile: 'data/record-tree.json' },
-    album: { icon: 'ui/album-icon.svg', title: 'Album', dataFile: 'data/album-config.json' },
-    music: { icon: 'ui/music-icon.svg', title: 'Music', dataFile: 'data/music-data.json' },
-    games: { icon: 'ui/games-icon.svg', title: 'Games', dataFile: 'data/games-tree.json' },
-    videos: { icon: 'ui/music-icon.svg', title: 'Videos', dataFile: 'data/videos-tree.json' }
+    notes: { icon: 'ui/notes-icon.svg', title: '笔记', dataFile: 'data/notes-tree.json' },
+    literature: { icon: 'ui/literature-icon.svg', title: '文学', dataFile: 'data/literature-tree.json' },
+    record: { icon: 'ui/record-icon.svg', title: '记录', dataFile: 'data/record-tree.json' },
+    album: { icon: 'ui/album-icon.svg', title: '相册', dataFile: 'data/album-config.json' },
+    music: { icon: 'ui/music-icon.svg', title: '音乐', dataFile: 'data/music-data.json' },
+    games: { icon: 'ui/games-icon.svg', title: '游戏', dataFile: 'data/games-tree.json' },
+    videos: { icon: 'ui/music-icon.svg', title: '影视', dataFile: 'data/videos-tree.json' }
 };
 
 export const ModuleConfig = {
@@ -18,13 +19,12 @@ export const ModuleConfig = {
     },
 
     getTitle(moduleName, isAdmin = false) {
-        const { icon, title } = this.get(moduleName);
-        const fallback = ['games', 'videos'].includes(moduleName)
-            ? " onerror=\"this.src='ui/literature-icon.svg'\"" : '';
-        const image = icon ? `<img src="${Utils.escapeAttr(icon)}" alt="${Utils.escapeAttr(title)}"${fallback} style="height: 1.25em; width: auto; vertical-align: middle;">` : '📂';
-        const text = moduleName === 'videos' && !isAdmin ? ['music', 'videos'].map(name =>
-            `<span class="music-mode-btn${name === moduleName ? ' active' : ''}" onclick="window.location.href='${name}.html'">${Utils.escapeHtml(this.get(name).title)}</span>`
-        ).join(' & ') : Utils.escapeHtml(title);
-        return `${image} ${text}`;
+        const { title } = this.get(moduleName);
+        const symbols = { notes: 'note', literature: 'book', record: 'clock', album: 'photo', music: 'music', games: 'game', videos: 'video' };
+        const symbol = appIcon(symbols[moduleName] || 'folder', 24);
+        const text = moduleName === 'videos' && !isAdmin
+            ? '<a class="music-mode-btn" href="music.html">音乐</a><span class="music-section-divider" aria-hidden="true"></span><a class="music-mode-btn active" href="videos.html" aria-current="page">影视</a>'
+            : '<span>' + Utils.escapeHtml(title) + '</span>';
+        return symbol + text;
     }
 };

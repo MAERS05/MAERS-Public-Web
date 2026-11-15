@@ -1,4 +1,6 @@
 /** 后台会话：Windows 本机登记后免密管理全部，线上按主密码验证；明文密钥只驻留内存。 */
+import { confirmAction } from "../admin/admin-confirm.module.js";
+
 import { isAdminAddress, isStudioAdminPage, isOnlineAdminPage, localFetch, STUDIO_ENTRY_KEY } from '../api-client.module.js';
 import { getSessionKeysRaw, getSessionKeyRaw, setSessionKeyRaw, fromB64, clearSessionKey } from './crypto.module.js';
 import { loadKeyring, matchesDataKey } from './keyring.module.js';
@@ -217,7 +219,7 @@ export async function cancelProtection(record, module = null) {
         window.location.reload();
         return null;
     }
-    if (!confirm('解密后内容将恢复公开。确定继续？')) return null;
+    if (!await confirmAction({ confirmText: "恢复公开", cancelText: "保持私密", description: "解密后的内容将对访客公开。" })) return null;
     if (local) return cmsNodeAction(module, 'unprotect', { id: record.id }, '正在解密', 'decryption');
     const progress = openProgress('正在解密', 'decryption');
     try {

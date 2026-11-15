@@ -63,7 +63,7 @@ async function show(reload, onMaster, keyring) {
             cancelText: '关闭',
             bodyHtml:
                 '<div class="mlock-unlocked-groups" data-role="unlocked-groups"></div><div data-role="password-rows"></div>' +
-                '<button type="button" class="mlock-btn-secondary" data-op="add-password">＋添加密码</button>',
+                '<button type="button" class="mlock-btn-secondary" data-op="add-password">添加密码</button>',
             onCancel: finish,
             onSubmit: async () => {
                 const rows = [...modal.el.querySelectorAll('[data-password-row]')];
@@ -131,7 +131,7 @@ async function show(reload, onMaster, keyring) {
             row.className = 'mlock-password-row';
             row.innerHTML =
                 '<input type="password" class="mlock-input" autocomplete="current-password" aria-label="解锁密码" placeholder="输入密码">' +
-                '<button type="button" class="mlock-btn-secondary" aria-label="移除此密码栏">×</button><span class="mlock-bad" role="alert"></span>';
+                '<button type="button" class="mlock-btn-secondary" aria-label="移除此密码栏">移除</button><span class="mlock-bad" role="alert"></span>';
             row.querySelector('button').onclick = () => {
                 if (processing) return;
                 if (host.children.length > 1) {

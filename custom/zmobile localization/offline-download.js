@@ -14,6 +14,8 @@
 
     // ── 框架资源（全部必须下载）──
     const FRAMEWORK = [
+        '/shared/icons.module.js',
+        '/data-manage/admin/admin-confirm.module.js',
         '/custom/cms/admin/cms-controller.module.js',
         '/custom/cms/admin/cms-private-drafts.module.js',
         '/custom/cms/admin/cms-drag.module.js',
@@ -111,7 +113,7 @@
         '/space.html', '/album.html', '/me.html',
         '/static-style/theme.css', '/static-style/components.css',
         '/static-style/style.css', '/static-style/responsive.css',
-        '/static-style/site-guide.css', '/static-style/spatial-nav.css',
+        '/static-style/site-guide.css', '/static-style/spatial-nav.css', '/static-style/whats-new.css',
         '/static-style/toast.css', '/static-style/splash.css', '/static-style/drag.css',
         '/static-style/sync-ui.css',
         '/custom/config.js', '/shared/flash-guard.js', '/shared/layout.module.js',
@@ -349,7 +351,7 @@
     function init() {
         const s = document.createElement('style');
         s.textContent = `
-            .od-btn{position:fixed;bottom:24px;right:20px;z-index:9999;width:44px;height:44px;border-radius:50%;border:1px solid transparent;background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:rgba(255,255,255,0.65);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s,color .2s,border-color .2s,box-shadow .2s,transform .15s;box-shadow:none}
+            .od-btn { position: static; width: 36px; height: 36px; padding: 8px; min-height: 36px; border: 0; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-sub); background: transparent; cursor: pointer; }
             .od-btn:hover{background:rgba(255,255,255,0.16);color:#fff;transform:scale(1.1)}
             .od-btn:active{transform:scale(.93)}
             .od-btn.done{color:#4ade80;background:rgba(74,222,128,0.1)}
@@ -363,12 +365,13 @@
         document.head.appendChild(s);
 
         const b = document.createElement('button');
-        b.className = 'od-btn';
+        b.className = 'od-btn app-icon-button';
+        b.setAttribute('aria-label', '保存离线内容');
         b.title = '下载离线包';
         b.setAttribute('aria-label', b.title);
         b.innerHTML = IC_DL;
         b.onclick = onClickDownload;
-        document.body.appendChild(b);
+        (document.querySelector('.app-sidebar-actions') || document.body).appendChild(b);
 
         navigator.serviceWorker?.addEventListener('controllerchange', syncDownloadStatus);
         navigator.serviceWorker?.addEventListener('message', event => {

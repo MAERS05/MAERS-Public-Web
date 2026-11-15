@@ -4,6 +4,8 @@
  * 集成：使用 AdminCore.BatchItemManager 进行批量管理
  * @version 3.0.0 - ES6 Module
  */
+import { requestText, confirmAction } from "../../../data-manage/admin/admin-confirm.module.js";
+
 
 import { Toast } from '../../../shared/toast.module.js';
 
@@ -237,7 +239,7 @@ async function performUpdateTags(nodeId, tags) {
         return res || { success: true };
     } catch (e) {
         console.error("[CMS] Update tags failed", e);
-        if (window.MAERS?.Toast) window.MAERS.Toast.error("Update tags failed");
+        if (window.MAERS?.Toast) window.MAERS.Toast.error("标签更新失败");
         return { success: false };
     }
 }
@@ -290,8 +292,8 @@ export async function uiCreateNode(type) {
     const parentId = parent === 'root' ? 'root' : parent.id;
 
     // Auto-Save: Direct execution
-    const defaultTitle = type === 'folder' ? 'New Folder' : 'New Note';
-    const title = prompt(`Enter ${type} Name:`, defaultTitle);
+    const defaultTitle = type === 'folder' ? '新文件夹' : '新笔记';
+    const title = await requestText({ title: (type === 'folder' ? '新建文件夹' : '新建笔记'), value: defaultTitle });
 
     if (title) {
         // 'text' maps to 'note' type usually, but backend might accept 'text'. 
@@ -330,7 +332,7 @@ export async function uiCreateNode(type) {
             // Force Hide SaveBar
             if (SaveButton) SaveButton.hide();
         } else {
-            Toast.error("Create Failed: " + res.msg);
+            Toast.error("创建失败：" + res.msg);
         }
     }
 }
@@ -365,7 +367,7 @@ export async function uiRenameNode(e, id, oldTitle) {
         if (idx !== -1 && manager.isDeleted(idx)) return;
     }
 
-    const newTitle = prompt("Enter new title:", oldTitle);
+    const newTitle = await requestText({ title: "修改名称", value: oldTitle });
     if (newTitle && newTitle !== oldTitle) {
         const res = await Controller.renameNode(id, newTitle);
         if (res.success) {
@@ -403,7 +405,7 @@ export async function uiUploadCover(e, id) {
 export async function uiRemoveCover(e, id) {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm("Remove cover image?")) {
+    if (await confirmAction({ confirmText: "移除封面", cancelText: "保留封面", danger: true })) {
         const res = await Controller.updateNode?.(id, { coverImage: null });
         if (res?.success || res === undefined) {
             if (window.MAERS?.Toast) {
@@ -421,7 +423,7 @@ export async function uiAddTag(e, id) {
     const node = State.AppState.allNodes.find((n) => n.id === id);
     if (!node) return;
 
-    const input = prompt("添加标签 (可使用 , 或 ， 分隔多个):");
+    const input = await requestText({ title: "添加标签 (可使用 , 或 ， 分隔多个):", value: '' });
     if (input) {
         const rawTags = input.split(/[,，]/);
         const cleanTags = rawTags
@@ -464,7 +466,7 @@ export async function uiRemoveTag(e, id, tag) {
     e.stopPropagation();
 
     // Add Confirmation to prevent accidental deletion
-    if (!confirm(`确定要删除标签 #${tag} 吗？`)) return;
+    if (!await confirmAction({ confirmText: "确认删除标签", cancelText: "不删了", danger: true })) return;
 
     const node = State.AppState.allNodes.find((n) => n.id === id);
     if (!node) return;
@@ -553,7 +555,7 @@ export async function uiLock(e, id) {
             _toast('error', `加锁失败: ${res.msg || ''}`);
             return;
         }
-        _toast('success', '🔒 已加密');
+        _toast('success', ' 已加密');
         await refreshView(false, true);
         if (SaveButton) SaveButton.hide();
     } catch (err) {
@@ -581,7 +583,7 @@ export async function uiUnlock(id) {
     const locked = (Controller.AppState.lockedNodes || []).find(n => n.id === id);
     if (!locked) return;
     if (await _unlockOne(locked)) {
-        _toast('success', '🔓 已解密');
+        _toast('success', ' 已解密');
         await refreshView(false, true);
     }
 }
@@ -593,7 +595,7 @@ export async function uiUnlock(id) {
 export async function uiDeleteLocked(id) {
     if (isLocalOnlyUnavailable()) return;
     const locked = (Controller.AppState.lockedNodes || []).find(n => n.id === id);
-    if (!locked || !confirm('确定永久删除这条加密内容吗？此操作无法恢复。')) return;
+    if (!locked || !await confirmAction({ confirmText: "永久删除", cancelText: "不删了", description: "这条私密内容删除后无法恢复。", danger: true })) return;
     const purge = await collectCmsPrivateCoverKeys(locked);
     const res = await Controller.deleteNode(id, purge.length ? { purge_private: purge } : undefined);
     if (res.success) {

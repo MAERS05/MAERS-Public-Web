@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MAERS Music Main Entry (main.js)
  * 用户页面入口文件 - 整合音乐播放与界面模块
  * @version 1.0.1 - ES6 Module with Search Utils

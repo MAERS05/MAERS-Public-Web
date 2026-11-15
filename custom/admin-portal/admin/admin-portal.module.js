@@ -2,6 +2,10 @@
  * MAERS Admin Portal (admin-portal.module.js)
  * 职责：管理门户模块卡片并挂载同步、清理与恢复入口。
  */
+import { confirmAction } from "../../../data-manage/admin/admin-confirm.module.js";
+import { icon as appIcon } from '../../../shared/icons.module.js';
+import { navigationInfo } from '../../../shared/spatial-nav.module.js';
+
 import {
     appendSavedCard, ensureCardPage, readCardList, refreshSavedCards, saveCardChanges
 } from '../../../data-manage/admin/card-persistence.module.js';
@@ -18,7 +22,7 @@ const SAVE_MODULES = '/api/save_modules';
 
 /** 清理结果与后续的徽章刷新分开处理，按钮无论成功或失败都可恢复。 */
 async function runCleanData(button) {
-    if (button.disabled || !confirm('确定整理未引用文件吗？\n\n将先检查数据索引和正文是否完整，再把未引用的图片与文档移入本机回收区。\n可通过「备份与恢复」恢复，不会因本地缺图删除图库记录。')) return;
+    if (button.disabled || !await confirmAction({ confirmText: "开始整理", cancelText: "先不整理", description: "未引用的文件会移入本机回收区，可在备份与恢复中找回。" })) return;
 
     const originalLabel = button.textContent;
     button.disabled = true;
@@ -40,7 +44,7 @@ async function runCleanData(button) {
         button.disabled = false;
         button.textContent = originalLabel;
     }
-    Toast.success(`🧹 整理完成：${result.deleted_files_count} 个未引用文件已移入回收区`);
+    Toast.success(` 整理完成：${result.deleted_files_count} 个未引用文件已移入回收区`);
     void syncManager.refreshGitStatusBadge();
 }
 
@@ -72,7 +76,12 @@ function mountHeaderActions() {
     const container = document.querySelector('.admin-header-actions');
     if (!container) return;
     syncManager.injectSyncButton(container);
-    if (isStudioAdminPage()) addLocalTool(container, {
+    const tools = document.createElement('details');
+    tools.className = 'admin-tools';
+    tools.innerHTML = '<summary class="app-icon-button" title="更多操作" aria-label="更多操作">' + appIcon('more') + '</summary><div class="admin-tools-panel" aria-label="管理工具"></div>';
+    container.append(tools);
+    const panel = tools.querySelector('.admin-tools-panel');
+    if (isStudioAdminPage()) addLocalTool(panel, {
         id: 'maers-storage-settings-btn', label: '存储设置',
         action: async () => {
             try {
@@ -83,15 +92,32 @@ function mountHeaderActions() {
             }
         }
     });
-    addLocalTool(container, { id: 'maers-clean-data-btn', label: '清理垃圾', action: runCleanData,
+    addLocalTool(panel, { id: 'maers-clean-data-btn', label: '整理文件', action: runCleanData,
         title: '检查数据真源，将未引用文件移入本机回收区' });
-    addLocalTool(container, { id: 'maers-recovery-btn', label: '备份与恢复', action: openRecoveryPanel });
+    addLocalTool(panel, { id: 'maers-recovery-btn', label: '备份与恢复', action: openRecoveryPanel });
+    const crypto = document.getElementById('maers-crypto-settings-btn');
+    if (crypto) {
+        crypto.className = 'maers-toolbar-btn';
+        crypto.textContent = crypto.getAttribute('aria-label');
+        panel.append(crypto);
+        document.getElementById('maers-crypto-controls')?.remove();
+    }
+    panel.addEventListener('click', event => { if (event.target.closest('button')) tools.open = false; });
+    document.addEventListener('click', event => { if (!tools.contains(event.target)) tools.open = false; });
+    tools.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { tools.open = false; tools.querySelector('summary').focus(); }
+    });
 }
 
 /** 保留图片与文字图标两种展示，路径和标题通过 DOM 赋值。 */
 function renderModuleIcon(moduleCard) {
     const icon = document.createElement('span');
     icon.className = 'icon';
+    const known = navigationInfo(moduleCard);
+    if (known.icon !== 'link' || /(?:^|\/)admin-index(?:\.html)?(?:[?#]|$)/.test(moduleCard.url || '')) {
+        icon.innerHTML = appIcon(known.key === 'index' ? 'home' : known.icon, 28);
+        return icon;
+    }
     const value = moduleCard.icon || '';
     if (value.includes('/') || value.endsWith('.svg') || value.endsWith('.png')) {
         const image = document.createElement('img');
@@ -166,12 +192,13 @@ export const Admin = {
             this.grid.appendChild(this._renderModuleCard(mod, idx, localOnlyUnavailable));
         });
 
-        const addCard = document.createElement('div');
+        const addCard = document.createElement('button');
+        addCard.type = 'button';
         addCard.className = 'admin-card functional-card';
         addCard.setAttribute('aria-label', '添加模块');
         if (localOnlyUnavailable) disableAdminControl(addCard);
         else addCard.onclick = () => this.addNewModule();
-        addCard.innerHTML = `<span class="icon">＋</span>`;
+        addCard.innerHTML = '<span class="icon">' + appIcon('plus', 24) + '</span><span class="name">添加入口</span>';
         this.grid.appendChild(addCard);
     },
 
@@ -179,6 +206,11 @@ export const Admin = {
     _renderModuleCard(mod, idx, localOnlyUnavailable) {
         const card = document.createElement('div');
         card.className = `admin-card ${this.manager.getItemClass(idx)}`;
+        card.tabIndex = 0;
+        card.setAttribute('role', 'link');
+        card.addEventListener('keydown', event => {
+            if (event.target === card && event.key === 'Enter') { event.preventDefault(); card.click(); }
+        });
         card.setAttribute('data-order-num', this.getOrderNum(idx));
 
         // 如果有选中项，点击卡片执行移动操作
@@ -242,7 +274,7 @@ export const Admin = {
         const oldUrl = mod.url;
 
         AdminModal.open({
-            title: 'Edit Module',
+            title: '编辑入口',
             isNew: false,
             data: mod,
             fields: this._moduleFields(),
@@ -265,10 +297,10 @@ export const Admin = {
     /** 新增和编辑模块共用的表单字段。 */
     _moduleFields() {
         return [
-            { name: 'title', label: 'Module Name', type: 'text', required: true },
-            { name: 'icon', label: 'Icon (Path or Emoji)', type: 'text', required: true, placeholder: 'ui/xxx.svg or 📝' },
-            { name: 'url', label: 'URL', type: 'text', required: true, placeholder: 'page.html' },
-            { name: 'style', label: 'Style Path (Optional)', type: 'text', placeholder: 'custom/xxx.css' }
+            { name: 'title', label: '入口名称', type: 'text', required: true },
+            { name: 'icon', label: '图标地址', type: 'text', required: true, placeholder: '例如 ui/notes-icon.svg' },
+            { name: 'url', label: '网址', type: 'text', required: true, placeholder: 'page.html' },
+            { name: 'style', label: '样式地址（选填）', type: 'text', placeholder: 'custom/xxx.css' }
         ];
     },
 
@@ -282,7 +314,7 @@ export const Admin = {
         };
 
         AdminModal.open({
-            title: 'Add New Module',
+            title: '添加入口',
             isNew: true,
             data: newModule,
             fields: this._moduleFields(),

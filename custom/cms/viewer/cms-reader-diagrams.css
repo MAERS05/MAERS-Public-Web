@@ -144,7 +144,7 @@ html.light-mode .cms-diagram-fs-btn,
 
 html.light-mode .cms-diagram-fs-btn:hover,
 .light-mode .cms-diagram-fs-btn:hover {
-  background: #ffffff !important;
+  background: var(--surface) !important;
   border-color: rgba(15, 23, 42, 0.22) !important;
 }
 
@@ -197,7 +197,7 @@ html.light-mode .language-mindmap.cms-diagram-card--fullscreen,
 .light-mode .language-mindmap.cms-diagram-card--fullscreen,
 html.light-mode .language-markmap.cms-diagram-card--fullscreen,
 .light-mode .language-markmap.cms-diagram-card--fullscreen {
-  background: #ffffff !important;
+  background: var(--surface) !important;
 }
 
 

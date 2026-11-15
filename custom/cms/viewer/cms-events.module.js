@@ -3,6 +3,8 @@
  * 职责：事件委托设置、网格事件处理
  * @version 3.0.0 - ES6 Module
  */
+import { confirmAction } from "../../../data-manage/admin/admin-confirm.module.js";
+
 
 // 通过入口模块注入视图与管理依赖。
 let State = null;
@@ -213,11 +215,11 @@ function handleCardClick(e, nodeId) {
 }
 
 /** 延后判断筛选状态，保持打开阅读器时的响应顺序。 */
-function navigateIfFiltered(node) {
+async function navigateIfFiltered(node) {
     const searchInput = document.getElementById('search-input');
     const hasSearch = searchInput && searchInput.value.trim().length > 0;
     if (!hasSearch && State.AppState.activeFilters.size === 0) return;
-    if (confirm("是否跳转到文本所在目录？\n\n【确定】跳转到文本所在目录 (更新导航栏)\n【取消】保持当前筛选状态 (仅预览)")) {
+    if (await confirmAction({ confirmText: "前往所在目录", cancelText: "保留当前筛选" })) {
         navigateToFileContext(node);
     }
 }
@@ -251,7 +253,7 @@ function onGridContextMenu(e) {
     e.preventDefault();
     e.stopPropagation();
     Admin?.uiCancelPick?.();
-    window.MAERS?.Toast?.success('❌ 移动已取消');
+    window.MAERS?.Toast?.success(' 移动已取消');
 }
 
 export const Events = {

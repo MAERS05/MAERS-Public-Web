@@ -1,4 +1,7 @@
+import { icon as appIcon } from '../../../shared/icons.module.js';
 /** 相册分类管理：批量编辑、确认写入后的状态更新与分类加解密。 */
+import { confirmAction } from "../../../data-manage/admin/admin-confirm.module.js";
+
 import { isOnlineAdminPage, localFetch } from '../../../data-manage/api-client.module.js';
 import { loadCloudAlbums } from '../../photos/admin/photos-private-drafts.module.js';
 
@@ -224,6 +227,9 @@ function renderActions(category, index, reason) {
 
 function renderCategory(category, index, reason) {
     const card = document.createElement('div');
+    card.tabIndex = 0;
+    card.setAttribute('role', 'link');
+    card.onkeydown = event => { if (event.target === card && event.key === 'Enter') { event.preventDefault(); card.click(); } };
     card.className = `category-card ${category.style_class || ''} ${manager?.getItemClass(index) || ''}`;
     const selected = manager?.selectedIndices.indexOf(index) ?? -1;
     if (selected >= 0) card.setAttribute('data-order-num', selected + 1);
@@ -256,11 +262,12 @@ function render() {
         if (reason && isEncryptedRecord(category)) disableAdminControl(card, reason);
         grid.appendChild(card);
     });
-    const add = document.createElement('div');
+    const add = document.createElement('button');
+    add.type = 'button';
     add.className = 'category-card func-card';
     if (reason) disableAdminControl(add, reason);
     else add.onclick = addNewCategory;
-    add.innerHTML = '<div class="func-icon">＋</div><div class="func-text">ADD NEW CATEGORY</div>';
+    add.innerHTML = '<span class="func-icon">' + appIcon("plus", 24) + '</span><span class="func-text">新建相册</span>';
     grid.appendChild(add);
     refreshUnlockAllButton();
 }
@@ -318,7 +325,7 @@ async function unlockByIndex(index) {
 
 export async function uiUnlock(index) {
     if (!canEdit()) return false;
-    if (!confirm('解锁将把该相册的全部图片迁回公开桶与仓库，恢复为公开状态。继续？')) return false;
+    if (!await confirmAction({ confirmText: "恢复公开", cancelText: "保持私密", description: "这个相册的图片会恢复公开。" })) return false;
     return unlockByIndex(index);
 }
 
@@ -340,12 +347,12 @@ export function uiEdit(event, index) {
     const entry = privateAlbums.get(item?.id);
     if (!item || (!entry && !canEdit()) || manager.isDeleted(index)) return;
     AdminModal.open({
-        title: 'Edit Category', isNew: false,
+        title: '编辑相册', isNew: false,
         data: { title: item.title, subtitle: item.subtitle, icon: iconInput(item.icon), slug: item.slug || '' },
         fields: [
-            { name: 'title', label: 'Title', type: 'text', required: true },
-            { name: 'subtitle', label: 'Subtitle', type: 'text', required: true },
-            { name: 'icon', label: 'Icon (SVG path or Emoji)', type: 'text', required: true },
+            { name: 'title', label: '名称', type: 'text', required: true },
+            { name: 'subtitle', label: '补充说明', type: 'text', required: true },
+            { name: 'icon', label: '图标地址', type: 'text', required: true },
             { name: 'slug', label: '链接代号', type: 'text', placeholder: item.id }
         ],
         onSave: async form => {
@@ -407,12 +414,12 @@ async function createCategory(form) {
 export async function addNewCategory() {
     if (!canEdit()) return;
     AdminModal.open({
-        title: 'Add New Category', isNew: true, data: { title: '', subtitle: '', icon: '', id: '', slug: '' },
+        title: '新建相册', isNew: true, data: { title: '', subtitle: '', icon: '', id: '', slug: '' },
         fields: [
-            { name: 'title', label: 'Title (Chinese)', type: 'text', required: true },
-            { name: 'subtitle', label: 'Subtitle (English)', type: 'text', required: true },
-            { name: 'icon', label: 'Icon (SVG path or Emoji)', type: 'text', required: true },
-            { name: 'id', label: 'Category ID (lowercase, immutable)', type: 'text', required: true, placeholder: 'category-name' },
+            { name: 'title', label: '名称', type: 'text', required: true },
+            { name: 'subtitle', label: '补充说明', type: 'text', required: true },
+            { name: 'icon', label: '图标地址', type: 'text', required: true },
+            { name: 'id', label: '相册代号（创建后不能修改）', type: 'text', required: true, placeholder: 'category-name' },
             { name: 'slug', label: '链接代号（留空使用分类 ID）', type: 'text', placeholder: 'nature' }
         ],
         onSave: createCategory

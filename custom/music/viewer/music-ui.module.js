@@ -122,10 +122,10 @@ export async function saveData() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(cleanMusicData(UI.libraryData))
         });
-        if (!response.ok) Toast.error("❌ 保存失败！");
+        if (!response.ok) Toast.error(" 保存失败！");
         return response.ok;
     } catch (err) {
-        Toast.error("❌ 网络错误");
+        Toast.error(" 网络错误");
         return false;
     }
 }
@@ -224,15 +224,15 @@ const performSearch = Utils.debounce((e) => {
     const results = [];
     UI.libraryData.forEach((cat, catIdx) => {
         if (cat._searchStr && cat._searchStr.includes(query))
-            results.push({ name: cat.name, type: 'Category', click: () => enterLevel1(catIdx) });
+            results.push({ name: cat.name, type: '分类', click: () => enterLevel1(catIdx) });
         cat.collections.forEach((col, colIdx) => {
             if (col._searchStr && col._searchStr.includes(query))
-                results.push({ name: col.name, type: 'Collection', click: () => { enterLevel1(catIdx); setTimeout(() => enterLevel2(catIdx, colIdx), ANIMATION_DELAY); } });
+                results.push({ name: col.name, type: '合集', click: () => { enterLevel1(catIdx); setTimeout(() => enterLevel2(catIdx, colIdx), ANIMATION_DELAY); } });
             col.albums.forEach((alb, albIdx) => {
                 if (alb._searchStr && alb._searchStr.includes(query))
                     results.push({
                         name: alb.title,
-                        type: 'Video',
+                        type: '曲目',
                         click: () => {
                             enterLevel1(catIdx);
                             setTimeout(() => {
@@ -267,7 +267,7 @@ const performSearch = Utils.debounce((e) => {
             }
         };
     } else {
-        searchResults.innerHTML = '<div class="search-item" style="color:#aaa; cursor:default;">No results</div>';
+        searchResults.innerHTML = '<div class="search-item" style="color:var(--text-sub); cursor:default;">没有匹配的内容</div>';
         searchResults.classList.add('active');
     }
 }, DEBOUNCE_DELAY);

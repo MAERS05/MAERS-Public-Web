@@ -10,11 +10,11 @@ const CROSS_PILL_ICON = '<svg class="cms-pill-icon" width="15" height="15" style
 
 // GitHub Alerts 类型元数据配置
 const ALERT_META = {
-    note:      { icon: 'ℹ️', label: 'Note' },
-    tip:       { icon: '💡', label: 'Tip' },
-    important: { icon: '🟣', label: 'Important' },
-    warning:   { icon: '⚠️', label: 'Warning' },
-    caution:   { icon: '🚨', label: 'Caution' }
+    note:      { icon: 'ℹ', label: '说明' },
+    tip:       { icon: '', label: '提示' },
+    important: { icon: '', label: '重要' },
+    warning:   { icon: '', label: '注意' },
+    caution:   { icon: '', label: '警示' }
 };
 
 /**

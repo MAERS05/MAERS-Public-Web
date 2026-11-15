@@ -4,8 +4,8 @@
  * @version 3.0.0 - ES6 Module (Modularized)
  */
 
-import { applyTheme, checkThemeStrategy, initHomeControls, initThemeCore } from './theme/theme-core.module.js';
-import { toggleGlobalShrink, setupZoomTrigger, initZoomSystem } from './theme/theme-zoom.module.js';
+import { applyTheme, checkThemeStrategy, initThemeCore } from './theme/theme-core.module.js';
+import { toggleGlobalShrink, setupZoomTrigger } from './theme/theme-zoom.module.js';
 
 /**
  * Main Initialization Function
@@ -24,9 +24,6 @@ export function initTheme() {
 }
 
 function _runInitTheme() {
-    const path = window.location.pathname;
-    const isHome = /^\/(?:index|admin-index)(?:\.html)?\/?$/.test(path) || path === '/' || path === '';
-
     // 0. Auto-Inject Drag Styles
     if (!document.querySelector('link[href*="drag.css"]')) {
         const link = document.createElement('link');
@@ -46,16 +43,8 @@ function _runInitTheme() {
         document.body.insertAdjacentHTML("beforeend", maskHtml);
     }
 
-    // 2. Home Actions
-    if (isHome) {
-        initHomeControls();
-    }
-
     // 3. Toggle Switch Logic
     initThemeCore();
-
-    // 4. Zoom System
-    initZoomSystem();
 
     // 5. Iframe Click Handling
     document.addEventListener("click", (e) => {
@@ -66,7 +55,7 @@ function _runInitTheme() {
             if (!isInteractive) window.parent.postMessage("closePanel", "*");
         }
     });
-    document.documentElement.classList.add("in-iframe");
+    document.documentElement.classList.toggle('in-iframe', window.parent !== window && window.name === 'content-frame');
 }
 
 // Backward Compatibility Global Mount

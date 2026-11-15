@@ -58,7 +58,7 @@ export function generateOutline() {
         const item = document.createElement('div');
         item.className = `outline-item outline-level-${level}${index === 0 ? ' active' : ''}`;
 
-        let rawText = heading.innerText || heading.textContent || 'Untitled';
+        let rawText = heading.innerText || heading.textContent || '未命名';
         rawText = rawText.replace(/^#+\s*/g, '').replace(/\u200B/g, '').trim();
         item.textContent = rawText;
         item.title = rawText;

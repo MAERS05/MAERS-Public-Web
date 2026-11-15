@@ -1,7 +1,7 @@
 /**
  * MAERS Git Commit Manager (git-commit.module.js)
- * 职责：电脑本地的一键 Git 提交与推送。
- * 发布只有一条通道：云端草稿先由电脑「拉取合并」写入本地文件，再由本地 Git 提交。
+ * 职责：电脑本地的一键 发布更新与推送。
+ * 发布只有一条通道：云端草稿先由电脑「拉取合并」写入本地文件，再由本地 发布更新。
  * 云端（手机）模式不直接提交：浏览器无法完整执行加密迁移、图片衍生图与跨模块文件组装，
  * 任何绕过本地合并的提交都会造成漏提交或误确认草稿。
  * @version 1.0.0
@@ -56,7 +56,7 @@ export class GitCommitManager {
     }
 
     /**
-     * 调用 Python 后端执行一键提交并推送
+     * 调用 Python 后端执行一键发布更新
      * @param {string} message - 提交说明
      */
     async commitAndPushLocal(message, onProgress = () => {}) {
@@ -111,7 +111,7 @@ export class GitCommitManager {
     }
 
     /**
-     * 打开 Git 提交弹窗：本地模式可提交；云端模式只展示待合并草稿并说明发布流程
+     * 打开 发布更新弹窗：本地模式可提交；云端模式只展示待合并草稿并说明发布流程
      * @param {Object} options
      * @param {Object} options.syncManager - 跨端同步管理器实例
      */
@@ -134,7 +134,7 @@ export class GitCommitManager {
                 <div class="mlock-header">
                     <div class="mlock-title-group">
                         <span class="mlock-title">${isLocalMode ? '一键提交所有改动到 Git' : '云端草稿'}</span>
-                        <span class="mlock-sub">${isLocalMode ? '先合并云端草稿，再提交并推送到仓库；提交前会执行检查' : '查看暂存记录，待电脑合并后发布'}</span>
+                        <span class="mlock-sub">${isLocalMode ? '先合并云端草稿，再发布更新到仓库；提交前会执行检查' : '查看暂存记录，待电脑合并后发布'}</span>
                     </div>
                 </div>
                 <div class="mlock-body" style="gap: 14px; padding-bottom: 14px;">
@@ -159,7 +159,7 @@ export class GitCommitManager {
                 <div class="mlock-footer">
                     <button type="button" id="git-modal-cancel" class="mlock-btn-secondary">${isLocalMode ? '取消' : '关闭'}</button>
                     <button type="button" id="git-modal-submit" class="mlock-btn-primary" style="background:linear-gradient(135deg,#2ed573,#00b894);">
-                        ${isLocalMode ? '提交并推送到 GitHub' : '待电脑合并后发布'}
+                        ${isLocalMode ? '发布更新到 GitHub' : '待电脑合并后发布'}
                     </button>
                 </div>
             </div>

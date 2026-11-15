@@ -10,9 +10,9 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, minimum-scale=0.1, maximum-scale=5.0, user-scalable=yes">
-    <title>MAERS Admin - Music</title>
+    <title>音乐管理 · 我的空间</title>
 
-    <!-- 🚀 Resource Preloading -->
+    <!--  Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
     <link rel="preload" href="static-style/components.css" as="style">
 
@@ -39,7 +39,7 @@
         initTheme();
     </script>
     <script>
-        // 🔥 强制开启管理员模式
+        //  强制开启管理员模式
         window.IS_ADMIN = true;
         document.documentElement.classList.add('admin-mode'); // Use documentElement or body later
     </script>
@@ -47,12 +47,13 @@
         <div class="main-card">
             <!-- 头部 -->
             <div class="music-header-bar">
-                <a href="admin-portal.html" class="back-btn">← Back</a>
-                <div class="center-title"><img src="ui/music-icon.svg" class="music-title-icon zoom-trigger-icon"
-                        style="height: 1.1em; width: 1.1em; position: relative; top: 3px; margin-right: 4px;">Music
-                </div>
-                <div class="right-icon"><img src="ui/music-headphone.svg"
-                        style="width: 1em; height: 1em; vertical-align: middle;"></div>
+                <a href="admin-portal.html" class="back-btn" title="返回" aria-label="返回"><svg class="app-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></a>
+                <h1 class="center-title"><svg class="app-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18V5l11-2v13M9 8l11-2"/><ellipse cx="6" cy="18" rx="3" ry="3"/><ellipse cx="17" cy="16" rx="3" ry="3"/></svg>音乐管理</h1>
+                <div class="search-box-wrapper">
+                        <input type="text" id="search-input" placeholder="搜索音乐" aria-label="搜索音乐">
+                        <div class="search-results" id="search-results"></div>
+                    </div>
+                <div class="right-icon"></div>
             </div>
             <!-- 主内容区 -->
             <div class="content-wrapper" style="opacity: 0; transition: opacity 0.5s ease;">
@@ -60,16 +61,12 @@
                 <div class="monitor-section">
                     <div class="bili-monitor">
                         <!-- 跳转按钮 -->
-                        <a id="jump-link" class="jump-link" target="_blank" title="跳转到 Bilibili 观看">
-                            <div class="jump-icon">
-                                ↗
-                            </div>
+                        <a aria-label="前往哔哩哔哩观看" id="jump-link" class="jump-link" target="_blank" title="跳转到 哔哩哔哩 观看">
+                            <div class="jump-icon"><svg class="app-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 15 6-6M8 17l-2 2a4 4 0 0 1-5-5l5-5a4 4 0 0 1 5 0m2-2 2-2a4 4 0 0 1 5 5l-5 5a4 4 0 0 1-5 0"/></svg></div>
                         </a>
                         <!-- 还原按钮（仅暂停时显示） -->
-                        <button id="reset-link" class="reset-link" title="清除播放记忆">
-                            <div class="reset-icon">
-                                ↺
-                            </div>
+                        <button aria-label="清除播放记忆" id="reset-link" class="reset-link" title="清除播放记忆">
+                            <div class="reset-icon"><svg class="app-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 8a8 8 0 1 0 0 8M20 3v5h-5"/></svg></div>
                         </button>
                         <img id="video-cover" class="video-cover" src="ui/music.webp" width="1296" height="816" fetchpriority="high" alt="">
                         <div id="video-shield"></div>
@@ -80,24 +77,21 @@
                     <!-- 播放控制条 -->
                     <div class="custom-control-bar">
                         <div class="control-btns">
-                            <button class="ctrl-btn" id="play-prev-btn">◀◀</button>
-                            <button class="ctrl-btn" id="master-play-btn" class="master-play-btn-large"><span
-                                    class="play-icon-layer">▶</span><span class="pause-icon-layer">||</span></button>
-                            <button class="ctrl-btn" id="play-next-btn">▶▶</button>
+                            <button class="ctrl-btn" id="play-prev-btn" title="上一首" aria-label="上一首"><svg class="app-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button>
+                            <button class="ctrl-btn master-play-btn-large" id="master-play-btn" title="播放或暂停" aria-label="播放或暂停"><span
+                                    class="play-icon-layer"><svg class="app-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 4 12 8-12 8Z"/></svg></span><span class="pause-icon-layer"><svg class="app-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg></span></button>
+                            <button class="ctrl-btn" id="play-next-btn" title="下一首" aria-label="下一首"><svg class="app-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button>
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <span id="curr-time" class="time-label">00:00</span>
-                            <input type="range" id="seek-slider" class="pure-slider" min="0" max="100" value="0">
+                            <input type="range" id="seek-slider" aria-label="播放进度" class="pure-slider" min="0" max="100" value="0">
                             <span id="total-time" class="time-label">00:00</span>
                         </div>
                     </div>
                 </div>
                 <!-- 右侧：播放列表区域 -->
                 <div class="playlist-container">
-                    <div class="search-box-wrapper">
-                        <input type="text" id="search-input" placeholder="Search music...">
-                        <div class="search-results" id="search-results"></div>
-                    </div>
+
                     <div class="playlist-window">
                         <div class="playlist-slider" id="slider">
                             <!-- Level 0: 分类 -->
@@ -116,8 +110,8 @@
                             <div class="level-view">
                                 <div class="view-header">
                                     <div class="header-left-group">
-                                        <span class="nav-back" id="nav-back-L1-text">← 返回</span>
-                                        <img src="ui/music-home.svg" class="home-icon-svg" id="nav-home-L1">
+                                        <button type="button" class="nav-back" id="nav-back-L1-text">返回</button>
+                                        <button type="button" class="music-home-button" id="nav-home-L1" title="返回分类" aria-label="返回分类"><img src="ui/music-home.svg" class="home-icon-svg" alt=""></button>
                                         <span id="title-level-1" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>
@@ -130,8 +124,8 @@
                             <div class="level-view">
                                 <div class="view-header">
                                     <div class="header-left-group">
-                                        <span class="nav-back" id="nav-back-L2-text">← 返回</span>
-                                        <img src="ui/music-home.svg" class="home-icon-svg" id="nav-home-L2">
+                                        <button type="button" class="nav-back" id="nav-back-L2-text">返回</button>
+                                        <button type="button" class="music-home-button" id="nav-home-L2" title="返回分类" aria-label="返回分类"><img src="ui/music-home.svg" class="home-icon-svg" alt=""></button>
                                         <span id="title-level-2" class="title-level"></span>
                                     </div>
                                     <span class="header-playing-info"></span>

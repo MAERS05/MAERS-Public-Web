@@ -195,7 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 初始化顶栏云同步与 Git 提交按钮
+    // 初始化顶栏云同步与 发布更新按钮
     const { syncManager } = await import('../../data-manage/sync/sync-manager.module.js');
     await syncManager.initPhotosSyncBar(Controller);
 });

@@ -6,9 +6,9 @@
     <script src="custom/config.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAERS Space - About Me</title>
+    <title>关于我 · 我的空间</title>
 
-    <!-- 🚀 Resource Preloading -->
+    <!--  Resource Preloading -->
     <link rel="preload" href="static-style/theme.css" as="style">
     <link rel="preload" href="static-style/components.css" as="style">
 
@@ -18,108 +18,17 @@
     <script type="module" src="data-manage/data-provider.module.js"></script>
     <!-- Layout handled by module -->
     <style>
-        .placeholder-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            color: var(--text-sub);
-            margin-bottom: 100px;
-        }
-
-        .placeholder-text {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--text-main);
-            margin-top: 20px;
-        }
-
-        .contact-form {
-            width: 100%;
-            max-width: 400px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .form-input,
-        .form-textarea {
-            width: 100%;
-            padding: 12px 15px;
-            border-radius: 12px;
-            border: 1px solid rgba(128, 128, 128, 0.2);
-            background: var(--pill-bg);
-            /* Opaque solid */
-            color: var(--text-main);
-            font-family: inherit;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-input:focus,
-        .form-textarea:focus {
-            outline: none;
-            background: var(--pill-hover-bg);
-            /* Opaque solid */
-        }
-
-        .form-textarea {
-            min-height: 120px;
-        }
-
-        .submit-btn {
-            padding: 12px;
-            border-radius: 12px;
-            border: none;
-            background: var(--text-main);
-            color: var(--bg-base);
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .submit-btn:hover {
-            opacity: 0.9;
-        }
-
-        .contact-note {
-            font-size: 0.85rem;
-            color: var(--text-main);
-            margin-top: 15px;
-        }
-
-        /* [Optimal] 消除移动端点击延迟 */
-        a,
-        button,
-        input,
-        textarea,
-        .photo-item,
-        .list-item,
-        .card-icon,
-        .tech-pill {
-            touch-action: manipulation;
-        }
-
-        /* [Custom] Page-specific transparency */
-        .main-card {
-            background-color: rgba(20, 20, 23, 0) !important;
-        }
-
-        html.light-mode .main-card {
-            background-color: rgba(255, 255, 255, 0) !important;
-        }
-        /* [Icon Theme] 昼夜模式图标颜色自适应 */
-        .header-title img {
-            filter: invert(1); /* 默认黑夜模式：反转黑白 */
-            transition: filter 0.3s ease, transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        html.light-mode .header-title img {
-            filter: none; /* 白昼模式：恢复黑色 */
-        }
+        .placeholder-content { width: min(480px, 100%); margin: auto; padding: 40px 0 64px; display: flex; flex-direction: column; align-items: flex-start; color: var(--text-main); }
+        .placeholder-content > img { width: 36px; height: 36px; margin-bottom: 20px; filter: invert(1); }
+        html.light-mode .placeholder-content > img { filter: none; }
+        .placeholder-text { font-size: 24px; font-weight: 600; margin: 0; }
+        .contact-form { display: grid; gap: 14px; width: 100%; margin-top: 26px; }
+        .form-input, .form-textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-soft); color: var(--text-main); font: inherit; }
+        .form-input:focus, .form-textarea:focus { border-color: var(--accent); background: var(--surface); }
+        .form-textarea { min-height: 160px; resize: vertical; }
+        .submit-btn { min-height: 42px; border: 0; border-radius: 9px; background: var(--accent); color: var(--on-accent); font-weight: 500; }
+        .submit-btn:hover { background: var(--accent-strong); }
+        .contact-note { margin-top: 12px; font-size: 13px; color: var(--text-sub); }
     </style>
 </head>
 
@@ -127,19 +36,19 @@
     <div class="container">
         <div class="main-card">
             <div class="placeholder-content">
-                <img src="ui/email.svg" style="width: 64px; height: 64px; margin-bottom: 15px;" alt="Email">
-                <div class="placeholder-text" style="font-size: 1.5rem; margin-top: 0;">Get in Touch</div>
+                <img src="ui/email.svg" alt="邮箱">
+                <div class="placeholder-text">联系我</div>
 
                 <!-- 
-                     🔴 [IMPORTANT] 
+                      [IMPORTANT] 
                      请将 action 中的 "YOUR_FORM_ID" 替换为您在 https://formspree.io/ 注册后获取的 ID。
                      注册非常简单，通常不会被风控拦截。
                 -->
                 <form id="contact-form" class="contact-form" action="" method="POST">
-                    <input type="email" name="email" class="form-input" placeholder="Your Email (for reply)" required>
-                    <textarea name="message" class="form-textarea" placeholder="Say hello... (Min 10 chars)"
+                    <input type="email" name="email" class="form-input" aria-label="你的邮箱" placeholder="你的邮箱，用于回复" required>
+                    <textarea name="message" class="form-textarea" aria-label="留言内容" placeholder="想说些什么？至少填写十个字"
                         minlength="10" required></textarea>
-                    <button type="submit" class="submit-btn" id="form-btn" disabled>Send Message</button>
+                    <button type="submit" class="submit-btn" id="form-btn" disabled>发送留言</button>
                     <p id="form-status" class="contact-note" style="display: none;"></p>
                 </form>
 
@@ -149,7 +58,7 @@
     </div>
     <script type="module">
         import { renderPageHeader } from './shared/simple-main.module.js';
-        renderPageHeader('<img src="ui/index.svg" alt="Index" class="title-icon" style="height: 1.5em; width: auto; vertical-align: middle; margin-right: 8px; position: relative; top: -0.2em;"> About Me', "index.html", "Back");
+        renderPageHeader('<img src="ui/index.svg" alt="" class="title-icon" style="height: 1.5em; width: auto; vertical-align: middle; margin-right: 8px; position: relative; top: -0.2em;"> 关于我', "index.html", "返回");
 
         // [Advanced] AJAX Form Handling
         const form = document.getElementById("contact-form");
@@ -163,7 +72,7 @@
 
             // UI Loading State
             btn.disabled = true;
-            btn.innerText = "Sending...";
+            btn.innerText = "正在发送…";
             status.style.display = "none";
             status.className = "contact-note"; // reset class
 
@@ -178,26 +87,26 @@
 
                 if (response.ok) {
                     // Success
-                    status.innerHTML = "Message Sent Successfully!";
+                    status.innerHTML = "留言已发送";
                     status.style.color = "var(--text-main)";
                     status.style.display = "block";
-                    btn.innerText = "Sent";
+                    btn.innerText = "已发送";
                     form.reset();
                 } else {
                     // Error (Domain block, etc.)
                     const errorData = await response.json();
-                    status.innerHTML = "Failed: " + (errorData.error || "Submission rejected");
-                    status.style.color = "#ff4d4f";
+                    status.innerHTML = "发送失败：" + (errorData.error || "留言未能发送");
+                    status.style.color = "var(--danger)";
                     status.style.display = "block";
-                    btn.innerText = "Try Again";
+                    btn.innerText = "重新发送";
                     btn.disabled = false;
                 }
             } catch (error) {
                 // Network Error
-                status.innerHTML = "Network error. Please try again.";
-                status.style.color = "#ff4d4f";
+                status.innerHTML = "网络暂时不可用，请稍后重试";
+                status.style.color = "var(--danger)";
                 status.style.display = "block";
-                btn.innerText = "Try Again";
+                btn.innerText = "重新发送";
                 btn.disabled = false;
             }
         }

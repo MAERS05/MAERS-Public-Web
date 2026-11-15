@@ -281,7 +281,7 @@ export function applyCmsNodeAction(module, root, action, data) {
         if (locate(root, data.id)) return true;
         const hit = data.parentId && data.parentId !== 'root' ? locate(root, data.parentId) : null;
         const names = hit ? [...hit.parents, hit.node.title, data.title] : ['root', data.title];
-        const safeTitle = names.map(name => name.replace(/[\\/*?:"<>|\x00-\x1f]/g, '').trim().replace(/\.+$/, '') || 'Untitled').join('-');
+        const safeTitle = names.map(name => name.replace(/[\\/*?:"<>|\x00-\x1f]/g, '').trim().replace(/\.+$/, '') || '未命名').join('-');
         const node = {
             id: data.id, type: data.type, title: data.title.trim(), tags: [],
             content: data.type === 'note' ? `markdown/${module}/${safeTitle}.md` : null,

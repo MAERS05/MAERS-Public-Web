@@ -5,6 +5,7 @@
  */
 
 import { Toast } from '../../../shared/toast.module.js';
+import { icon as appIcon } from '../../../shared/icons.module.js';
 
 // Dependency Injection
 let State = null;
@@ -51,8 +52,9 @@ function injectUI() {
             const btn = document.createElement('button');
             btn.className = 'recent-toggle-btn';
             btn.style.cssText = 'background: transparent; border: none; padding: 5px; cursor: pointer; opacity: 0.7; transition: 0.2s; color: var(--text-sub); z-index: 10;';
-            btn.innerHTML = `<img src="ui/cms-history.svg" style="width:24px; height:24px; display:block; color:inherit;">`;
+            btn.innerHTML = appIcon('clock', 19);
             btn.title = '快速访问';
+            btn.setAttribute('aria-label', btn.title);
             (toolsRow || headerRight).appendChild(btn);
         }
     }
@@ -64,8 +66,8 @@ function injectUI() {
             <div id="recent-drawer" class="tag-drawer">
                 <div class="drawer-header">
                     <div style="display:flex; justify-content:space-between; align-items:center; width:100%">
-                        <h3>Quick Access</h3>
-                        <button class="btn-close-drawer btn-close-recent">×</button>
+                        <h3>最近打开</h3>
+                        <button class="btn-close-drawer btn-close-recent" aria-label="关闭最近打开" title="关闭最近打开">${appIcon('close', 18)}</button>
                     </div>
                 </div>
                 <div class="drawer-body" id="recent-drawer-list"></div>
@@ -88,7 +90,7 @@ function setupListeners() {
 
     // Close button listener
     document.addEventListener('click', e => {
-        if (e.target.matches('.btn-close-recent')) {
+        if (e.target.closest('.btn-close-recent')) {
             toggleDrawer();
         }
     });
@@ -221,7 +223,7 @@ function renderList() {
     html += `<div class="drawer-section">
         ${renderHeader('固定访问', 'fixed')}
         <div class="section-content" style="display:${sectionStates.fixed ? 'block' : 'none'}">
-            ${pinned.length > 0 ? renderItems(pinned, true) : '<div style="padding:10px 15px; color:#888; font-style:italic; font-size:0.85em; opacity:0.6;">No pinned items</div>'}
+            ${pinned.length > 0 ? renderItems(pinned, true) : '<div style="padding:10px 15px; color:#888; font-style:italic; font-size:0.85em; opacity:0.6;">还没有置顶内容</div>'}
         </div>
     </div>`;
 
@@ -229,7 +231,7 @@ function renderList() {
     html += `<div class="drawer-section">
         ${renderHeader('最近访问', 'recent')}
         <div class="section-content" style="display:${sectionStates.recent ? 'block' : 'none'}">
-            ${history.length > 0 ? renderItems(history, false) : '<div style="padding:10px 15px; color:#888; font-style:italic; font-size:0.85em; opacity:0.6;">No recent items</div>'}
+            ${history.length > 0 ? renderItems(history, false) : '<div style="padding:10px 15px; color:#888; font-style:italic; font-size:0.85em; opacity:0.6;">还没有打开过内容</div>'}
         </div>
     </div>`;
 
@@ -263,7 +265,7 @@ function renderItems(list, isPinned) {
     return list.map(item => `
         <div class="drawer-item recent-item" data-id="${item.id}" data-type="${item.type}" style="display:flex; justify-content:space-between; align-items:center;">
             <div class="item-info" style="flex:1; display:flex; align-items:center; gap:8px; overflow:hidden;">
-                <span class="item-icon">${item.type === 'folder' ? '📁' : '📄'}</span>
+                <span class="item-icon">${item.type === 'folder' ? '' : ''}</span>
                 <div style="display:flex; flex-direction:column; min-width:0;">
                     <span class="item-name" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(item.title)}</span>
                     <span class="item-time" style="font-size:0.7em;color:var(--text-sub);opacity:0.6;">${new Date(item.timestamp).toLocaleDateString()}</span>
@@ -295,7 +297,7 @@ async function openRecentFile(id) {
             }
         }
     } else {
-        Toast.error('File not found (might be deleted)');
+        Toast.error('内容可能已经移除，请刷新后重试');
         // Remove from history
         let history = getHistory();
         history = history.filter(i => i.id !== id);

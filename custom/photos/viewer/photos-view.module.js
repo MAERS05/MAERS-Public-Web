@@ -1,3 +1,4 @@
+import { icon as appIcon } from '../../../shared/icons.module.js';
 /**
  * MAERS Album View (photos-view.module.js)
  * 职责：图库列表渲染、排序、标签与管理按钮；灯箱通过独立实例调度
@@ -68,9 +69,21 @@ async function loadTitle(category) {
         }
         if (!titleEl || !category) return;
         // 图标沿用配置中的图标标记，标题只按文字展示。
-        titleEl.innerHTML = `${category.icon || ''} ${Utils.escapeHtml(category.title || category.subtitle || '')}`;
-        document.title = `${category.title || category.subtitle || 'Photos'} · MAERS`;
-        window.MAERS?.Theme?.setupZoomTrigger?.(titleEl, 'icon_only', true);
+        const iconValue = String(category.icon || '').trim();
+        const iconSource = iconValue.match(/src=["']([^"']+)["']/)?.[1] || iconValue;
+        const symbol = document.createElement('span');
+        symbol.className = 'page-title-symbol';
+        if (/^ui\/[a-z0-9_-]+\.svg$/i.test(iconSource)) {
+            const image = document.createElement('img');
+            image.src = new URL('../../../' + iconSource, import.meta.url).href;
+            image.alt = '';
+            symbol.append(image);
+        } else symbol.innerHTML = appIcon('photo', 24);
+        const label = document.createElement('span');
+        label.textContent = category.title || category.subtitle || '照片';
+        titleEl.classList.remove('zoom-trigger-icon', 'zoom-trigger-whole');
+        titleEl.replaceChildren(symbol, label);
+        document.title = `${category.title || category.subtitle || '照片'} · 我的空间`;
     } catch (err) {
         console.error('[MAERS Photos] 相册标题加载失败', err);
     }
@@ -272,7 +285,7 @@ function createTag(tag, activeFilters) {
     chip.className = 'photo-tag-chip';
     chip.textContent = tag;
     if (!AdminCore?.Tags?.filterByTag) return chip;
-    chip.title = 'Click to filter';
+    chip.title = '筛选这个标签';
     chip.style.cursor = 'pointer';
     chip.classList.toggle('active', Boolean(activeFilters?.has(tag)));
     chip.onclick = event => {

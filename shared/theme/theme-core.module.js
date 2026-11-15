@@ -51,8 +51,8 @@ function safeLoadConfig() {
 }
 
 const THEME_TRANSITION_MS = 500;
-const THEME_COLOR_DARK = '#0a0a0c';
-const THEME_COLOR_LIGHT = '#ffffff';
+const THEME_COLOR_DARK = '#171d19';
+const THEME_COLOR_LIGHT = '#f4f6f3';
 let themeTransitionTimer = null;
 let themeViewTransition = null;
 let themeRequestId = 0;

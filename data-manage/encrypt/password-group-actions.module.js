@@ -53,7 +53,7 @@ export async function createPasswordGroup() {
     const created = await form({
         title: '新建密码组',
         sub: '主密码也能解锁此组，组密码仅解锁此组内容',
-        confirmText: '创建',
+        confirmText: '创建密码组',
         fields: [
             { name: 'name', placeholder: '密码组名称（最多 64 字）' },
             { name: 'pwd', type: 'password', placeholder: '密码（至少 8 位）', autocomplete: 'new-password' },
@@ -107,7 +107,7 @@ export async function editName(id) {
     return form({
         title: '重命名密码组',
         sub: '组名改变不影响密码和关联内容',
-        confirmText: '保存',
+        confirmText: '保存修改',
         fields: [{ name: 'name', placeholder: '组名', value: group.name || '默认组' }],
         submit: async ({ name }) => {
             name = name.trim();
@@ -131,7 +131,7 @@ export async function editPassword(id) {
     return form({
         title: '重设密码组密码',
         sub: '本地直接重设，无需旧密码；关联内容和组名保持不变',
-        confirmText: '保存',
+        confirmText: '保存修改',
         fields: [
             { name: 'pwd', type: 'password', placeholder: '新密码（至少 8 位）', autocomplete: 'new-password' },
             { name: 'again', type: 'password', placeholder: '再次输入新密码', autocomplete: 'new-password' }
@@ -154,7 +154,7 @@ export async function deletePasswordGroup(id) {
     const accepted = await form({
         title: '删除空密码组',
         sub: '确认删除此密码组？有关联内容的组不能删除',
-        confirmText: '删除',
+        confirmText: '删除密码组', cancelText: '不删了',
         submit: async () => true
     });
     if (!accepted) return false;

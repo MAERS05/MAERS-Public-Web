@@ -510,10 +510,11 @@ namespace MAERSLauncher
                 if (normalized.EndsWith(suffix, StringComparison.OrdinalIgnoreCase)) return false;
             }}
             int port = DefaultPort > 0 ? DefaultPort : 8000;
-            string expectedBadge = "[Local:" + port + "]";
+            string expectedBadge = "[本机:" + port + "]";
             if (normalized.EndsWith(expectedBadge, StringComparison.OrdinalIgnoreCase))
             {{
                 return hasStandaloneAppId ||
+                    normalized.EndsWith(" · 我的空间 " + expectedBadge, StringComparison.Ordinal) ||
                     normalized.StartsWith("MAERS Admin", StringComparison.OrdinalIgnoreCase) ||
                     normalized.StartsWith("MAERS Public Web", StringComparison.OrdinalIgnoreCase) ||
                     normalized.StartsWith("404 ", StringComparison.OrdinalIgnoreCase);

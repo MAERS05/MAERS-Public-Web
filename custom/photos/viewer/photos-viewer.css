@@ -1,4 +1,3 @@
-@import "../../zmobile adaptation/mobile-photos.css";
 
 /* Photos Viewer Styles - Photo Grid & Lightbox */
 
@@ -89,7 +88,7 @@
 }
 
 .photo-item:hover {
-    transform: scale(1.05) translateY(-8px);
+    transform: none;
     box-shadow: none;
     z-index: 50;
 }
@@ -110,7 +109,7 @@
     opacity: 1;
 }
 
-.maers-photoswipe { --pswp-icon-color: #fff; z-index: 10010; }
+.maers-photoswipe { --pswp-icon-color: var(--text-main); z-index: 10010; }
 .maers-photoswipe .pswp__top-bar { height: 48px; padding: 4px 12px; background: transparent; }
 .maers-photoswipe .pswp__button--close { width: 36px; height: 40px; margin-right: 4px; }
 .maers-photoswipe .pswp__button--close .pswp__icn { width: 22px; height: 22px; top: 9px; left: 7px; }
@@ -175,7 +174,7 @@ body.is-photo-viewing .auto-mode-btn { visibility: hidden; pointer-events: none 
     border: 1px solid rgba(255, 255, 255, 0.55);
     border-radius: 5px;
     background: rgba(35, 35, 35, 0.9);
-    color: #fff;
+    color: var(--text-main);
     font-size: 12px;
     font-weight: 700;
     white-space: nowrap;
@@ -183,7 +182,7 @@ body.is-photo-viewing .auto-mode-btn { visibility: hidden; pointer-events: none 
 .maers-photoswipe .pswp__button--quality:hover { background: #444; }
 .maers-photoswipe .pswp__button--quality:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 .maers-photoswipe .pswp__button--quality:active { transform: scale(0.95); }
-.maers-photoswipe .pswp__button--quality[aria-pressed="true"] { color: var(--accent-color, #78ffd6); border-color: currentColor; }
+.maers-photoswipe .pswp__button--quality[aria-pressed="true"] { color: var(--accent); border-color: currentColor; }
 .maers-photoswipe .pswp__button--quality[aria-busy="true"] { opacity: 0.65; cursor: progress; }
 .maers-photoswipe .pswp__button--quality[data-load-state="error"] { border-style: dashed; }
 
@@ -204,8 +203,8 @@ body.is-photo-viewing .auto-mode-btn { visibility: hidden; pointer-events: none 
     bottom: 0;
     left: 0;
     width: 100%;
-    padding: 30px 10px 10px;
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 100%);
+    padding: 10px;
+    background: transparent;
     display: flex;
     flex-wrap: wrap;
     gap: 5px;
@@ -221,19 +220,18 @@ body.is-photo-viewing .auto-mode-btn { visibility: hidden; pointer-events: none 
     pointer-events: auto;
 }
 
-.photo-item:hover .photo-tags {
+.photo-item:is(:hover, :focus-within) .photo-tags {
     transform: translateY(0);
     opacity: 1;
 }
 
 .photo-tag-chip {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(4px);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: rgba(255, 255, 255, 0.9);
+    background: #173522e6;
+    border: 1px solid #c2d8b34d;
+    color: #f1f7ee;
     font-size: 11px;
     padding: 3px 8px;
-    border-radius: 10px;
+    border-radius: 6px;
     white-space: nowrap;
     font-weight: 500;
     cursor: context-menu;
@@ -241,12 +239,10 @@ body.is-photo-viewing .auto-mode-btn { visibility: hidden; pointer-events: none 
 }
 
 .photo-tag-chip.active {
-    background: #78ffd6;
-    color: #000;
+    background: var(--accent);
+    color: var(--on-accent);
     box-shadow: none;
-    /* Space uses scale(1.1), but we add pointer-events */
-    transform: scale(1.05);
-    /* slightly less than Space to potentially avoid overlap */
+    transform: none;
     border-color: transparent;
     pointer-events: auto;
 }
@@ -256,8 +252,8 @@ body.is-photo-viewing .auto-mode-btn { visibility: hidden; pointer-events: none 
 
 
 .photo-tag-chip:not(.active):hover {
-    background: rgba(255, 255, 255, 0.3);
-    border-color: rgba(255, 255, 255, 0.5);
+    background: #284c32;
+    border-color: #bed8c280;
 }
 
 /* Tag Filter Bar Styles Removed */

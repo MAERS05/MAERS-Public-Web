@@ -3,6 +3,8 @@
  * 合并：按时间顺序执行，失败时选择跳过、原地重试或关闭；只确认实际成功项。
  * 回放：页面刷新后把尚未合并的草稿叠加到内存状态，保持界面与队列一致。
  */
+import { confirmAction } from "../admin/admin-confirm.module.js";
+
 import { localFetch } from '../api-client.module.js';
 import { Toast } from '../../shared/toast.module.js';
 import { operationFetch } from '../operation-progress.module.js';
@@ -94,7 +96,7 @@ async function applyRelayItem(item, source, secret, checkedDocs, confirmOverwrit
  * @returns {Promise<boolean>} 全部草稿均已执行且确认时为 true
  */
 export async function mergeRelayQueue(manager, driver, {
-    confirmOverwrite = message => window.confirm(message),
+    confirmOverwrite = message => confirmAction({ confirmText: "用云端内容覆盖", cancelText: "保留本机内容", description: message, danger: true }),
     chooseFailure = (message, overwriteRevision, hasItem = false) => AdminModal.choose({ title: '拉取失败，请选择处理方式', message,
         primary: { text: '从失败项开始重新拉取', value: 'retry' },
         secondary: { text: '跳过失败项继续拉取', value: 'skip' },

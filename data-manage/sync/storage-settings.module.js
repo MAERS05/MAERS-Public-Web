@@ -1,4 +1,6 @@
 /** 本机存储设置：卡片入口 + 子弹窗编辑桶组、发布地址，并按项复制同步 Worker 的配置。 */
+import { confirmAction } from "../admin/admin-confirm.module.js";
+
 import { localFetch } from '../api-client.module.js';
 import { openFormModal } from '../encrypt/lock-dialog.module.js';
 import { Toast } from '../../shared/toast.module.js';
@@ -63,10 +65,10 @@ function bucketFields(scope) {
             <label class="sync-field storage-fields__wide"><span class="sync-field__label">S3 端点</span>
                 <input class="mlock-input" data-name="endpoint_url" type="url" placeholder="https://" spellcheck="false" autocomplete="off">
             </label>
-            <label class="sync-field"><span class="sync-field__label">Access Key ID</span>
+            <label class="sync-field"><span class="sync-field__label">访问标识</span>
                 <input class="mlock-input" data-name="access_key_id" autocomplete="off" spellcheck="false">
             </label>
-            <label class="sync-field"><span class="sync-field__label">Secret Access Key</span>
+            <label class="sync-field"><span class="sync-field__label">访问密钥</span>
                 <input class="mlock-input" data-name="secret_access_key" type="password" autocomplete="new-password">
             </label>
         </div>`;
@@ -81,7 +83,7 @@ const SETTINGS_FORM = `
                 <label class="sync-field"><span class="sync-field__label">桶组</span>
                     <select class="mlock-input storage-bucket-select" data-group></select>
                 </label>
-                <button type="button" class="mlock-btn-secondary" data-add-group>＋ 新增桶组</button>
+                <button type="button" class="mlock-btn-secondary" data-add-group>新增桶组</button>
                 <button type="button" class="mlock-btn-secondary" data-rename-group>重命名</button>
                 <button type="button" class="mlock-btn-secondary" data-delete-group>删除</button>
             </div>
@@ -323,8 +325,8 @@ export async function openStorageSettings() {
         }
     }
 
-    function changeGroup(id) {
-        if (dirty && !confirm('放弃当前未保存的改动并切换桶组？')) {
+    async function changeGroup(id) {
+        if (dirty && !await confirmAction({ confirmText: "放弃修改并切换", cancelText: "继续编辑" })) {
             selector.value = selected;
             return;
         }

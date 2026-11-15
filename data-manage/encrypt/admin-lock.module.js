@@ -8,6 +8,10 @@
  * - unlockRecord(encRecord) → 解密记录，返回原始对象 | null
  * - openFormModal / showRecoveryCodeModal / validateNewPassword → 供加密设置面板复用
  */
+import { icon as appIcon } from '../../shared/icons.module.js';
+
+import { confirmAction } from "../admin/admin-confirm.module.js";
+
 import { localFetch } from '../api-client.module.js';
 import { disableAdminControl, isLocalOnlyUnavailable } from '../admin/local-only.module.js';
 
@@ -42,6 +46,10 @@ import { cmsMediaReferences } from './private-media.module.js';
  */
 export function setupLockActionButton(btn, { isLocked = false, title = '', onClick = null } = {}) {
     if (!btn) return;
+    if (btn.tagName !== 'BUTTON') {
+        btn.setAttribute('role', 'button'); btn.tabIndex = 0;
+        btn.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); btn.click(); } };
+    }
     btn.innerHTML = cryptoIconHtml(isLocked ? 'decryption' : 'encryption');
     if (canWriteKeyring()) {
         if (isLocked || title) btn.title = isLocked ? PROTECTION_ACTION_TITLE : title;
@@ -49,6 +57,7 @@ export function setupLockActionButton(btn, { isLocked = false, title = '', onCli
     } else {
         disableAdminControl(btn, '加密功能仅限电脑本地后台');
     }
+    btn.setAttribute('aria-label', btn.title || '加密设置');
 }
 
 /**
@@ -89,7 +98,7 @@ export async function unlockRecord(encRecord) {
 
     const result = await unwrapRecord(encRecord, key);
     if (!result) {
-        Toast.error('❌ 解密失败：数据损坏，或不是用当前密钥加密的');
+        Toast.error(' 解密失败：数据损坏，或不是用当前密钥加密的');
     }
     return result;
 }
@@ -212,6 +221,7 @@ export function refreshUnlockAllButton() {
     toggle.title = _unlockAllExpanded ? '收起取消加密操作' : '展开取消加密操作';
     toggle.setAttribute('aria-label', toggle.title);
     toggle.setAttribute('aria-expanded', String(_unlockAllExpanded));
+    toggle.innerHTML = appIcon('lock', 18);
 
     if (!panel) {
         panel = document.createElement('div');
@@ -239,7 +249,7 @@ export function refreshUnlockAllButton() {
 async function _runUnlockAll() {
     if (_unlockAllBusy || !_unlockAllHandlers) return;
     const total = _unlockAllHandlers.getCount();
-    if (!confirm(`确定取消当前模块全部 ${total} 项记录的加密吗？\n\n这会将记录转回明文，用于恢复公开；不是临时查看。`)) return;
+    if (!await confirmAction({ confirmText: "全部恢复公开", cancelText: "保持私密", description: "当前模块的全部加密内容都会恢复公开。" })) return;
 
     _unlockAllBusy = true;
     refreshUnlockAllButton();
@@ -362,10 +372,12 @@ export function renderLockedCard(opts = {}) {
             });
         }
         if (onDelete) {
-            const delBtn = document.createElement('span');
+            const delBtn = document.createElement('button');
+        delBtn.type = 'button';
             delBtn.className = 'maers-admin-btn locked-card__delete';
             delBtn.title = '删除此加密内容';
-            delBtn.textContent = '✕';
+            delBtn.innerHTML = appIcon('trash', 16);
+        delBtn.setAttribute('aria-label', delBtn.title);
             delBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 onDelete(e);
@@ -381,8 +393,8 @@ export function renderLockedCard(opts = {}) {
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         gap: 8px; cursor: pointer;
-        border: 1.5px dashed rgba(100, 150, 255, 0.35);
-        background: rgba(100, 150, 255, 0.04);
+        border: 1px dashed var(--border);
+        background: var(--surface-soft);
     `;
     el.innerHTML = `
         <div style="font-size:2rem; opacity:0.6;">${cryptoIconHtml('encryption', 32)}</div>
@@ -397,10 +409,12 @@ export function renderLockedCard(opts = {}) {
         const delContainer = document.createElement('div');
         delContainer.className = 'maers-admin-action-group nav-card-actions';
         delContainer.style.cssText = 'position:absolute; top:8px; right:8px;';
-        const delBtn = document.createElement('span');
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
         delBtn.className = 'maers-admin-btn';
         delBtn.title = '删除此加密记录';
-        delBtn.textContent = '✕';
+        delBtn.innerHTML = appIcon('trash', 16);
+        delBtn.setAttribute('aria-label', delBtn.title);
         delBtn.onclick = (e) => { e.stopPropagation(); onDelete(e); };
         delContainer.appendChild(delBtn);
         el.appendChild(delContainer);

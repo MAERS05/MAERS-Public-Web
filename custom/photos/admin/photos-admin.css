@@ -13,7 +13,7 @@
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.3);
-    color: rgba(255, 255, 255, 0.9);
+    color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -24,7 +24,7 @@
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.photo-item:hover .delete-btn {
+.photo-item:is(:hover,:focus-within) .delete-btn {
     opacity: 1;
     transform: scale(1);
 }
@@ -32,8 +32,8 @@
 .delete-btn:hover {
     background: rgba(255, 59, 48, 1);
     border-color: rgba(255, 59, 48, 1);
-    color: white;
-    transform: scale(1.15) rotate(5deg);
+    color: var(--text-main);
+    transform: none;
     box-shadow: none;
 }
 
@@ -61,16 +61,16 @@
     transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.photo-item:hover .move-btn {
+.photo-item:is(:hover,:focus-within) .move-btn {
     opacity: 1;
     transform: scale(1);
 }
 
 .move-btn:hover {
-    background: #78ffd6 !important;
-    color: #000 !important;
-    border-color: #78ffd6 !important;
-    transform: scale(1.1) !important;
+    background: var(--accent) !important;
+    color: var(--on-accent) !important;
+    border-color: var(--accent) !important;
+    transform: none !important;
 }
 
 /* ==========================================================================
@@ -80,7 +80,7 @@
 .photo-item.pending-delete {
     opacity: 0.4;
     filter: grayscale(100%);
-    border: 2px dashed #ff4757;
+    border: 2px dashed var(--danger);
     cursor: pointer;
 }
 
@@ -90,9 +90,9 @@
 }
 
 .photo-item.pending-delete .delete-btn {
-    background-color: #2ed573 !important;
-    border-color: #2ed573 !important;
-    transform: rotate(45deg);
+    background-color: var(--accent) !important;
+    border-color: var(--accent) !important;
+    transform: none;
     z-index: 10;
     opacity: 1 !important;
 }
@@ -103,8 +103,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #ff4757;
-    color: white;
+    background: var(--danger);
+    color: var(--text-main);
     padding: 2px 8px;
     font-size: 12px;
     border-radius: 4px;
@@ -115,17 +115,17 @@
    ========================================================================== */
 
 .photo-item.is-picked {
-    border: 2px solid #78ffd6 !important;
+    border: 2px solid var(--accent) !important;
     box-shadow: none !important;
-    transform: scale(0.96);
+    transform: none;
     z-index: 100;
 }
 
 .photo-item.is-picked .move-btn {
     opacity: 1 !important;
-    transform: scale(1.1) !important;
-    background: #78ffd6 !important;
-    color: #000 !important;
+    transform: none !important;
+    background: var(--accent) !important;
+    color: var(--on-accent) !important;
     box-shadow: none;
 }
 
@@ -134,8 +134,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: #78ffd6;
-    color: #000;
+    background: var(--accent);
+    color: var(--on-accent);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -152,28 +152,11 @@
    Save Button Animation
    ========================================================================== */
 
-@keyframes save-glow {
-    0% {
-        box-shadow: none;
-        border-color: rgba(120, 255, 214, 0.3);
-    }
-
-    50% {
-        box-shadow: none;
-        border-color: rgba(120, 255, 214, 1);
-        transform: scale(1.05);
-    }
-
-    100% {
-        box-shadow: none;
-        border-color: rgba(120, 255, 214, 0.3);
-    }
-}
 
 #save-order-btn.has-changes {
     background: rgba(120, 255, 214, 0.15) !important;
-    color: #78ffd6 !important;
-    animation: save-glow 2s infinite ease-in-out;
+    color: var(--accent) !important;
+    animation: none;
     cursor: pointer !important;
     opacity: 1 !important;
     display: flex !important;

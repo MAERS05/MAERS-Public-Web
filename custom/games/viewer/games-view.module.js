@@ -11,7 +11,7 @@ import { createGridItem } from '../../cms/viewer/render/cms-render-grid.module.j
 import { DataProvider } from '../../../data-manage/data-provider.module.js';
 
 const MODES = { PLAYING: 'playing', PLAYED: 'played' };
-const LABELS = { playing: 'Playing', played: 'Played' };
+const LABELS = { playing: '在玩', played: '玩过' };
 
 // 十帧按快、中、慢三段播放，总时长一秒。
 const ANIM_FRAME_COUNT = 10;
@@ -74,7 +74,8 @@ export const GamesView = {
         const titleEl = document.querySelector('.header-title');
         if (!titleEl || titleEl.querySelector('.games-mode-btn')) return;
 
-        const btn = document.createElement('span');
+        const btn = document.createElement('button');
+        btn.type = 'button';
         btn.className = 'games-mode-btn';
         btn.textContent = LABELS[this.currentMode];
         btn.title = '点击切换视图';
@@ -103,9 +104,9 @@ export const GamesView = {
         container.innerHTML = `
             <div class="playing-sandbox">
                 <div class="playing-card-group">
-                    <div class="playing-label">今日玩:</div>
+                    <div class="playing-label">今天玩什么</div>
                     <div class="folder-grid playing-grid" id="playing-card-wrapper"></div>
-                    <button id="btn-draw-game" class="btn-draw-game">抽一下</button>
+                    <button id="btn-draw-game" class="btn-draw-game">帮我选一个</button>
                 </div>
             </div>
         `;

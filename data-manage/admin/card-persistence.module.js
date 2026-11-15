@@ -1,4 +1,6 @@
 /** 首页与门户卡片持久化：页面创建、列表保存及保存后的关联页面删除。 */
+import { requestText } from "./admin-confirm.module.js";
+
 import { localFetch } from '../api-client.module.js';
 import { Feedback } from './admin-base.module.js';
 
@@ -58,11 +60,14 @@ export function refreshSavedCards(refresh, notifySuccess) {
     notifySuccess();
 }
 
-function confirmPageDeletions(items, label) {
+async function confirmPageDeletions(items, label) {
     const confirmed = [];
     for (const item of items) {
         if (!isLocalPage(item.url)) continue;
-        const name = prompt(`⚠️ 危险操作：是否一并删除物理文件？\n\n您删除了${label} "${item.title}"。\n若要同时彻底删除服务器上的文件 "${item.url}"，请在下方输入文件名确认：\n\n(否则请直接点击“取消”或关闭窗口)`, '');
+        const name = await requestText({
+            title: '同时删除页面文件：' + item.url,
+            value: '', confirmText: '删除页面文件', cancelText: '只移除入口'
+        });
         if (name === item.url) confirmed.push(item.url);
         else if (name !== null) Feedback.notifyError('文件名不匹配，文件未删除。');
     }

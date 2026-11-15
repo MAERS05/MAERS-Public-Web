@@ -7,6 +7,10 @@
  * 4. 通过显式状态和回调接入 cms-reader-editor 的编辑、保存与上传能力
  * @version 4.0.0 - Unified Pure Reader Architecture
  */
+import { icon as appIcon } from '../../../shared/icons.module.js';
+
+import { confirmAction } from "../../../data-manage/admin/admin-confirm.module.js";
+
 
 import { sha256Hex } from '../../../data-manage/encrypt/crypto.module.js';
 import { localFetch } from '../../../data-manage/api-client.module.js';
@@ -93,7 +97,8 @@ function _interceptMdLinks(container) {
         if (!target && !isMarkdown) return;
         event.preventDefault(); event.stopImmediatePropagation();
         if (!target) { _notify('未找到唯一的目标笔记，请检查链接路径', 'error'); return; }
-        if (window.IS_ADMIN && readerState.dirty && confirm('有未保存的源码更改，是否先保存再跳转？')) {
+        if (window.IS_ADMIN && readerState.dirty) {
+            if (!await confirmAction({ confirmText: "保存并前往", cancelText: "留在这里" })) return;
             const result = await save();
             if (!result?.success) return;
         }
@@ -138,7 +143,7 @@ export async function open(node) {
         node._sourceRevision = revision;
         node._loadFailed = false;
     } else if (node._mdPath) {
-        layer.innerHTML = '<div class="reader-loading">⏳ 正在加载文档...</div>';
+        layer.innerHTML = '<div class="reader-loading">正在加载文档…</div>';
         layer.classList.add('active'); document.body.style.overflow = 'hidden';
         try {
             let path;
@@ -208,7 +213,7 @@ export function close() {
 // ─── 阅读器骨架 ───
 function _renderUnifiedReader(layer, node) {
     const isAdmin = Boolean(window.IS_ADMIN);
-    const safeTitle = _escapeHtml(node.title || 'Untitled');
+    const safeTitle = _escapeHtml(node.title || '未命名');
     const rawMd = node._loadFailed ? '> [!WARNING]\n> 文档加载失败，请重新打开；正文保存已禁用。' : (node._rawMd ?? node.content ?? '');
 
     layer.className = isAdmin
@@ -219,16 +224,16 @@ function _renderUnifiedReader(layer, node) {
     layer.addEventListener('click', (e) => e.stopPropagation());
 
     const metaLeftHtml = isAdmin
-        ? `<button class="outline-btn" title="切换目录大纲">☰</button>
+        ? `<button class="outline-btn" title="切换目录大纲" aria-label="切换目录">${appIcon("book", 18)}</button>
            <input type="text" value="${safeTitle}" id="edit-title-input" class="reader-title-input" placeholder="输入笔记标题..." title="修改标题后按回车或点击保存生效">`
-        : `<button class="outline-btn" title="切换目录大纲">☰</button>
+        : `<button class="outline-btn" title="切换目录大纲" aria-label="切换目录">${appIcon("book", 18)}</button>
            <span class="reader-title">${safeTitle}</span>`;
 
     const actionsRightHtml = isAdmin
         ? `${node._mdPath || node._private ? `<button type="button" class="reader-admin-btn" id="btn-open-external" title="${node._private ? '在浏览器内编辑私密正文' : '使用系统默认软件（如 Typora / Obsidian）直接打开原文件'}"><span class="btn-label">外部编辑</span></button>` : ''}
            <button type="button" class="reader-admin-btn" id="btn-toggle-source" title="展开/收起 Markdown 源码抽屉"><span class="btn-label">内部编辑</span></button>
-           <button type="button" class="close-btn" title="关闭阅读器">✕</button>`
-        : `<button type="button" class="close-btn" title="关闭阅读器">✕</button>`;
+           <button type="button" class="close-btn" title="关闭阅读器" aria-label="返回列表">${appIcon("back", 18)}</button>`
+        : `<button type="button" class="close-btn" title="关闭阅读器" aria-label="返回列表">${appIcon("back", 18)}</button>`;
 
     const sourceDrawerHtml = isAdmin
         ? `<aside class="cms-source-drawer collapsed" id="cms-source-drawer">
@@ -238,7 +243,7 @@ function _renderUnifiedReader(layer, node) {
                        <button type="button" class="reader-admin-btn" id="btn-upload-md-img" title="上传图片并在光标处插入相对路径">上传图片</button>
                        <input type="file" id="cms-md-img-input" accept="image/*" multiple style="display:none">
                        <button type="button" class="reader-admin-btn primary editor-save-btn" id="btn-save-source">保存更改</button>
-                       <button type="button" class="cms-source-close-btn" id="btn-close-source" title="收起源码抽屉">✕</button>
+                       <button type="button" class="cms-source-close-btn" id="btn-close-source" title="收起源码抽屉" aria-label="收起源码">${appIcon("close", 18)}</button>
                    </div>
                </div>
                <div id="cms-source-editor" class="cms-source-editor"></div>
@@ -258,7 +263,7 @@ function _renderUnifiedReader(layer, node) {
             <div class="reader-outline-panel collapsed" id="reader-outline"></div>
             <div class="reader-scroll-area">
                 <div class="markdown-body paper-sheet" id="reader-content">
-                    <div style="display:flex;justify-content:center;align-items:center;height:100%;color:var(--text-main);font-size:1.5rem;">加载中...</div>
+                    <div class="reader-loading" role="status">正在排版…</div>
                 </div>
                 <section class="cms-backlinks paper-sheet" id="reader-backlinks" aria-label="反向引用"></section>
             </div>
@@ -346,7 +351,8 @@ function _renderMarkdownBody(contentDiv, rawMd, node, preserveScrollTop = null) 
                         getNotes: () => Controller?.AppState?.allNodes || [],
                         preprocess: preprocessMarkdown,
                         navigate: async item => {
-                            if (readerState.dirty && confirm('有未保存的源码更改，是否先保存再跳转？\n确定：保存后跳转；取消：丢弃更改并跳转。')) {
+                            if (readerState.dirty) {
+            if (!await confirmAction({ confirmText: "保存并前往", cancelText: "留在这里" })) return;
                                 const result = await save();
                                 if (!result?.success) return;
                             }

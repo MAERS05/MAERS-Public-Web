@@ -167,7 +167,7 @@ export class SyncManager {
             Toast.warning('草稿已暂存，请手动刷新页面');
             return { success: true };
         }
-        Toast.success('⚡ 已存入云端暂存队列 (待电脑端合并)');
+        Toast.success(' 已存入云端暂存队列 (待电脑端合并)');
         return { success: true };
     }
 
@@ -494,15 +494,15 @@ export class SyncManager {
     }
 
     /**
-     * 打开 Git 一键提交面板
+     * 打开 发布更新面板
      */
     async openGitCommitModal() {
         try {
             const { gitCommitManager } = await import('./git-commit.module.js');
             await gitCommitManager.openCommitModal({ syncManager: this });
         } catch (error) {
-            console.error('[MAERS.Sync] 加载 Git 面板失败:', error);
-            Toast.error('Git 面板加载失败，请重试');
+            console.error('[MAERS.Sync] 加载 发布面板失败:', error);
+            Toast.error('发布面板加载失败，请重试');
         }
     }
 

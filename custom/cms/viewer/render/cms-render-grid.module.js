@@ -3,6 +3,8 @@
  * @description CMS 网格渲染 - 卡片生成与分片渲染优化
  * @version 1.0.0 - ES6 Module
  */
+import { icon as appIcon } from '../../../../shared/icons.module.js';
+
 import { localFetch } from '../../../../data-manage/api-client.module.js';
 import { DataProvider, publicMediaUrl } from '../../../../data-manage/data-provider.module.js';
 
@@ -92,27 +94,31 @@ function createAdminActions(node, state, manager, index) {
     wrapper.className = 'maers-admin-action-group';
     wrapper.style.cssText = "position: absolute; top: 5px; right: 5px; z-index: 10; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; max-width: 140px;";
 
-    const createBtn = (icon, title, onClick) => {
-        const btn = document.createElement('span');
-        btn.className = 'maers-admin-btn';
-        btn.title = title;
-        if (icon === 'remove-cover') btn.innerHTML = `<img class="maers-admin-icon--remove-cover" src="${REMOVE_COVER_ICON}" width="18" height="18" alt="" aria-hidden="true">`;
-        else if (icon === '✎') btn.innerHTML = '<span class="maers-admin-edit-icon">✎</span>';
-        else btn.textContent = icon;
-        btn.addEventListener('click', onClick);
-        return btn;
+    const createBtn = (symbol, title, onClick) => {
+        const button = document.createElement('button');
+        const names = { Select: ['选择并调整顺序', 'more'], Rename: ['重命名', 'edit'],
+            'Delete/Undo': [isDeleted ? '恢复' : '删除', isDeleted ? 'refresh' : 'trash'],
+            'Upload Cover': ['设置封面', 'photo'], 'Remove Cover': ['移除封面', 'trash'] };
+        const [label, name] = names[title] || [title, 'tag'];
+        button.type = 'button';
+        button.className = 'maers-admin-btn';
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        button.innerHTML = appIcon(name, 17);
+        button.addEventListener('click', onClick);
+        return button;
     };
 
     // 筛选结果不提供排序入口
     if (!filtering) {
         wrapper.appendChild(createBtn('≡', 'Select', (e) => Admin.uiPickNode(e, node.id)));
     }
-    wrapper.appendChild(createBtn('✎', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
+    wrapper.appendChild(createBtn('', 'Rename', (e) => Admin.uiRenameNode(e, node.id, node.title)));
 
-    wrapper.appendChild(createBtn('＋', 'Add Tag', (e) => Admin.uiAddTag(e, node.id)));
+    wrapper.appendChild(createBtn('＋', '添加标签', (e) => Admin.uiAddTag(e, node.id)));
 
     // 普通列表和筛选列表都允许删除与撤销
-    const delIcon = isDeleted ? '↺' : '✕';
+    const delIcon = isDeleted ? '↺' : '';
     const delBtn = createBtn(delIcon, 'Delete/Undo', (e) => Admin.uiDeleteNode(e, node.id));
     if (isDeleted) delBtn.classList.add('btn-delete-active');
     if (isLocalOnlyUnavailable() && hasProtectedCmsContent(node, state.AppState.lockedNodes)) {
@@ -121,7 +127,7 @@ function createAdminActions(node, state, manager, index) {
     wrapper.appendChild(delBtn);
     if (isLitModule) {
         if (!node.coverImage) {
-            wrapper.appendChild(createBtn('🖼️', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
+            wrapper.appendChild(createBtn('', 'Upload Cover', (e) => Admin.uiUploadCover(e, node.id)));
         } else {
             wrapper.appendChild(createBtn('remove-cover', 'Remove Cover', (e) => Admin.uiRemoveCover(e, node.id)));
         }
@@ -239,11 +245,22 @@ function createTags(node, state) {
 
 export function createGridItem(node, state, index) {
     const el = document.createElement('div');
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.addEventListener('keydown', event => {
+        if (event.target === el && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); el.click(); }
+    });
     const manager = updateItemState(el, node, state, index);
     if (state.IS_ADMIN && Admin) Drag?.setupItemDrag?.(el, node);
     const actions = createAdminActions(node, state, manager, index);
     if (actions) el.appendChild(actions);
     if (COVER_MODULES.includes(Controller?.CONFIG?.CURRENT_MODULE)) el.appendChild(createCover(node));
+    else {
+        const symbol = document.createElement('span');
+        symbol.className = 'item-icon';
+        symbol.innerHTML = appIcon(node.type === 'folder' ? 'folder' : 'note', 24);
+        el.append(symbol);
+    }
     const title = document.createElement('div');
     title.className = 'item-title';
     title.textContent = node.title;
@@ -325,7 +342,7 @@ export function renderGrid(list, isSearch = false, shouldResetManager = false, s
     }
 
     if (!list || list.length === 0) {
-        container.innerHTML = `<div class="empty-tip">${State.IS_ADMIN ? '<button class="tag-toggle-btn" data-action="create-note">+ Create Note</button>' : "Empty."}</div>`;
+        container.innerHTML = `<div class="empty-tip">${State.IS_ADMIN ? '<button class="tag-toggle-btn" data-action="create-note">新建笔记</button>' : "这里还没有公开内容。"}</div>`;
         if (State.IS_ADMIN && Admin && !skipSync) {
             Admin.syncManagerList?.([], true);
         }

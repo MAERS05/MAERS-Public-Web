@@ -55,7 +55,7 @@ export function createReaderEditor({ state: readerState, getController, renderMa
         const button = document.querySelector('.editor-save-btn');
         const title = document.getElementById('edit-title-input');
         const textarea = readerState.sourceEditor;
-        const name = (title?.value || node?.title || 'Untitled').trim() || 'Untitled';
+        const name = (title?.value || node?.title || '未命名').trim() || '未命名';
         const text = customContent !== undefined ? String(customContent) : (textarea?.value ?? node?._rawMd ?? '');
         if (node?._loadFailed && !options.titleOnly) {
             _notify('正文尚未成功读取，请重新打开后再保存；原文未改动', 'error');

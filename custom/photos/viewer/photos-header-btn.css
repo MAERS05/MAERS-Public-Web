@@ -121,7 +121,7 @@ html.light-mode .sort-dropdown-menu {
 
 /* Light Mode Item Text */
 html.light-mode .sort-item {
-    color: #333;
+    color: var(--text-main);
     /* Force dark text if var fails */
 }
 
@@ -141,7 +141,7 @@ html.light-mode .sort-item {
 html.light-mode .sort-item.active {
     background: rgba(0, 0, 0, 0.08);
     /* Darker gray background */
-    color: #000;
+    color: var(--text-main);
 }
 
 /* Dark mode specific adjustments */
@@ -163,7 +163,7 @@ html:not(.light-mode) .sort-item:hover {
 
 html:not(.light-mode) .sort-item.active {
     background: rgba(255, 255, 255, 0.15);
-    color: #fff;
+    color: var(--text-main);
 }
 
 @keyframes fadeInMenu {
@@ -177,3 +177,4 @@ html:not(.light-mode) .sort-item.active {
         transform: translateY(0);
     }
 }
+#tag-toggle-btn { flex: 0 0 36px; width: 36px; height: 36px; min-height: 36px; padding: 8px; border-radius: 9px; }

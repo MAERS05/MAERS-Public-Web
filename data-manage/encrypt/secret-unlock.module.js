@@ -134,7 +134,7 @@ async function _trigger() {
         const { openFormModal } = await import('./lock-dialog.module.js');
         const confirmed = await new Promise(resolve => openFormModal({
             title: '是否跳转后台？',
-            confirmText: '是', cancelText: '', focusDialog: true,
+            confirmText: '继续访问', cancelText: '', focusDialog: true,
             alternate: { text: '否', onClick: () => resolve(false) },
             onSubmit: () => { resolve(true); return true; },
             onCancel: () => resolve(null)
@@ -235,7 +235,7 @@ function _blockPage() {
     document.head.appendChild(style);
     const box = document.createElement('div');
     box.id = 'maers-404';
-    box.textContent = '404 · Page Not Found';
+    box.textContent = '404 · 页面不存在';
     document.body.appendChild(box);
 }
 

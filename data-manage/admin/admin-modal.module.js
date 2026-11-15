@@ -4,10 +4,11 @@ import { Toast } from '../../shared/toast.module.js';
 import { Utils } from '../../shared/utils.module.js';
 import { disableAdminControl, isLocalOnlyUnavailable } from './local-only.module.js';
 import { openFormModal } from '../encrypt/lock-dialog.module.js';
+import { icon as appIcon } from '../../shared/icons.module.js';
 
 function fieldAttributes(field, value, type = field.type || 'text') {
-    const placeholder = field.placeholder || (type === 'tags' ? 'tag1, tag2' : '');
-    return `name="${Utils.escapeAttr(field.name)}" value="${Utils.escapeAttr(value)}"
+    const placeholder = field.placeholder || (type === 'tags' ? '多个标签用逗号分开' : '');
+    return `name="${Utils.escapeAttr(field.name)}" value="${Utils.escapeAttr(value)}" aria-label="${Utils.escapeAttr(field.label || field.name)}"
         placeholder="${Utils.escapeAttr(placeholder)}" ${field.required ? 'required' : ''}
         ${field.disabled ? 'disabled' : ''}`;
 }
@@ -20,7 +21,7 @@ function renderControl(field, value) {
         case 'url':
             return `<div style="display:flex; gap:8px;">
                 <input type="url" ${attributes} class="form-control" style="flex:1;">
-                ${field.showFetch ? '<button type="button" class="btn-fetch-meta" title="Auto-fetch metadata">🪄</button>' : ''}
+                ${field.showFetch ? '<button type="button" class="btn-fetch-meta app-icon-button" title="读取网页信息" aria-label="读取网页信息">' + appIcon('refresh', 18) + '</button>' : ''}
             </div>`;
         case 'image':
             return `<div style="display:flex; gap:8px; align-items:center;">
@@ -41,11 +42,11 @@ function createModal({ title, isNew = false, fields = [], data = {} }) {
         <label>${Utils.escapeHtml(field.label)}${field.required ? ' *' : ''}</label>
         ${renderControl(field, data[field.name] ?? '')}
     </div>`).join('');
-    modal.innerHTML = `<div class="modal-content">
-        <div class="modal-header"><h3>${Utils.escapeHtml(title)}</h3><button class="btn-close-modal">×</button></div>
+    modal.innerHTML = `<div class="modal-content" role="dialog" aria-modal="true" aria-label="${Utils.escapeAttr(title)}">
+        <div class="modal-header"><h3>${Utils.escapeHtml(title)}</h3><button type="button" class="btn-close-modal" title="关闭弹窗" aria-label="关闭弹窗">${appIcon('close', 18)}</button></div>
         <form class="admin-modal-form">${controls}
-            <div class="modal-actions"><button type="button" class="btn-cancel">Cancel</button>
-                <button type="submit" class="btn-primary">${isNew ? 'Create' : 'Save'}</button></div>
+            <div class="modal-actions"><button type="button" class="btn-cancel">不改了</button>
+                <button type="submit" class="btn-primary">${isNew ? '创建' : '保存修改'}</button></div>
         </form>
     </div>`;
     return modal;
@@ -68,16 +69,16 @@ function bindSubmit(modal, { fields = [], onSave, isNew = false }, close) {
         event.preventDefault();
         if (saving) return;
         saving = true;
-        button.textContent = 'Saving...';
+        button.textContent = '正在保存…';
         button.disabled = true;
         try {
             if (await onSave(readForm(form, fields), modal) !== false) close();
         } catch (error) {
             console.error('[MAERS.Admin] 表单保存失败:', error);
-            Toast.error('Save failed: ' + error.message);
+            Toast.error('保存失败：' + error.message);
         } finally {
             saving = false;
-            button.textContent = isNew ? 'Create' : 'Save';
+            button.textContent = isNew ? '创建' : '保存修改';
             button.disabled = false;
         }
     };
@@ -114,7 +115,7 @@ function bindMetadataFetch(modal, data, iconInput, iconPreview) {
         if (url.length < 4) return;
         const id = ++requestId;
         const initial = { name: inputs.nameInput?.value, icon: iconInput?.value };
-        const canUpdateName = !initial.name || initial.name === 'New Link' || initial.name === data.name;
+        const canUpdateName = !initial.name || initial.name === '新收藏' || initial.name === data.name;
         const current = () => id === requestId && modal.isConnected !== false && urlInput.value.trim() === url;
         button.classList.add('loading');
         try {
@@ -150,20 +151,33 @@ function bindFieldHandlers(modal, data) {
 }
 
 function open(config) {
+    const previousFocus = document.activeElement;
     const modal = createModal(config);
     document.body.appendChild(modal);
-    const close = () => modal.remove();
+    const close = () => {
+        modal.remove();
+        if (previousFocus?.isConnected) previousFocus.focus();
+    };
+    modal.addEventListener('keydown', event => {
+        if (event.key === 'Escape') { event.stopPropagation(); close(); return; }
+        if (event.key !== 'Tab') return;
+        const controls = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href]')].filter(control => control.getClientRects().length);
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    });
     modal.querySelector('.btn-close-modal').onclick = close;
     modal.querySelector('.btn-cancel').onclick = close;
     bindFieldHandlers(modal, config.data || {});
     bindSubmit(modal, config, close);
+    (modal.querySelector('input:not(:disabled), textarea:not(:disabled), select:not(:disabled)') || modal.querySelector('.btn-close-modal'))?.focus();
 }
 
 /** 操作按钮返回调用方的选项值，关闭返回 null。 */
 function choose({ title, message, primary, secondary, extraChoices = [] }) {
     return new Promise(resolve => {
         const modal = openFormModal({
-            icon: '⚠️', title, focusDialog: true, closeButton: true,
+            icon: '', title, focusDialog: true, closeButton: true,
             bodyHtml: `<p class="mlock-message">${Utils.escapeHtml(message)}</p>`,
             confirmText: primary.text, cancelText: '',
             alternate: { text: secondary.text, onClick: () => resolve(secondary.value) },

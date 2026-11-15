@@ -42,7 +42,7 @@ export function renderBreadcrumb() {
 
     const prefix = document.createElement("span");
     prefix.className = "filter-prefix";
-    prefix.textContent = "Filter : ";
+    prefix.textContent = "筛选：";
     prefix.style.marginRight = "8px";
     prefix.style.opacity = "0.6";
     prefix.style.cursor = "pointer"; // Make it clickable
@@ -55,7 +55,7 @@ export function renderBreadcrumb() {
     };
     prefix.onmouseover = () => {
         prefix.style.opacity = "1";
-        prefix.title = "Back / Clear";
+        prefix.title = "返回并清空筛选";
     };
     prefix.onmouseout = () => {
         prefix.style.opacity = "0.6";
@@ -88,7 +88,7 @@ export function renderBreadcrumb() {
     } else {
         const item = document.createElement("span");
         item.className = "filter-item";
-        item.textContent = "All";
+        item.textContent = "全部";
         overlay.appendChild(item);
     }
 
@@ -96,7 +96,7 @@ export function renderBreadcrumb() {
 
     const rootSpan = document.createElement("span");
     rootSpan.className = `crumb-item ${State.AppState.pathStack.length === 1 ? "active" : ""}`;
-    rootSpan.innerText = "Root";
+    rootSpan.innerText = "全部内容";
     rootSpan.onclick = (e) => {
         e.stopPropagation();
         navigateTo(-1);
@@ -241,45 +241,10 @@ export function enterFolder(node) {
 }
 
 export function renderPageTitle() {
-    const titleEl = document.querySelector(".header-title");
+    const titleEl = document.querySelector('.header-title');
     if (!titleEl) return;
-
-    const desiredHTML = ModuleConfig.getTitle(State.CONFIG.CURRENT_MODULE, State.IS_ADMIN);
-
-    const imgMatch = desiredHTML.match(/^<img src="([^"]+)"[^>]*>\s*(.*)$/);
-
-    if (imgMatch) {
-        const targetSrc = imgMatch[1];
-        const targetText = imgMatch[2];
-
-        const existingImg = titleEl.querySelector('img');
-        if (existingImg && existingImg.getAttribute('src') === targetSrc) {
-            let node = existingImg.nextSibling;
-            while (node) {
-                const next = node.nextSibling;
-                node.remove();
-                node = next;
-            }
-
-            titleEl.insertAdjacentHTML('beforeend', ' ' + targetText.trim());
-
-            if (window.MAERS?.Theme?.setupZoomTrigger) {
-                window.MAERS.Theme.setupZoomTrigger(existingImg, 'icon_only', true);
-            }
-            return;
-        }
-    }
-
-    titleEl.innerHTML = desiredHTML;
-
-    if (window.MAERS?.Theme?.setupZoomTrigger) {
-        const img = titleEl.querySelector('img');
-        if (img) {
-            window.MAERS.Theme.setupZoomTrigger(img, 'icon_only', true);
-        } else {
-            window.MAERS.Theme.setupZoomTrigger(titleEl, 'icon_only', true);
-        }
-    }
+    titleEl.classList.remove('zoom-trigger-icon', 'zoom-trigger-whole');
+    titleEl.innerHTML = ModuleConfig.getTitle(State.CONFIG.CURRENT_MODULE, State.IS_ADMIN);
 }
 
 export const Nav = {

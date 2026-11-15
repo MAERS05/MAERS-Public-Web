@@ -74,7 +74,7 @@ function renderLinkCard(node, container) {
 
     card.innerHTML = `
         <div class="space-icon">
-            <img src="${node.icon || 'ui/placeholder.svg'}" alt="${State.escapeAttr(node.name)}">
+            <img src="${node.icon || 'ui/space-icon.svg'}" alt="${State.escapeAttr(node.name)}">
         </div>
         <div class="space-text">
             <div class="space-title">${State.escapeHtml(node.name)}</div>

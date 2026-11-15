@@ -174,7 +174,7 @@ export async function executeBatchMove(ids, targetParentId) {
         if (manager) manager.clearSelection();
         Admin?.refreshView?.();
     } else {
-        if (window.MAERS?.Toast) window.MAERS.Toast.error("Move failed.");
+        if (window.MAERS?.Toast) window.MAERS.Toast.error("移动失败");
     }
 }
 

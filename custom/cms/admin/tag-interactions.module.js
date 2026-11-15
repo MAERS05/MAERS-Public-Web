@@ -2,6 +2,8 @@
  * @module custom/cms/admin/tag-interactions.module.js
  * @description 标签交互模块 - 右键菜单（重命名、删除、排序）
  */
+import { requestText, confirmAction } from "../../../data-manage/admin/admin-confirm.module.js";
+
 
 // 注入样式
 if (!document.getElementById('tag-interactions-styles')) {
@@ -72,10 +74,10 @@ function showContextMenu(e, tagText, tagIndex, tagEl, tagsContainer, getTags, on
     // 重命名
     const rename = document.createElement('div');
     rename.className = 'tag-menu-option';
-    rename.textContent = '✎ 重命名';
+    rename.textContent = ' 重命名';
     rename.onclick = async () => {
         menu.remove();
-        const newName = prompt(`重命名标签 "${tagText}":`, tagText);
+        const newName = await requestText({ title: `重命名标签 "${tagText}":`, value: tagText });
         if (newName?.trim() && newName.trim() !== tagText) {
             const tags = [...getTags()];
             tags[tagIndex] = newName.trim();
@@ -99,10 +101,10 @@ function showContextMenu(e, tagText, tagIndex, tagEl, tagsContainer, getTags, on
     // 删除
     const del = document.createElement('div');
     del.className = 'tag-menu-option delete-option';
-    del.textContent = '✕ 删除';
+    del.textContent = ' 删除';
     del.onclick = async () => {
         menu.remove();
-        if (confirm(`删除标签 #${tagText}?`)) {
+        if (await confirmAction({ confirmText: "确认删除标签", cancelText: "不删了", danger: true })) {
             await onTagsUpdate(getTags().filter((_, i) => i !== tagIndex));
             tagEl.remove();
         }

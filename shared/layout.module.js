@@ -3,6 +3,8 @@
  * 页面布局工具函数
  * @version 2.0.0 - ES6 Module
  */
+import { icon as appIcon } from './icons.module.js';
+
 
 import { initSpatialNav } from './spatial-nav.module.js';
 import { initSecretUnlock, guardCurrentPage } from '../data-manage/encrypt/secret-unlock.module.js';
@@ -14,7 +16,7 @@ export function injectThemeSwitch() {
     const html = `
     <div class="theme-switch-wrapper">
         <label class="theme-switch-label" for="checkbox">
-            <input type="checkbox" id="checkbox" class="theme-switch-checkbox" ${document.documentElement.classList.contains('light-mode') ? '' : 'checked'} />
+            <input type="checkbox" id="checkbox" class="theme-switch-checkbox" aria-label="切换深浅主题" title="切换深浅主题" ${document.documentElement.classList.contains('light-mode') ? '' : 'checked'} />
             <div class="ball">
                 <img id="mode-icon" src="ui/moon.svg" alt="" aria-hidden="true" />
                 <img class="mode-icon-sun" src="ui/sun.svg" alt="" aria-hidden="true" />
@@ -55,25 +57,18 @@ export function injectImmersiveBackground() {
 
 function _runInit() {
     injectThemeSwitch();
-    injectImmersiveBackground();
     // Load Spatial Nav (replaces loadSpatialNav which injected script tag)
     initSpatialNav();
 }
 
-export function renderPageHeader(title, backUrl = "index.html", backText = "Back to Home") {
+export function renderPageHeader(title, backUrl = 'index.html', backText = '返回') {
     if (document.querySelector('.page-header-bar')) return;
-    const currentMode = new URLSearchParams(window.location.search).get('mode');
-    const separator = backUrl.includes('?') ? '&' : '?';
-    const finalBackUrl = currentMode ? `${backUrl}${separator}mode=${currentMode}` : backUrl;
-    const headerHtml = `
-    <div class="page-header-bar">
-        <a href="${finalBackUrl}" class="back-btn">← ${backText}</a>
-        <div class="header-title">${title}</div>
-        <div style="width:80px"></div>
-    </div>`;
-
-    const mainCard = document.querySelector('.main-card');
-    if (mainCard) { mainCard.insertAdjacentHTML('afterbegin', headerHtml); }
+    const mode = new URLSearchParams(location.search).get('mode');
+    const target = mode ? backUrl + (backUrl.includes('?') ? '&' : '?') + 'mode=' + encodeURIComponent(mode) : backUrl;
+    const card = document.querySelector('.main-card');
+    if (card) card.insertAdjacentHTML('afterbegin', '<div class="page-header-bar"><div class="header-left">' +
+        '<a class="back-btn" href="' + target + '" title="' + backText + '" aria-label="' + backText + '">' +
+        appIcon('back', 18) + '</a><div class="header-title">' + title + '</div></div></div>');
 }
 
 let studioEntryStarted = false;

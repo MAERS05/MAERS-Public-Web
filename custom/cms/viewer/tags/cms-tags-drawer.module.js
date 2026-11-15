@@ -3,6 +3,8 @@
  * @description CMS 标签抽屉 - 控制器 (Controller)
  * @version 2.0.0 - Refactored
  */
+import { requestText, confirmAction } from "../../../../data-manage/admin/admin-confirm.module.js";
+
 
 import { Toast } from '../../../../shared/toast.module.js';
 
@@ -222,7 +224,7 @@ async function handleRename(oldName, refreshCallback) {
         Toast.error('批量重命名私密标签请在电脑本地后台操作');
         return;
     }
-    const newName = prompt(`重命名标签 "${oldName}":`, oldName);
+    const newName = await requestText({ title: `重命名标签 "${oldName}":`, value: oldName });
     if (!newName?.trim() || newName.trim() === oldName) return;
 
     const res = await TagsApi.renameTag(getModuleName(), oldName, newName.trim());
@@ -257,13 +259,13 @@ async function handleRename(oldName, refreshCallback) {
             Controller.AppState.tagCategories = categories;
         }
 
-        Toast.success(`✅ 标签已重命名: ${oldName} → ${newName.trim()}\n${res.count == null ? '已存入云端暂存队列，待电脑端合并' : `已更新 ${res.count} 个项目`}`);
+        Toast.success(` 标签已重命名: ${oldName} → ${newName.trim()}\n${res.count == null ? '已存入云端暂存队列，待电脑端合并' : `已更新 ${res.count} 个项目`}`);
         if (refreshCallback) refreshCallback();
         categoryManager?.setList(Controller.AppState.tagCategories);
         if (typeof Controller?.refreshView === 'function') Controller.refreshView(false, true);
         SaveButton?.hide();
     } else {
-        Toast.error('❌ 重命名失败: ' + res.error);
+        Toast.error(' 重命名失败: ' + res.error);
     }
 }
 
@@ -272,7 +274,7 @@ async function handleDelete(tagName, refreshCallback) {
         Toast.error('批量删除私密标签请在电脑本地后台操作');
         return;
     }
-    if (!confirm(`确认删除标签 #${tagName}？\n所有使用该标签的项目都会移除此标签。`)) return;
+    if (!await confirmAction({ confirmText: "确认删除标签", cancelText: "不删了", danger: true })) return;
 
     const res = await TagsApi.deleteTag(getModuleName(), tagName);
     if (res.success) {
@@ -300,13 +302,13 @@ async function handleDelete(tagName, refreshCallback) {
             Controller.AppState.tagCategories = categories;
         }
 
-        Toast.success(`✅ 标签已删除: ${tagName}\n${res.count == null ? '已存入云端暂存队列，待电脑端合并' : `已从 ${res.count} 个项目中移除`}`);
+        Toast.success(` 标签已删除: ${tagName}\n${res.count == null ? '已存入云端暂存队列，待电脑端合并' : `已从 ${res.count} 个项目中移除`}`);
         if (refreshCallback) refreshCallback();
         categoryManager?.setList(Controller.AppState.tagCategories);
         if (typeof Controller?.refreshView === 'function') Controller.refreshView(false, true);
         SaveButton?.hide();
     } else {
-        Toast.error('❌ 删除失败: ' + res.error);
+        Toast.error(' 删除失败: ' + res.error);
     }
 }
 
@@ -355,7 +357,7 @@ function handleSort(tagName, categoryName, refreshCallback) {
 
 async function handleCleanup(refreshCallback) {
     const moduleName = getModuleName();
-    if (!confirm(`确认清理 "${moduleName}" 中未使用的标签？`)) return;
+    if (!await confirmAction({ confirmText: "清理未使用标签", cancelText: "先不清理" })) return;
 
     const res = await TagsApi.cleanupTags(moduleName);
     if (res.success) {
@@ -364,15 +366,15 @@ async function handleCleanup(refreshCallback) {
             if (categories && Controller?.AppState) {
                 Controller.AppState.tagCategories = categories;
             }
-            Toast.success(`✅ 已清理 ${res.removed_count} 个标签:\n${res.removed_tags.join(', ')}`);
+            Toast.success(` 已清理 ${res.removed_count} 个标签:\n${res.removed_tags.join(', ')}`);
             if (refreshCallback) refreshCallback(() => { });
             categoryManager?.setList(Controller.AppState.tagCategories);
             SaveButton?.hide();
         } else {
-            Toast.info('✨ 没有需要清理的标签');
+            Toast.info(' 没有需要清理的标签');
         }
     } else {
-        Toast.error('❌ 清理失败: ' + res.error);
+        Toast.error(' 清理失败: ' + res.error);
     }
 }
 

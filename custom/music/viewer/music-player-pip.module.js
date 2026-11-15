@@ -16,7 +16,7 @@ export function initPIP(playerModule, controlModule) {
 }
 
 /**
- * 🎵 启用后台播放保持机制
+ *  启用后台播放保持机制
  * 使用 Wake Lock API (主方案) + 虚拟音频 (后备方案)
  */
 export async function enableBackgroundPlayback() {
@@ -26,7 +26,7 @@ export async function enableBackgroundPlayback() {
             Player.wakeLock.addEventListener('release', () => {
             });
         } catch (err) {
-            console.warn('⚠️ Wake Lock 请求失败:', err.message);
+            console.warn(' Wake Lock 请求失败:', err.message);
         }
     }
 
@@ -39,13 +39,13 @@ export async function enableBackgroundPlayback() {
             Player.keepAliveAudio.volume = 0.01;
             await Player.keepAliveAudio.play();
         } catch (err) {
-            console.warn('⚠️ 虚拟音频启动失败:', err.message);
+            console.warn(' 虚拟音频启动失败:', err.message);
         }
     }
 }
 
 /**
- * 🔇 禁用后台播放保持机制
+ *  禁用后台播放保持机制
  */
 export async function disableBackgroundPlayback() {
     if (Player.wakeLock) {
@@ -53,7 +53,7 @@ export async function disableBackgroundPlayback() {
             await Player.wakeLock.release();
             Player.wakeLock = null;
         } catch (err) {
-            console.warn('⚠️ Wake Lock 释放失败:', err);
+            console.warn(' Wake Lock 释放失败:', err);
         }
     }
 

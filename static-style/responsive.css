@@ -48,7 +48,7 @@
         border-radius: 50%;
         background: rgba(0, 0, 0, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.3);
-        color: #fff;
+        color: var(--text-main);
         display: flex;
         align-items: center;
         justify-content: center;
@@ -70,16 +70,16 @@
 
     /* 选中状态下，按钮变成高亮 */
     .photo-item.is-picked .move-btn {
-        background: #78ffd6;
-        color: #000;
-        border-color: #78ffd6;
+        background: var(--accent);
+        color: var(--text-main);
+        border-color: var(--accent);
         box-shadow: none;
     }
 
     /* 2. 选中图片保持固定高亮与缩放，无需重复播放相同关键帧。 */
     body .photo-item.is-picked {
         box-shadow: none;
-        border-color: #78ffd6;
+        border-color: var(--accent);
         transform: scale(0.98);
         z-index: 100;
         opacity: 1 !important;
@@ -90,8 +90,8 @@
         position: absolute;
         top: -8px;
         left: -8px;
-        background: #ff4757;
-        color: white;
+        background: var(--danger);
+        color: var(--text-main);
         width: 24px;
         height: 24px;
         border-radius: 50%;
@@ -127,7 +127,7 @@
         /* 已选中的不能作为目标 */
     }
 
-    /* ✅ 修正后的代码 */
+    /*  修正后的代码 */
     /* 移动模式下，禁用删除操作 */
     body.is-reordering .delete-btn {
         pointer-events: none;
@@ -139,7 +139,7 @@
     /* 1. 选中状态：缩小 + 绿色呼吸边框 */
     .category-card.is-picked {
         transform: scale(0.95) !important;
-        border-color: #78ffd6 !important;
+        border-color: var(--accent) !important;
         background: rgba(120, 255, 214, 0.05) !important;
         box-shadow: none !important;
         z-index: 100;
@@ -148,9 +148,9 @@
 
     /* 2. 移动按钮的激活状态 */
     .category-card.is-picked .btn-move {
-        background: #78ffd6;
-        color: #000;
-        border-color: #78ffd6;
+        background: var(--accent);
+        color: var(--text-main);
+        border-color: var(--accent);
         transform: scale(1.1);
     }
 
@@ -164,7 +164,7 @@
     body.is-reordering .category-card:not(.is-picked):hover {
         opacity: 1;
         transform: scale(1.02);
-        border-color: #fff;
+        border-color: var(--text-main);
     }
 }
 /* 遵循系统减少动态效果偏好。 */

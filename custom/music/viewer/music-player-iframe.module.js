@@ -1,6 +1,6 @@
 /**
  * MAERS Music Player IFrame (music-player-iframe.module.js)
- * Bilibili iframe通信：创建、管理、容器查找
+ * 哔哩哔哩 iframe通信：创建、管理、容器查找
  * @version 3.0.0 - ES6 Module
  */
 
@@ -11,7 +11,7 @@ export function initIFrame(playerModule) {
 }
 
 /**
- * 创建或获取 Bilibili player iframe
+ * 创建或获取 哔哩哔哩 player iframe
  * 自动处理主窗口和小窗容器的查找
  * @returns {HTMLIFrameElement}
  */

@@ -1,9 +1,13 @@
+/** 照片管理：删除前用明确动作确认。 */
+import { confirmAction } from '../../../data-manage/admin/admin-confirm.module.js';
 /**
  * MAERS Album Admin (photos-admin.module.js)
  * 职责：管理员功能 - 选择、排序、删除、上传
  * 依赖：Controller, View, AdminCore
  * @version 3.0.0 - ES6 Module
  */
+import { requestText } from "../../../data-manage/admin/admin-confirm.module.js";
+
 import { Toast } from '../../../shared/toast.module.js';
 import { localFetch } from '../../../data-manage/api-client.module.js';
 
@@ -103,7 +107,7 @@ export function executeMove(targetPath) {
 
 // --- Deletion ---
 
-export function stageDelete(arg) {
+export async function stageDelete(arg) {
     if (!manager) return;
     if (manager.selectedIndices.length > 0) return;
 
@@ -118,6 +122,7 @@ export function stageDelete(arg) {
         const path = el.getAttribute('data-path');
         const index = Controller.State.loadedData.findIndex(i => i.path === path);
         if (index !== -1) {
+            if (!manager.isDeleted(index) && !await confirmAction({ confirmText: '确认删除', cancelText: '不删了', danger: true })) return;
             manager.toggleDelete(index);
         }
     }
@@ -259,7 +264,7 @@ export const Admin = {
 
 async function addTag(photo) {
     if (!photo) return;
-    const input = prompt("添加标签 (可使用 , 或 ， 分隔多个):");
+    const input = await requestText({ title: "添加标签 (可使用 , 或 ， 分隔多个):", value: '' });
     if (!input || !input.trim()) return;
 
     const rawTags = input.split(/[,，]/);

@@ -74,7 +74,7 @@ export const TagsRender = {
 
         // 1. Add Category (Admin only)
         if (State.IS_ADMIN) {
-            html += `<button class="add-cat-btn" style="background:none;color:#a0a0a5;border:none;cursor:pointer;">＋ 添加分类</button>`;
+            html += `<button class="add-cat-btn" style="background:none;color:#a0a0a5;border:none;cursor:pointer;">添加分类</button>`;
         }
 
         // 2. Toggle Button
@@ -88,7 +88,7 @@ export const TagsRender = {
         // Right controls (Cleanup)
         html += `<div style="display:flex;align-items:center;gap:15px;">`;
         if (State.IS_ADMIN) {
-            html += `<button class="cleanup-tags-btn" title="清理未使用的标签" style="background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:0.5;transition:opacity 0.2s;">🗑️</button>`;
+            html += `<button class="cleanup-tags-btn" title="清理未使用的标签" style="background:none;border:none;cursor:pointer;font-size:1.1rem;opacity:0.5;transition:opacity 0.2s;"></button>`;
         }
         html += `</div></div>`;
 
@@ -150,7 +150,7 @@ export const TagsRender = {
                       </div>
                       <div class="list-anim-wrapper" style="display:grid;transition:all 0.3s ease;${gridStyle}">
                           <div class="category-tags-list" style="display:flex;flex-direction:column;gap:2px;overflow:hidden;min-height:0;">
-                              ${tagsHtml || '<span style="font-size:12px;color:#555;padding-left:15px;">Empty</span>'}
+                              ${tagsHtml || '<span style="font-size:12px;color:#555;padding-left:15px;">暂无标签</span>'}
                           </div>
                       </div>
                    </div>`;

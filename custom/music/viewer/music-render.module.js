@@ -5,6 +5,8 @@
  * @version 3.0.0 - ES6 Module
  */
 
+import { icon as appIcon } from '../../../shared/icons.module.js';
+
 import { isEncryptedRecord } from '../../../data-manage/encrypt/crypto.module.js';
 import { disableAdminControl, isLocalOnlyUnavailable } from '../../../data-manage/admin/local-only.module.js';
 import { renderLockedCard, cryptoIconHtml, setupLockActionButton } from '../../../data-manage/encrypt/admin-lock.module.js';
@@ -62,7 +64,7 @@ export function renderCategories() {
         // Arrow span
         const arrowSpan = document.createElement('span');
         arrowSpan.className = 'arrow-icon';
-        arrowSpan.textContent = '›';
+        arrowSpan.innerHTML = appIcon('forward', 16);
 
         // Click handler
         const handleClick = (event) => {
@@ -77,6 +79,9 @@ export function renderCategories() {
         };
 
         labelSpan.onclick = handleClick;
+        labelSpan.tabIndex = 0;
+        labelSpan.setAttribute('role', 'button');
+        labelSpan.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleClick(event); } };
         arrowSpan.onclick = handleClick;
 
         div.appendChild(labelSpan);
@@ -94,7 +99,8 @@ export function renderCategories() {
             });
 
             // 加锁按钮
-            const lockBtn = document.createElement('span');
+            const lockBtn = document.createElement('button');
+            lockBtn.type = 'button';
             lockBtn.className = 'maers-admin-btn';
             setupLockActionButton(lockBtn, {
                 isLocked: Boolean(cat._private_id || cat._cloudEnvelope),
@@ -157,7 +163,7 @@ export function renderCollections(catIndex) {
         // Arrow
         const arrowSpan = document.createElement('span');
         arrowSpan.className = 'arrow-icon';
-        arrowSpan.textContent = '›';
+        arrowSpan.innerHTML = appIcon('forward', 16);
 
         // Click handler
         const handleClick = (event) => {
@@ -172,6 +178,9 @@ export function renderCollections(catIndex) {
         };
 
         labelSpan.onclick = handleClick;
+        labelSpan.tabIndex = 0;
+        labelSpan.setAttribute('role', 'button');
+        labelSpan.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleClick(event); } };
         arrowSpan.onclick = handleClick;
 
         div.appendChild(labelSpan);
@@ -189,7 +198,8 @@ export function renderCollections(catIndex) {
             });
 
             // 加锁按钮
-            const lockBtn = document.createElement('span');
+            const lockBtn = document.createElement('button');
+            lockBtn.type = 'button';
             lockBtn.className = 'maers-admin-btn';
             setupLockActionButton(lockBtn, {
                 isLocked: Boolean(col._private_id || col._cloudEnvelope),
@@ -283,7 +293,7 @@ export function renderAlbums(catIndex, colIndex) {
             chevron = document.createElement('span');
             chevron.className = 'album-chevron';
             chevron.id = `chevron-${albIndex}`;
-            chevron.textContent = '▶';
+            chevron.innerHTML = appIcon('forward', 14);
         }
 
         // Click handler
@@ -299,6 +309,9 @@ export function renderAlbums(catIndex, colIndex) {
         };
 
         contentDiv.onclick = handleClick;
+        contentDiv.tabIndex = 0;
+        contentDiv.setAttribute('role', 'button');
+        contentDiv.onkeydown = event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); handleClick(event); } };
 
         mainDiv.appendChild(contentDiv);
         if (chevron) mainDiv.appendChild(chevron);
@@ -315,7 +328,8 @@ export function renderAlbums(catIndex, colIndex) {
             });
 
             // 加锁按钮
-            const lockBtn2 = document.createElement('span');
+            const lockBtn2 = document.createElement('button');
+            lockBtn2.type = 'button';
             lockBtn2.className = 'maers-admin-btn';
             setupLockActionButton(lockBtn2, {
                 isLocked: Boolean(album._private_id || album._cloudEnvelope),
@@ -325,10 +339,12 @@ export function renderAlbums(catIndex, colIndex) {
             actionsEl.appendChild(lockBtn2);
 
             // 补全：还原分P按钮 (↺)
-            const resetBtn = document.createElement('span');
+            const resetBtn = document.createElement('button');
+            resetBtn.type = 'button';
             resetBtn.className = 'maers-admin-btn';
-            resetBtn.title = '还原所有原始分P';
-            resetBtn.textContent = '↺';
+            resetBtn.title = '还原原始曲目';
+            resetBtn.innerHTML = appIcon('refresh', 16);
+            resetBtn.setAttribute('aria-label', '还原曲目');
             if (isLocalOnlyUnavailable()) {
                 disableAdminControl(resetBtn, '还原原始分 P 需要电脑本地后台获取 B 站信息');
             } else {
@@ -384,14 +400,16 @@ export function renderAlbums(catIndex, colIndex) {
                     iconGroup.style.display = 'flex';
                     iconGroup.style.gap = '5px';
 
-                    const eI = document.createElement('span');
-                    eI.className = 'track-edit-icon'; eI.textContent = '✎';
+                    const eI = document.createElement('button');
+            eI.type = 'button';
+                    eI.className = 'track-edit-icon'; eI.innerHTML = appIcon('edit', 15); eI.title = '重命名曲目'; eI.setAttribute('aria-label', eI.title);
                     eI.onclick = (e) => Admin.uiRenamePart(e, albIndex, trackIdx);
                     iconGroup.appendChild(eI);
 
-                    const dI = document.createElement('span');
-                    dI.className = 'track-edit-icon'; dI.textContent = '✕';
-                    dI.style.color = '#ff4757';
+                    const dI = document.createElement('button');
+            dI.type = 'button';
+                    dI.className = 'track-edit-icon'; dI.innerHTML = appIcon('trash', 15); dI.title = '删除曲目'; dI.setAttribute('aria-label', dI.title);
+                    dI.style.color = 'var(--danger)';
                     dI.onclick = (e) => Admin.uiDeletePart(e, albIndex, trackIdx);
                     iconGroup.appendChild(dI);
 

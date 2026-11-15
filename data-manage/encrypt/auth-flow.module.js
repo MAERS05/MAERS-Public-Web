@@ -79,11 +79,11 @@ async function _unlockFlow(group) {
 
     const dek = await new Promise((resolve) => {
         openFormModal({
-            icon: '🔐',
+            icon: '',
             title: enrollment ? '登记本机免密管理' : group === 'default' ? '输入主密码' : `解锁「${slot.name}」`,
             sub: enrollment ? '验证一次现有主密码，今后在这台电脑自动管理全部内容' : group === 'default' ? '解锁所有已接入的密码组' : '验证后可以管理该组内容',
             fields: [{ name: 'pwd', type: 'password', placeholder: `输入${label}...`, autocomplete: 'current-password' }],
-            confirmText: '确定',
+            confirmText: '验证密码',
             onSubmit: async ({ pwd }) => {
                 if (!pwd) return '密码不能为空';
                 const raw = await unlockWithPassword(slot, pwd);
@@ -115,7 +115,7 @@ async function _setupFlow() {
                 { name: 'pwd', type: 'password', placeholder: `主密码（至少 ${MIN_PASSWORD_LEN} 位）`, autocomplete: 'new-password' },
                 { name: 'pwd2', type: 'password', placeholder: '再次输入主密码', autocomplete: 'new-password' }
             ],
-            confirmText: '创建',
+            confirmText: '创建密码',
             onSubmit: async ({ pwd, pwd2 }) => {
                 const err = validateNewPassword(pwd, pwd2);
                 if (err) return err;
@@ -158,7 +158,7 @@ export function recoverWithCodeFlow(keyring, group = 'default') {
     const label = group === 'default' ? '主密码' : '密码组密码';
     return new Promise((resolve) => {
         openFormModal({
-            icon: '🧩',
+            icon: '',
             title: `使用恢复码重置${label}`,
             sub: '已加密的数据不受影响，重置后用新密码解锁',
             fields: [
@@ -166,7 +166,7 @@ export function recoverWithCodeFlow(keyring, group = 'default') {
                 { name: 'pwd', type: 'password', placeholder: `新${label}（至少 ${MIN_PASSWORD_LEN} 位）`, autocomplete: 'new-password' },
                 { name: 'pwd2', type: 'password', placeholder: `再次输入新${label}`, autocomplete: 'new-password' }
             ],
-            confirmText: '重置',
+            confirmText: '重置密码',
             onSubmit: async ({ code, pwd, pwd2 }) => {
                 const err = validateNewPassword(pwd, pwd2);
                 if (err) return err;

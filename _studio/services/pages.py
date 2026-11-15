@@ -9,6 +9,7 @@ from . import storage
 PAGE_TEMPLATE = """<!DOCTYPE html>
 <html lang="zh-CN" class="fixed-layout-page">
 <head>
+    <script src="custom/config.js"></script>
     <script src="shared/flash-guard.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,16 +22,16 @@ PAGE_TEMPLATE = """<!DOCTYPE html>
     <script type="module" src="data-manage/data-provider.module.js"></script>
     <style>
         .placeholder-content {{ flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: var(--text-sub); }}
-        .placeholder-text {{ font-size: 2rem; font-weight: 700; color: var(--text-main); margin-top: 20px; }}
+        .placeholder-text {{ font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-top: 20px; }}
     </style>
 </head>
 <body>
     <div class="container">
         <div class="main-card">
             <div class="placeholder-content">
-                <div style="font-size: 4rem;">✨</div>
+                <div aria-hidden="true" class="placeholder-icon"></div>
                 <div class="placeholder-text">{title}</div>
-                <p>New page created via Admin.</p>
+                <p>在这里放下新的内容。</p>
             </div>
         </div>
     </div>
@@ -53,7 +54,7 @@ def ensure_page(body):
     path = _path(body.get('filename'))
     if os.path.exists(path):
         return 200, {'status': 'exists'}
-    title = body.get('title', 'New Page')
+    title = body.get('title', '新页面')
     storage.write_text(path, PAGE_TEMPLATE.format(title=html.escape(title), title_json=json.dumps(title).replace('<', '\\u003c')))
     return 200, {'status': 'created'}
 

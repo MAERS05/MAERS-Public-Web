@@ -3,7 +3,7 @@
 export function injectSyncControl(manager, targetContainer) {
     if (!targetContainer || document.getElementById('maers-sync-btn')) return;
 
-    // 模式、同步与 Git 提交共用一个设置入口
+    // 模式、同步与 发布更新共用一个设置入口
     const btn = document.createElement('button');
     btn.id = 'maers-sync-btn';
     btn.className = 'maers-toolbar-btn';
@@ -30,7 +30,7 @@ export function syncControlLabel(manager) {
     const parts = [];
     if (unavailable) parts.push('草稿读取失败');
     else if (count > 0) parts.push(`待合并(${count})`);
-    if (manager.pendingGitCount > 0) parts.push(`待Git(${manager.pendingGitCount})`);
+    if (manager.pendingGitCount > 0) parts.push(`待发布(${manager.pendingGitCount})`);
     return parts.length ? parts.join(' · ') : '本地模式';
 }
 
@@ -40,7 +40,7 @@ export function updateSyncModalBadge(manager) {
     const count = manager.pendingItemsCount ?? '读取失败';
     const gitTitle = modal.querySelector('[data-role="git-count-title"]');
     if (gitTitle) gitTitle.textContent = manager.isLocalHost()
-        ? `Git 一键提交(${manager.pendingGitCount})`
+        ? `发布更新(${manager.pendingGitCount})`
         : `待电脑合并草稿(${count})`;
     const pullBtn = modal.querySelector('#btn-manual-pull');
     if (pullBtn) pullBtn.textContent = `拉取合并 (${count})`;
@@ -55,8 +55,8 @@ export function updateSyncToolbarButton(manager) {
 
     if (manager.isLocalHost()) {
         btn.title = manager.pendingItemsCount > 0
-            ? `有 ${manager.pendingItemsCount} 条云端草稿待合并；点击打开设置，可拉取合并或提交 Git`
-            : '点击打开设置，可配置同步或提交 Git';
+            ? `有 ${manager.pendingItemsCount} 条云端草稿待合并；打开同步与发布`
+            : '打开同步与发布';
         btn.classList.add(manager.pendingGitCount > 0 || manager.pendingItemsCount > 0
             ? 'maers-toolbar-btn--sync-pending' : 'maers-toolbar-btn--sync-local');
     } else {

@@ -1,13 +1,13 @@
 /** 首页更新日志管理：读取、编辑分组和条目、保存及弹窗生命周期。 */
+import { icon } from '../../../shared/icons.module.js';
+import { confirmAction } from '../../../data-manage/admin/admin-confirm.module.js';
 import { localFetch } from '../../../data-manage/api-client.module.js';
 import { Toast } from '../../../shared/toast.module.js';
 import { isLocalOnlyUnavailable } from '../../../data-manage/admin/local-only.module.js';
 import { syncManager } from '../../../data-manage/sync/sync-manager.module.js';
 export function initChangelogEditor() {
-    document.addEventListener('DOMContentLoaded', () => {
-        // 等待 layout 注入后在顶栏找位置放按钮
-        _injectChangelogBtn();
-    });
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', _injectChangelogBtn, { once: true });
+    else _injectChangelogBtn();
 }
 
 function _injectChangelogBtn() {
@@ -19,18 +19,12 @@ function _injectChangelogBtn() {
     const btn = document.createElement('button');
     btn.id = 'changelog-edit-btn';
     btn.className = 'cl-admin-trigger';
-    btn.innerHTML = `
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-        </svg>
-        <span>更新日志</span>
-    `;
+    btn.type = 'button';
+    btn.title = '编辑更新日志';
+    btn.innerHTML = icon('clock', 18) + '<span>更新日志</span>';
     btn.onclick = () => _openChangelogModal();
 
-    document.body.appendChild(btn);
+    (document.querySelector('.page-header-bar') || document.querySelector('.app-sidebar-actions') || document.body).appendChild(btn);
 }
 
 /**
@@ -76,25 +70,25 @@ async function _openChangelogModal() {
     overlay.className = 'cl-modal-overlay';
 
     overlay.innerHTML = `
-        <div id="changelog-modal-box" class="cl-modal-box">
+        <div id="changelog-modal-box" class="cl-modal-box" role="dialog" aria-modal="true" aria-label="编辑更新日志" tabindex="-1">
             <!-- 弹窗头部 -->
             <div class="cl-modal-header">
                 <div class="cl-header-title">
-                    <span>更新日志管理</span>
-                    <span class="cl-header-sub">${relayMode ? '修改先暂存，待电脑合并后发布' : '发布网站变动，前台将主动提示访客'}</span>
+                    <span>编辑更新日志</span>
+                    <span class="cl-header-sub">${relayMode ? '修改先暂存，待电脑合并后发布' : '按日期整理网站更新'}</span>
                 </div>
-                <button id="cl-close-btn" class="cl-close-btn" title="关闭">✕</button>
+                <button type="button" id="cl-close-btn" class="cl-close-btn" title="关闭编辑" aria-label="关闭编辑">${icon("close", 18)}</button>
             </div>
 
             <!-- 新增记录面板 -->
             <div class="cl-add-panel">
                 <div class="cl-panel-row">
-                    <span class="cl-panel-label">＋ 记录新发布</span>
-                    <input type="date" id="cl-new-date" class="cl-date-input"
-                        value="${new Date().toISOString().slice(0, 10)}">
+                    <span class="cl-panel-label">记录新发布</span>
+                    <input type="date" id="cl-new-date" class="cl-date-input" aria-label="更新日期"
+                        value="${_today()}">
                 </div>
-                <textarea id="cl-new-entries" class="cl-textarea" placeholder="每行一条更新内容，例如：&#10;• 新增摄影作品 8 张&#10;• 优化手机端交互排版"></textarea>
-                <button id="cl-add-btn" class="cl-add-btn">＋ 加入列表</button>
+                <textarea id="cl-new-entries" class="cl-textarea" aria-label="更新内容" placeholder="每行写一条更新内容"></textarea>
+                <button id="cl-add-btn" class="cl-add-btn">加入列表</button>
             </div>
 
             <!-- 历史记录流 -->
@@ -108,8 +102,8 @@ async function _openChangelogModal() {
                     共 ${_countEntries(logs)} 条更新记录
                 </div>
                 <div class="cl-footer-actions">
-                    <button id="cl-cancel-btn" class="cl-btn-secondary">取消</button>
-                    <button id="cl-save-btn" class="cl-btn-primary">${relayMode ? '暂存修改' : '保存发布'}</button>
+                    <button id="cl-cancel-btn" class="cl-btn-secondary">不改了</button>
+                    <button id="cl-save-btn" class="cl-btn-primary">${relayMode ? '暂存修改' : '保存修改'}</button>
                 </div>
             </div>
         </div>
@@ -120,13 +114,39 @@ async function _openChangelogModal() {
     // 深拷贝数据，用于本地修改缓冲
     const workingLogs = structuredClone(logs);
 
-    // 关闭弹窗
-    const closeModal = () => overlay.remove();
-    overlay.querySelector('#cl-close-btn').onclick = closeModal;
-    overlay.querySelector('#cl-cancel-btn').onclick = closeModal;
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closeModal();
-    });
+    // 编辑缓冲在保存之前只存在内存中；误关时保留继续编辑的选择。
+    const previousFocus = document.activeElement;
+    let saving = false;
+    const pendingText = overlay.querySelector('#cl-new-entries');
+    const hasPendingText = () => Boolean(pendingText.value.trim());
+    const isDirty = () => hasPendingText() || JSON.stringify(workingLogs) !== JSON.stringify(logs);
+    const closeModal = async ({ discard = false } = {}) => {
+        if (saving) return;
+        if (!discard && isDirty() &&
+            !await confirmAction({ confirmText: '放弃修改', cancelText: '继续编辑' })) return;
+        document.removeEventListener('keydown', onKey, true);
+        overlay.remove();
+        if (previousFocus?.isConnected) previousFocus.focus();
+    };
+    const onKey = event => {
+        if (document.querySelector('.mlock-overlay')) return;
+        if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); closeModal(); return; }
+        if (event.key !== 'Tab') return;
+        const controls = [...overlay.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled)')].filter(control => control.getClientRects().length);
+        if (!controls.length) {
+            event.preventDefault();
+            overlay.querySelector('.cl-modal-box').focus();
+            return;
+        }
+        const first = controls[0], last = controls.at(-1);
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    overlay.querySelector('#cl-close-btn').onclick = () => closeModal();
+    overlay.querySelector('#cl-cancel-btn').onclick = () => closeModal({ discard: true });
+    overlay.addEventListener('click', event => { if (event.target === overlay) closeModal(); });
+    overlay.querySelector('#cl-new-entries').focus();
 
     // 刷新列表与统计
     const refreshUI = () => {
@@ -136,7 +156,8 @@ async function _openChangelogModal() {
     };
 
     // 添加记录
-    overlay.querySelector('#cl-add-btn').onclick = () => {
+    const stagePendingEntries = () => {
+        if (saving) return false;
         const dateInput = overlay.querySelector('#cl-new-date');
         const textInput = overlay.querySelector('#cl-new-entries');
         const date = dateInput.value.trim();
@@ -144,7 +165,8 @@ async function _openChangelogModal() {
 
         if (!date || !rawText) {
             Toast.warning('请选择日期并填写更新条目');
-            return;
+            (!date ? dateInput : textInput).focus();
+            return false;
         }
 
         const entries = rawText
@@ -152,7 +174,11 @@ async function _openChangelogModal() {
             .map(s => s.trim().replace(/^[•\-\*]\s*/, '')) // 清理前缀符号
             .filter(Boolean);
 
-        if (!entries.length) return;
+        if (!entries.length) {
+            Toast.warning('请填写更新内容');
+            textInput.focus();
+            return false;
+        }
 
         // 若同日期已存在则合并至最新
         const existingGroup = workingLogs.find(g => g.date === date);
@@ -165,16 +191,25 @@ async function _openChangelogModal() {
 
         textInput.value = '';
         refreshUI();
+        return true;
     };
+    overlay.querySelector('#cl-add-btn').onclick = stagePendingEntries;
 
     // 绑定初始删除事件
     _bindDeleteBtns(overlay, workingLogs, refreshUI);
 
     // 保存发布
     overlay.querySelector('#cl-save-btn').onclick = async () => {
+        if (saving) return;
+        if (hasPendingText() && !stagePendingEntries()) return;
+        saving = true;
         const saveBtn = overlay.querySelector('#cl-save-btn');
-        saveBtn.disabled = true;
-        saveBtn.textContent = '保存中...';
+        const controls = [...overlay.querySelectorAll('button, input, textarea')].map(control => [control, control.disabled]);
+        controls.forEach(([control]) => { control.disabled = true; });
+        const dialog = overlay.querySelector('.cl-modal-box');
+        dialog.setAttribute('aria-busy', 'true');
+        dialog.focus();
+        saveBtn.textContent = '正在保存…';
 
         try {
             const result = await syncManager.writeDocument('changelog', workingLogs, {
@@ -182,13 +217,17 @@ async function _openChangelogModal() {
             });
             if (result.success) {
                 if (!relayMode) Toast.success('更新日志已成功保存！');
-                closeModal();
+                saving = false;
+                closeModal({ discard: true });
             }
         } catch (e) {
             Toast.error('网络请求失败: ' + e.message);
         } finally {
-            saveBtn.disabled = false;
-            saveBtn.textContent = relayMode ? '暂存修改' : '保存发布';
+            saving = false;
+            controls.forEach(([control, disabled]) => { control.disabled = disabled; });
+            dialog.removeAttribute('aria-busy');
+            saveBtn.textContent = relayMode ? '暂存修改' : '保存修改';
+            if (overlay.isConnected) pendingText.focus();
         }
     };
 }
@@ -200,11 +239,8 @@ function _renderChangelogList(logs) {
     if (!logs || !logs.length) {
         return `
             <div class="cl-empty-state">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.4;">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                <span>暂无更新日志记录，在上方录入后点击保存即可</span>
+                ${icon("clock", 26)}
+                <span>还没有记录，写下第一条更新吧</span>
             </div>
         `;
     }
@@ -213,7 +249,7 @@ function _renderChangelogList(logs) {
         <div class="cl-group-card">
             <div class="cl-group-header">
                 <span class="cl-group-date-badge">${_escHtml(group.date)}</span>
-                <button class="cl-group-del-btn" data-gi="${gi}" title="删除此日全部记录">删除整日</button>
+                <button class="cl-group-del-btn" data-gi="${gi}" title="移除当天全部记录">移除当天</button>
             </div>
             <ul class="cl-entry-list">
                 ${group.entries.map((entry, ei) => `
@@ -222,7 +258,7 @@ function _renderChangelogList(logs) {
                             <span class="cl-entry-bullet"></span>
                             <span>${_escHtml(entry)}</span>
                         </div>
-                        <button class="cl-entry-del-btn" data-gi="${gi}" data-ei="${ei}" title="删除此条">✕</button>
+                        <button class="cl-entry-del-btn" data-gi="${gi}" data-ei="${ei}" title="移除这条记录" aria-label="移除这条记录">${icon("trash", 16)}</button>
                     </li>
                 `).join('')}
             </ul>
@@ -275,3 +311,8 @@ function _escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+
+function _today() {
+    const date = new Date();
+    return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
+}

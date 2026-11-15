@@ -1,4 +1,4 @@
-﻿/**
+/**
  * MAERS Admin Panel Main Entry
  * @version 1.0.0 - ES6 Module
  */

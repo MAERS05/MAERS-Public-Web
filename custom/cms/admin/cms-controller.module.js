@@ -420,7 +420,7 @@ export async function bootstrap(View) {
         View.renderGrid(AppState.root, false, true);
     } else {
         console.error("[MAERS.CMS] Failed to load data.");
-        if (window.MAERS?.Toast) window.MAERS.Toast.error("Failed to load data.");
+        if (window.MAERS?.Toast) window.MAERS.Toast.error("暂时无法读取内容");
     }
     return success;
 }
